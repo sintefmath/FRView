@@ -40,52 +40,55 @@ layout(binding=2)   uniform samplerBuffer   field;
 void
 main()
 {
+    // fetch meta data
+    uvec4 indices = texelFetch( cells, gl_PrimitiveIDIn );
+    uint cell = indices.r;
 
-
-    uint cell;
-    vec3 n0, n1, n2;
-    uvec4 indices;
-    if( false && flat_normals ) {
-        cell = texelFetch( cells, gl_PrimitiveIDIn ).r;
-        n0 = cross( in_g[1].obj_pos - in_g[0].obj_pos,
-                       in_g[2].obj_pos - in_g[0].obj_pos);
-        n1 = n0;
-        n2 = n0;
-    }
-    else {
-        indices = texelFetch( cells, gl_PrimitiveIDIn );
-        cell = indices.r;
-        //float s = ((indices.y & 0x40000000u) != 0u ) ? 1.f : -1.f;
-        float s = ((indices.x & 0x80000000u) != 0u ) ? 1.f : -1.f;
-        n0 = normalize( s*NM*texelFetch( normals, int(indices.y & 0x0fffffffu) ).rgb );
-        n1 = normalize( s*NM*texelFetch( normals, int(indices.z & 0x0fffffffu) ).rgb );
-        n2 = normalize( s*NM*texelFetch( normals, int(indices.w & 0x0fffffffu) ).rgb );
-    }
+    // fetch and transform normal vectors
+    vec3 n0 = normalize( NM*texelFetch( normals, int(indices.y & 0x0fffffffu) ).rgb );
+    vec3 n1 = normalize( NM*texelFetch( normals, int(indices.z & 0x0fffffffu) ).rgb );
+    vec3 n2 = normalize( NM*texelFetch( normals, int(indices.w & 0x0fffffffu) ).rgb );
 
     vec3 color;
-    if( use_field ) {
-        uint cid = cell & 0x0fffffffu;
-        float value = texelFetch( field, int(cid) ).r;
-        if( log_map ) {
-            value = log( value );
+    if( cell == ~0u ) {
+        // fault surface
+        color.rgb = surface_color.rgb;
+        vec3 tn = cross( in_g[1].obj_pos - in_g[0].obj_pos,
+                         in_g[2].obj_pos - in_g[0].obj_pos);
+        n0 = faceforward( n0, tn, vec3(0.f, 0.f, 1.f ) );
+        n1 = faceforward( n1, tn, vec3(0.f, 0.f, 1.f ) );
+        n2 = faceforward( n2, tn, vec3(0.f, 0.f, 1.f ) );
+    }
+    else {
+        if( (cell & 0x80000000u) == 0u ) {
+            n0 = -n0;
+            n1 = -n1;
+            n2 = -n2;
         }
-        float scalar = clamp( field_remap.y*( value - field_remap.x), 0.0, 1.0 );
-        color = max( vec3(0.f),
+
+        if( use_field ) {
+            // colorize using a field
+            uint cid = cell & 0x0fffffffu;
+            float value = texelFetch( field, int(cid) ).r;
+            if( log_map ) {
+                value = log( value );
+            }
+            float scalar = clamp( field_remap.y*( value - field_remap.x), 0.0, 1.0 );
+            color = max( vec3(0.f),
                          sin( vec3( 4.14f*(scalar - 0.5f),
                                     3.14f*(scalar),
                                     4.14f*(scalar + 0.5f) ) ) );
+        }
+        else {
+            // color cells by id
+            color.rgb = surface_color.rgb;
+            uint cid = cell & 0x0fffffffu;
+            color.rgb = surface_color.rgb *
+                    vec3(  0.5*float( int( cid & 4u  ) == 0 ) + 0.5*float( int( cid & 1u ) == 0  ),
+                           0.5*float( int( cid & 8u ) == 0 ) + 0.5*float( int( cid & 1u ) != 0  ),
+                           0.5*float( int( cid & 16u ) == 0 ) + 0.5*float( int( cid & 2u ) == 0  ));
+        }
     }
-    else {
-        color.rgb = surface_color.rgb;
-        uint cid = cell & 0x0fffffffu;
-//        uint cid = uint(gl_PrimitiveIDIn);//cell & 0x0fffffffu;
-        color.rgb = surface_color.rgb *
-                vec3(  0.5*float( int( cid & 4u  ) == 0 ) + 0.5*float( int( cid & 1u ) == 0  ),
-                       0.5*float( int( cid & 8u ) == 0 ) + 0.5*float( int( cid & 1u ) != 0  ),
-                       0.5*float( int( cid & 16u ) == 0 ) + 0.5*float( int( cid & 2u ) == 0  ));
-
-    }
-
 
     out_g.color = surface_color.w*vec4( color, 1.0 );
 #ifdef DO_PAINT

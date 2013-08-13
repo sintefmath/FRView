@@ -12,7 +12,7 @@
 #include <vector>
 #include <boost/utility.hpp>
 #include <unordered_map>
-#include "Eclipse.hpp"
+#include "eclipse/Eclipse.hpp"
 
 template<typename REAL>
 class Project : public boost::noncopyable
@@ -23,10 +23,11 @@ public:
         GEOMETRY_CORNERPOINT_GRID
     };
 
-    Project();
+    Project(const std::string filename,
+             int refine_i = 1,
+             int refine_j = 1,
+             int refine_k = 1 );
 
-    template<class Container>
-    Project( const Container& files );
 
     GeometryType
     geometryType() const
@@ -106,6 +107,13 @@ public:
     const std::vector<int>
     cornerPointActNum() const { return m_cornerpoint_geometry.m_actnum; }
 
+
+    REAL
+    cornerPointXYScale() const { return m_cornerpoint_geometry.m_xyscale; }
+
+    REAL
+    cornerPointZScale() const { return m_cornerpoint_geometry.m_zscale; }
+
     struct Well
     {
         bool                                        m_defined;
@@ -128,9 +136,12 @@ public:
         SolutionReader                              m_reader;
         std::string                                 m_path;
         union {
-            Eclipse::Block                          m_unformatted_eclipse;
+            eclipse::Block                          m_unformatted_eclipse;
         }                                           m_location;
     };
+
+    const std::vector<int>&
+    fieldRemap() const { return m_cornerpoint_geometry.m_refine_map_compact; }
 
     bool
     solution( Solution& solution,
@@ -155,13 +166,17 @@ private:
         unsigned int                                    m_nx;
         unsigned int                                    m_ny;
         unsigned int                                    m_nz;
+        unsigned int                                    m_rx;
+        unsigned int                                    m_ry;
+        unsigned int                                    m_rz;
         unsigned int                                    m_nr;
+        REAL                                            m_xyscale;
+        REAL                                            m_zscale;
         std::vector<REAL>                               m_coord;
         std::vector<REAL>                               m_zcorn;
         std::vector<int>                                m_actnum;
+        std::vector<int>                                m_refine_map_compact;
     }                                               m_cornerpoint_geometry;
-
-
 
     struct ReportStep {
         unsigned int                                m_seqnum;
@@ -179,6 +194,14 @@ private:
 
     std::vector<ReportStep>                         m_report_steps;
     std::list<File>                                 m_unprocessed_files;
+
+    void
+    refineCornerpointGeometry( unsigned int rx,
+                               unsigned int ry,
+                               unsigned int rz );
+
+    void
+    bakeCornerpointGeometry();
 
     ReportStep&
     reportStepBySeqNum( unsigned int seqnum );
@@ -202,26 +225,16 @@ private:
     addFile( const std::string& file );
 
     void
-    import( const Eclipse::ReportStep& e_step,
+    import( const eclipse::ReportStep& e_step,
             const std::string path );
 
     void
-    addWell( const Eclipse::Well& ewell,
+    addWell( const eclipse::Well& ewell,
             const unsigned int sequence_number );
 
 
     void
-    refresh();
+    refresh( int rx, int ry, int rz );
 
 };
 
-template<typename REAL>
-template<class Container>
-Project<REAL>::Project( const Container& files )
-    : m_geometry_type( GEOMETRY_NONE )
-{
-    for( auto it=files.begin(); it!=files.end(); ++it ) {
-        addFile( *it );
-    }
-    refresh();
-}

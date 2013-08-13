@@ -4,6 +4,10 @@
 #include "Logger.hpp"
 #include "CPViewJob.hpp"
 
+namespace resources {
+    extern std::string cameramanipulator;
+}
+
 int
 main( int argc, char** argv )
 {
@@ -11,14 +15,14 @@ main( int argc, char** argv )
     if( is_master ){
         std::cerr << "Is master.\n";
     }
-    std::list<std::string> files;
-    files.push_back( "/work/cpgrids/misc/res2/BC0407.EGRID" );
-    files.push_back( "/work/cpgrids/misc/res2/BC0407.UNRST" );
-
     initializeLoggingFramework( &argc, argv );
-    CPViewJob* job = new CPViewJob( files );
-    tinia::trell::IPCGLJobController* observer = new tinia::trell::IPCGLJobController( is_master );
-    observer->setJob( job );
-    observer->run( argc, argv );
-    exit( EXIT_SUCCESS );
+
+    std::list<std::string> files;
+
+    CPViewJob job( files );
+    tinia::trell::IPCGLJobController controller( is_master );
+    controller.setJob( &job );
+    controller.addScript( resources::cameramanipulator );
+    controller.run( argc, argv );
+    return 0;
 }

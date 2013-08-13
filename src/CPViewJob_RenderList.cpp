@@ -16,10 +16,10 @@
 #include <tinia/renderlist/SetRasterState.hpp>
 
 #include "CPViewJob.hpp"
-#include "GridTess.hpp"
-#include "ClipPlane.hpp"
-#include "GridVoxelization.hpp"
-#include "VoxelSurface.hpp"
+#include "render/GridTess.hpp"
+#include "render/ClipPlane.hpp"
+#include "render/GridVoxelization.hpp"
+#include "render/VoxelSurface.hpp"
 
 namespace resources {
     extern const std::string gles_solid_vs;
@@ -31,31 +31,33 @@ namespace resources {
 const tinia::renderlist::DataBase*
 CPViewJob::getRenderList( const std::string& session, const std::string& key )
 {
-    if( !m_cares_about_renderlists ) {
+    if( !m_renderlist_initialized ) {
         initRenderList();
-        m_cares_about_renderlists = true;
+        m_renderlist_initialized = true;
     }
+    m_under_the_hood.update();
+    doLogic();
     fetchData();
     updateModelMatrices();
     doCompute();
 
-    bool profile;
-    m_model->getElementValue( "profile" , profile );
+    if( m_project && m_has_pipeline ) {
+        if( m_renderlist_state == RENDERLIST_CHANGED_CLIENTS_NOTIFIED ) {
+            m_renderlist_state = RENDERLIST_SENT;
 
-    if( m_renderlist_rethink ) {
-        m_renderlist_rethink = false;
-        if( profile ) {
-            m_profile_proxy_gen.beginQuery();
-        }
+            if( m_under_the_hood.profilingEnabled() ) {
+                m_under_the_hood.proxyGenerateTimer().beginQuery();
+            }
 
-        m_grid_voxelizer->build( m_grid_tess,
-                                    m_grid_tess_subset,
-                                    glm::value_ptr( m_local_to_world ) );
-        m_voxel_surface->build( m_grid_voxelizer, m_grid_field );
-        if( profile ) {
-            m_profile_proxy_gen.endQuery();
+            m_grid_voxelizer->build( m_grid_tess,
+                                     m_grid_tess_subset,
+                                     glm::value_ptr( m_local_to_world ) );
+            m_voxel_surface->build( m_grid_voxelizer, m_grid_field );
+            if( m_under_the_hood.profilingEnabled() ) {
+                m_under_the_hood.proxyGenerateTimer().endQuery();
+            }
+            updateRenderList();
         }
-        updateRenderList();
     }
     return &m_renderlist_db;
 }
@@ -145,6 +147,12 @@ void
 CPViewJob::updateRenderList( )
 {
     namespace rl = tinia::renderlist;
+
+    models::Appearance::Theme theme = m_appearance.theme();
+    if( m_theme != theme ) {
+
+    }
+
 
     m_renderlist_db.castedItemByName<rl::SetLocalCoordSys*>( "bbox_pos" )
             ->setOrientation( glm::value_ptr( m_bbox_from_world ),

@@ -20,23 +20,22 @@
 #include "CPViewJob.hpp"
 #include "Logger.hpp"
 #include "Project.hpp"
-#include "GridTess.hpp"
-#include "GridTessSubset.hpp"
-#include "GridTessSurf.hpp"
-#include "GridTessSurfBuilder.hpp"
-#include "GridTessSurfRenderer.hpp"
-#include "GridField.hpp"
-#include "CellSelector.hpp"
-#include "ClipPlane.hpp"
-#include "GridCubeRenderer.hpp"
-#include "TextRenderer.hpp"
-#include "WellRenderer.hpp"
-#include "TikZExporter.hpp"
-#include "CoordSysRenderer.hpp"
-#include "GridVoxelization.hpp"
-#include "VoxelSurface.hpp"
 #include "ASyncReader.hpp"
 #include "PerfTimer.hpp"
+#include "render/GridTess.hpp"
+#include "render/GridTessSubset.hpp"
+#include "render/GridTessSurf.hpp"
+#include "render/GridTessSurfBuilder.hpp"
+#include "render/GridTessSurfRenderer.hpp"
+#include "render/GridField.hpp"
+#include "render/CellSelector.hpp"
+#include "render/ClipPlane.hpp"
+#include "render/GridCubeRenderer.hpp"
+#include "render/TextRenderer.hpp"
+#include "render/WellRenderer.hpp"
+#include "render/CoordSysRenderer.hpp"
+#include "render/GridVoxelization.hpp"
+#include "render/VoxelSurface.hpp"
 
 using std::string;
 using std::stringstream;
@@ -44,23 +43,19 @@ using std::stringstream;
 
 CPViewJob::CPViewJob( const std::list<string>& files )
     : tinia::jobcontroller::OpenGLJob(),
+      m_file( m_model, *this ),
+      m_under_the_hood( m_model, *this ),
+      m_appearance( m_model ),
+      m_visibility_mask( models::Appearance::VISIBILITY_MASK_NONE ),
+      m_theme( 0 ),
+      m_grid_stats( m_model, *this ),
+      m_has_context( false ),
       m_async_reader( new ASyncReader( m_model ) ),
-      m_cares_about_renderlists( false ),
-      m_policies_changed( true ),
-      m_renderlist_rethink( false ),
-      m_clip_plane( NULL ),
-      m_grid_tess( NULL ),
-      m_grid_tess_subset( NULL ),
-      m_subset_surface( NULL ),
-      m_grid_tess_surf_builder( NULL ),
-      m_grid_field( NULL ),
-      m_tess_renderer( NULL ),
-      m_half_plane_selector( NULL ),
-      m_grid_cube_renderer( NULL ),
-      m_well_renderer( NULL ),
+      m_renderlist_initialized( false ),
+      m_renderlist_state( RENDERLIST_SENT ),
+      m_has_pipeline( false ),
       m_load_geometry( false )
 {
-    m_async_reader->issueReadProject( files );
 
     m_load_color_field = false;
     m_has_color_field = false;
@@ -68,11 +63,7 @@ CPViewJob::CPViewJob( const std::list<string>& files )
     m_care_about_updates = true;
     m_report_step_index = 0;
     m_solution_index = 0;
-    m_model->addStateListener(this);
 
-    m_faults_surface_tainted = true;
-    m_subset_surface_tainted = true;
-    m_boundary_surface_tainted = true;
 
     float identity[16] = {
         1.f, 0.f, 0.f, 0.f,
@@ -103,27 +94,71 @@ CPViewJob::CPViewJob( const std::list<string>& files )
 
 
     const double dmax = std::numeric_limits<double>::max();
+    using namespace tinia::model::gui;
 
-    m_model->addElement("viewer", viewer );
-    m_model->addElement<bool>("myTab", true);
+    VerticalLayout* root = new VerticalLayout;
+    HorizontalLayout* tab_buttons = new HorizontalLayout;
+    //tab_buttons->setEnabledKey( "asyncreader_working", true );
+
+    root->addChild( tab_buttons );
+
+    // File dialogue
+    PopupButton* file_popup = new PopupButton( m_file.titleKey(), false );
+    file_popup->setChild( m_file.guiFactory() );
+    tab_buttons->addChild( file_popup );
+
+    // Appearance
+    PopupButton* appearance_popup = new PopupButton( m_appearance.titleKey(), false );
+    appearance_popup->setChild( m_appearance.guiFactory() );
+    tab_buttons->addChild( appearance_popup );
+
+    // Profile dialogue
+    PopupButton* under_the_hood_popup = new PopupButton( m_under_the_hood.titleKey(), false );
+    under_the_hood_popup->setChild( m_under_the_hood.guiFactory() );
+    tab_buttons->addChild( under_the_hood_popup );
+    tab_buttons->addChild( new HorizontalExpandingSpace );
+
+    HorizontalLayout* app_pane = new HorizontalLayout;
+    root->addChild( app_pane );
     m_model->addElement<bool>("has_project", false );
+    //app_pane->setEnabledKey( "has_project" );
 
+    VerticalLayout* right_master = new VerticalLayout;
+    VerticalLayout* right_column = new VerticalLayout;
+
+
+    // Preprocess dialogue
+    if( 1 ) {
+        ElementGroup* preprocess_group = new ElementGroup( "asyncreader_working", true );
+        preprocess_group->setVisibilityKey( "asyncreader_working" );
+
+        HorizontalLayout* progress_layout = new HorizontalLayout;
+        progress_layout->addChild( new Label( "asyncreader_what", true) );
+        //progress_layout->addChild( new tinia::model::gui::Label( "asyncreader_progress", true ) );
+        progress_layout->addChild( new HorizontalExpandingSpace );
+        preprocess_group->setChild( progress_layout );
+        root->addChild( preprocess_group );
+    }
+
+
+
+    // Viewer
+    m_model->addElement("viewer", viewer );
     m_model->addElement<string>( "boundingbox", "-0.1 -0.1 -0.1 1.1 1.1 1.1" );
     m_model->addElement<int>( "renderlist", 0 );
-    m_model->addElement<bool>( "grid_details_enable", true, "Grid" );
-    m_model->addElement<bool>( "export", false, "Export");
-    m_model->addElement<bool>( "export_tikz", false, "TikZ");
-    m_model->addElement<string>( "grid_dim", "foo", "Dimensions" );
-    m_model->addElement<string>( "grid_total_cells", "baz", "Cells" );
-    m_model->addElement<string>( "grid_active_cells", "baz", "Active cells" );
-    m_model->addElement<string>( "grid_faces", "bar", "Faces" );
+    Canvas* canvas = new Canvas("viewer", "renderlist", "boundingbox" );
+    canvas->boundingBoxKey( "boundingbox" );
+    canvas->setViewerType( std::string( "MouseClickResponder" ) );
+    app_pane->addChild( canvas );
+    app_pane->addChild( right_master );
+    right_master->addChild( right_column );
+
+
+
     m_model->addElement<bool>( "field_info_enable", true, "Field" );
-//    m_model->addConstrainedElement<double>( "z_scale", 10.0, 0.01, 1000.0, "Z-scale" );
-    m_model->addConstrainedElement<double>( "z_scale", 1.0, 0.01, 1000.0, "Z-scale" );
     m_model->addElement<string>( "field_info_calendar", "n/a", "Date" );
     m_model->addElement<string>( "field_info_range", "n/a", "Range" );
     m_model->addElement<bool>( "project_tab", true, "Project" );
-    m_model->addElement<bool>( "rendering_label", true, "Rendering" );
     m_model->addElement<bool>( "transparency_label", true, "Transparency" );
     m_model->addElement<bool>( "surface_tab", true, "Surfaces" );
     m_model->addElement<bool>( "well_tab", true, "Wells" );
@@ -151,37 +186,9 @@ CPViewJob::CPViewJob( const std::list<string>& files )
                                                     &subsets[0],
                                                     &subsets[5] );
 
-    const char* edge_render_modes[2] = { "Surface Paint", "Geometric" };
-    m_model->addElementWithRestriction<string>( "edge_render_mode",
-                                                 edge_render_modes[0],
-                                                 &edge_render_modes[0],
-                                                 &edge_render_modes[2] );
-    m_model->addAnnotation( "edge_render_mode", "Edge render mode" );
-    m_model->addElement<bool>( "render_grid", false, "Render grid" );
-    m_model->addElement<bool>( "render_options", false, "Render options" );
-    m_model->addElement<bool>( "render_wells", false, "Render wells" );
-
-    m_model->addElement<bool>( "white_background", true, "White background" );
-    m_model->addElement<bool>( "single_surface", true, "Extract single surface" );
-
-    m_model->addElement<bool>("faults_label", true, "Faults" );
-    m_model->addConstrainedElement<int>( "faults_fill_opacity", 0, 0, 100, "Fill" );
-    m_model->addConstrainedElement<int>( "faults_outline_opacity", 0, 0, 100, "Outlines" );
-    m_model->addElement<bool>( "rendering_quality_group", true, "Rendering quality" );
-    m_model->addConstrainedElement<int>( "rendering_quality", 3, 0, 3, "Rendering quality" );
-    m_model->addElement<string>( "rendering_quality_string", "high", "Details" );
-
-    m_model->addConstrainedElement<int>( "line_thickness", 50, 1, 100, "Line thickness" );
-    //    m_model->addConstrainedElement<int>( "subset_fill_opacity", 0, 0, 100, "Fill" );
-//    m_model->addConstrainedElement<int>( "subset_outline_opacity", 20, 0, 100, "Outlines");
-    m_model->addConstrainedElement<int>( "subset_fill_opacity", 100, 0, 100, "Fill" );
-    m_model->addConstrainedElement<int>( "subset_outline_opacity", 100, 0, 100, "Outlines");
-    m_model->addConstrainedElement<int>( "boundary_fill_opacity", 0, 0, 100, "Fill" );
-    m_model->addConstrainedElement<int>( "boundary_outline_opacity", 0, 0, 100, "Outlines" );
     m_model->addElement<bool>( "surface_subset_field_range", false );
     m_model->addElement<bool>( "surface_subset_index_range", false );
     m_model->addElement<bool>( "surface_subset_plane", false );
-    m_model->addElement<bool>( "subset_label", true, "Subset" );
     m_model->addElement<bool>( "tessellation_label", true, "Tessellation" );
     m_model->addElement<bool>( "tess_flip_orientation", false, "Flip orientation" );
     m_model->addElement<bool>( "plane_select_PY", false, "PY" );
@@ -205,55 +212,34 @@ CPViewJob::CPViewJob( const std::list<string>& files )
                                                 solutions.begin(),
                                                 solutions.end() );
     m_model->addAnnotation( "field_select_solution_override", "Specific solution");
-    m_model->addElement<bool>("grid_boundary", true, "Grid boundary" );
     m_model->addElement<bool>( "field_range_label", true, "Range" );
-    m_model->addElement<bool>( "z_scale_label", true, "Z-scale" );
     m_model->addElement<bool>( "color_label", true, "Color" );
     m_model->addElement<bool>( "details_label", true, "Details" );
 
-    m_model->addElement<bool>( "profile", false, "Enable profiling" );
-    m_model->addElement<bool>( "profile_reset", false, "Reset profiling counters" );
-    m_model->addElement<double>( "profile_proxy_gen", 0.f, "Create proxy (ns)" );
-    m_model->addElement<double>( "profile_surface_gen", 0.f, "Create surface geo (ns)" );
-    m_model->addElement<double>( "profile_surface_render", 0.f, "Render surface (ns)" );
 
-    m_model->addElement<double>( "profile_proxy_gen_s", 0.f, "Samples:" );
-    m_model->addElement<double>( "profile_surface_gen_s", 0.f, "Samples:" );
-    m_model->addElement<double>( "profile_surface_render_s", 0.f, "Samples:" );
-
-    using namespace tinia::model::gui;
-
-    tinia::model::gui::HorizontalLayout* root = new tinia::model::gui::HorizontalLayout;
-    tinia::model::gui::VerticalLayout* right_master = new tinia::model::gui::VerticalLayout;
-
-    tinia::model::gui::VerticalLayout* right_column = new tinia::model::gui::VerticalLayout;
-    right_column->setEnabledKey( "has_project" );
-    tinia::model::gui::Canvas* canvas = new tinia::model::gui::Canvas("viewer", "renderlist", "boundingbox" );
-    root->addChild( canvas );
-    root->addChild( right_master );
-    right_master->addChild( right_column );
-
-
+    m_model->addStateListener( "asyncreader_ticket", this);
+    m_model->addStateListener( "field_solution", this);
+    m_model->addStateListener( "field_report_step", this);
+    m_model->addStateListener( "plane_select_PX", this);
+    m_model->addStateListener( "plane_select_NX", this);
+    m_model->addStateListener( "plane_select_PY", this);
+    m_model->addStateListener( "plane_select_NY", this);
+    m_model->addStateListener( "plane_select_shift", this);
+    m_model->addStateListener( "index_range_select_min_i", this);
+    m_model->addStateListener( "index_range_select_max_i", this);
+    m_model->addStateListener( "index_range_select_min_j", this);
+    m_model->addStateListener( "index_range_select_max_j", this);
+    m_model->addStateListener( "index_range_select_min_k", this);
+    m_model->addStateListener( "index_range_select_max_k", this);
+    m_model->addStateListener( "field_select_min", this);
+    m_model->addStateListener( "field_select_max", this);
+    m_model->addStateListener( "surface_subset", this);
+    m_model->addStateListener( "field_range_enable", this);
+    m_model->addStateListener( "tess_flip_orientation", this);
 
     // --- info
-    tinia::model::gui::ElementGroup* grid_details_group = new tinia::model::gui::ElementGroup( "grid_details_enable", true );
-    tinia::model::gui::Grid* grid_details_grid = new tinia::model::gui::Grid( 6, 4 );
-    grid_details_grid->setChild( 0, 1, new tinia::model::gui::HorizontalSpace );
-    grid_details_grid->setChild( 0, 3, new tinia::model::gui::HorizontalExpandingSpace );
-    grid_details_grid->setChild( 0, 0, new tinia::model::gui::Label( "grid_dim" ) );
-    grid_details_grid->setChild( 0, 2, new tinia::model::gui::Label( "grid_dim", true ) );
-    grid_details_grid->setChild( 1, 0, new tinia::model::gui::Label( "grid_total_cells" ) );
-    grid_details_grid->setChild( 1, 2, new tinia::model::gui::Label( "grid_total_cells", true ) );
-    grid_details_grid->setChild( 2, 0, new tinia::model::gui::Label( "grid_active_cells" ) );
-    grid_details_grid->setChild( 2, 2, new tinia::model::gui::Label( "grid_active_cells", true ) );
-    grid_details_grid->setChild( 3, 0, new tinia::model::gui::Label( "grid_faces" ) );
-    grid_details_grid->setChild( 3, 2, new tinia::model::gui::Label( "grid_faces", true ) );
-    grid_details_grid->setChild( 4, 0, new tinia::model::gui::Label( "z_scale" ) );
-    grid_details_grid->setChild( 4, 2, new tinia::model::gui::DoubleSpinBox( "z_scale" ) );
-    grid_details_grid->setChild( 5, 0, new tinia::model::gui::Label( "export" ) );
-    grid_details_grid->setChild( 5, 2, new tinia::model::gui::Button( "export_tikz" ) );
-    grid_details_group->setChild( grid_details_grid );
-    right_column->addChild( grid_details_group );
+    right_column->addChild( m_grid_stats.guiFactory() );
+
 
     tinia::model::gui::ElementGroup* field_details_group = new tinia::model::gui::ElementGroup( "field_info_enable", true );
     tinia::model::gui::Grid* field_details_grid = new tinia::model::gui::Grid( 4, 4 );
@@ -330,79 +316,6 @@ CPViewJob::CPViewJob( const std::list<string>& files )
     subsets_layout->addChild( subset_plane_popup );
 
 
-
-
-    Grid* alpha_faults_layout = new Grid(2,3);
-    alpha_faults_layout->setChild( 0, 0, new Label( "faults_fill_opacity" ) );
-    alpha_faults_layout->setChild( 0, 1, new HorizontalSlider( "faults_fill_opacity" ) );
-    alpha_faults_layout->setChild( 1, 0, new Label( "faults_outline_opacity" ) );
-    alpha_faults_layout->setChild( 1, 1, new HorizontalSlider( "faults_outline_opacity" ) );
-    alpha_faults_layout->setChild( 2, 1, new HorizontalExpandingSpace );
-    ElementGroup* alpha_faults_group = new ElementGroup( "faults_label", true );
-    alpha_faults_group->setChild( alpha_faults_layout );
-
-    Grid* alpha_subset_layout = new Grid(3,2);
-    alpha_subset_layout->setChild( 0, 0, new Label( "subset_fill_opacity" ) );
-    alpha_subset_layout->setChild( 0, 1, new HorizontalSlider( "subset_fill_opacity" ) );
-    alpha_subset_layout->setChild( 1, 0, new Label( "subset_outline_opacity" ) );
-    alpha_subset_layout->setChild( 1, 1, new HorizontalSlider( "subset_outline_opacity" ) );
-    alpha_subset_layout->setChild( 2, 1, new HorizontalExpandingSpace );
-    ElementGroup* alpha_subset_group = new ElementGroup( "subset_label", true );
-    alpha_subset_group->setChild( alpha_subset_layout );
-
-    Grid* alpha_boundary_layout = new Grid(3,2);
-    alpha_boundary_layout->setChild( 0, 0, new Label( "boundary_fill_opacity" ) );
-    alpha_boundary_layout->setChild( 0, 1, new HorizontalSlider( "boundary_fill_opacity" ) );
-    alpha_boundary_layout->setChild( 1, 0, new Label( "boundary_outline_opacity" ) );
-    alpha_boundary_layout->setChild( 1, 1, new HorizontalSlider( "boundary_outline_opacity" ) );
-    alpha_boundary_layout->setChild( 2, 1, new HorizontalExpandingSpace );
-    ElementGroup* alpha_boundary_group = new ElementGroup( "grid_boundary", true );
-    alpha_boundary_group->setChild( alpha_boundary_layout );
-
-    // Group that contains rendering quality slider
-    Grid* alpha_quality_layout = new Grid(2,2);
-    alpha_quality_layout->setChild( 0, 0, new HorizontalSlider( "rendering_quality", true ) );
-    alpha_quality_layout->setChild( 0, 1, new Label( "rendering_quality_string", true ) );
-    ElementGroup* rendering_quality_group = new ElementGroup( "rendering_quality_group", true );
-    rendering_quality_group->setChild( alpha_quality_layout );
-
-    // Group that contains edge render mode
-
-    ElementGroup* edge_render_mode_group = new ElementGroup( "edge_render_mode", true );
-    edge_render_mode_group->setChild( new tinia::model::gui::ComboBox( "edge_render_mode" ) );
-
-    ElementGroup* line_thickness_group = new ElementGroup( "line_thickness", true );
-    line_thickness_group->setChild( new HorizontalSlider( "line_thickness", true ) );
-
-
-
-    VerticalLayout* render_options_layout = new VerticalLayout;
-    render_options_layout->addChild( new tinia::model::gui::CheckBox( "render_grid" ) );
-    render_options_layout->addChild( new tinia::model::gui::CheckBox( "white_background" ) );
-    render_options_layout->addChild( new tinia::model::gui::CheckBox( "single_surface" ) );
-    ElementGroup* render_options_group = new ElementGroup( "render_options", true );
-    render_options_group->setChild( render_options_layout );
-
-    VerticalLayout* transparency_layout = new VerticalLayout;
-    transparency_layout->addChild( render_options_group );
-    transparency_layout->addChild( rendering_quality_group );
-    transparency_layout->addChild( edge_render_mode_group );
-    transparency_layout->addChild( line_thickness_group );
-    transparency_layout->addChild( alpha_faults_group );
-    transparency_layout->addChild( alpha_subset_group );
-    transparency_layout->addChild( alpha_boundary_group );
-
-    PopupButton* transparency_popup = new PopupButton( "rendering_quality_string", false );
-    transparency_popup->setChild( transparency_layout );
-
-
-    // Small container that holds the rendering quality value in a label and a
-    // popup for details.
-    HorizontalLayout* transparency_popup_c = new HorizontalLayout;
-    transparency_popup_c->addChild( new Label( "rendering_quality_string", true ) );
-    transparency_popup_c->addChild( transparency_popup );
-
-
     Grid* colormap_range_grid = new Grid( 2, 3 );
     colormap_range_grid->setVisibilityKey( "field_range_enable" );
     colormap_range_grid->setChild( 0, 0, new Label( "field_range_min" ) );
@@ -427,44 +340,11 @@ CPViewJob::CPViewJob( const std::list<string>& files )
     surf_details_grid->setChild( 0, 2, subsets_layout );
     surf_details_grid->setChild( 1, 0, new Label( "tessellation_label" ) );
     surf_details_grid->setChild( 1, 2, new CheckBox( "tess_flip_orientation" ) );
-    surf_details_grid->setChild( 2, 0, new Label( "rendering_quality_group" /*"transparency_label"*/ ) );
-    surf_details_grid->setChild( 2, 2, transparency_popup_c );
-    surf_details_grid->setChild( 3, 0, new Label( "colormap_label" ) );
-    surf_details_grid->setChild( 3, 2, colormap_popup );
+    surf_details_grid->setChild( 2, 0, new Label( "colormap_label" ) );
+    surf_details_grid->setChild( 2, 2, colormap_popup );
 
     surf_details_group->setChild( surf_details_grid );
     right_column->addChild( surf_details_group );
-
-    right_master->addChild( new tinia::model::gui::CheckBox( "profile" ) );
-    Grid* profile_grid = new Grid( 4, 4 );
-    profile_grid->setVisibilityKey( "profile" );
-    right_master->addChild( profile_grid );
-    profile_grid->setChild( 0, 0, new Button( "profile_reset" ) );
-    profile_grid->setChild( 1, 0, new Label( "profile_proxy_gen" ) );
-    profile_grid->setChild( 1, 1, new Label( "profile_proxy_gen", true ) );
-    profile_grid->setChild( 1, 2, new Label( "profile_proxy_gen_s" ) );
-    profile_grid->setChild( 1, 3, new Label( "profile_proxy_gen_s", true ) );
-    profile_grid->setChild( 2, 0, new Label( "profile_surface_gen" ) );
-    profile_grid->setChild( 2, 1, new Label( "profile_surface_gen", true ) );
-    profile_grid->setChild( 2, 2, new Label( "profile_surface_gen_s" ) );
-    profile_grid->setChild( 2, 3, new Label( "profile_surface_gen_s", true ) );
-    profile_grid->setChild( 3, 0, new Label( "profile_surface_render" ) );
-    profile_grid->setChild( 3, 1, new Label( "profile_surface_render", true ) );
-    profile_grid->setChild( 3, 2, new Label( "profile_surface_render_s" ) );
-    profile_grid->setChild( 3, 3, new Label( "profile_surface_render_s", true ) );
-
-
-    ElementGroup* preprocess_group = new ElementGroup( "asyncreader_working", true );
-    preprocess_group->setVisibilityKey( "asyncreader_working" );
-
-    tinia::model::gui::HorizontalLayout* progress_layout = new tinia::model::gui::HorizontalLayout;
-    progress_layout->addChild( new tinia::model::gui::Label( "asyncreader_what", true) );
-    //progress_layout->addChild( new tinia::model::gui::Label( "asyncreader_progress", true ) );
-    progress_layout->addChild( new tinia::model::gui::HorizontalExpandingSpace );
-    preprocess_group->setChild( progress_layout );
-    right_master->addChild( preprocess_group );
-
-
 
 
     right_master->addChild( new tinia::model::gui::VerticalExpandingSpace );
@@ -474,6 +354,12 @@ CPViewJob::CPViewJob( const std::list<string>& files )
 
     m_model->setGUILayout( root, tinia::model::gui::DESKTOP);
 
+    for(auto it=files.begin(); it!=files.end(); ++it ) {
+        if( (*it).find('.') != std::string::npos ) {
+            loadFile( *it, 1, 1, 1, false );
+            break;
+        }
+    }
 }
 
 bool
@@ -499,6 +385,38 @@ CPViewJob::handleButtonClick( tinia::model::StateElement *stateElement )
     return false;
 }
 
+void
+CPViewJob::loadFile( const std::string& filename,
+                     int refine_i,
+                     int refine_j,
+                     int refine_k,
+                     bool triangulate )
+{
+    m_file.setFileName( filename );
+
+    m_load_geometry = false;
+    m_load_color_field = false;
+    m_project = std::shared_ptr< Project<float> >();
+    std::list<std::string> solutions = {"none"};
+    m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
+    m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
+    m_model->updateConstraints<int>("field_report_step", 0, 0, 0 );
+    m_model->updateConstraints<int>( "field_select_report_step", 0, 0, 0 );
+    m_model->updateConstraints<int>( "index_range_select_min_i", 0, 0, 0 );
+    m_model->updateConstraints<int>( "index_range_select_max_i", 0, 0, 0 );
+    m_model->updateConstraints<int>( "index_range_select_min_j", 0, 0, 0 );
+    m_model->updateConstraints<int>( "index_range_select_max_j", 0, 0, 0 );
+    m_model->updateConstraints<int>( "index_range_select_min_k", 0, 0, 0 );
+    m_model->updateConstraints<int>( "index_range_select_max_k", 0, 0, 0 );
+    m_grid_stats.update();
+
+    releasePipeline();
+    m_async_reader->issueReadProject( filename,
+                                      refine_i,
+                                      refine_j,
+                                      refine_k,
+                                      triangulate );
+}
 
 void
 CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
@@ -513,9 +431,7 @@ CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
 
     const string& key = stateElement->getKey();
 
-    if( key == "asyncreader_ticket" ) {
-
-        // Async job is finished
+    if( key == "asyncreader_ticket" ) { // Async job is finished
         if( !m_project ) {
             m_load_geometry = true;
         }
@@ -523,44 +439,22 @@ CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_load_color_field = true;
         }
     }
-    else if( key == "profile_reset" && handleButtonClick(stateElement)) {
-        m_profile_surface_render.reset();
-    }
-    else if( key == "export_tikz" && handleButtonClick(stateElement) ) {
-        tinia::model::Viewer viewer;
-        m_model->getElementValue( "viewer", viewer );
-        glm::mat4 mv = glm::make_mat4( viewer.modelviewMatrix.data() );
-        glm::mat4 p = glm::make_mat4( viewer.projectionMatrix.data() );
-
-        float s = std::max( viewer.width, viewer.height );
-        glm::mat4 vpt( viewer.width/s, 0.f, 0.f, 0.f,
-                      0.0f, viewer.height/s, 0.f, 0.f,
-                      0.f, 0.f, 1.f, 0.f,
-                      0.f, 0.f, 0.f, 1.f );
-
-        TikZExporter exporter( m_grid_tess );
-        exporter.run( "dump.tex",
-                      vpt*p*mv*m_local_to_world,
-                      glm::transpose( glm::inverse( mv*m_local_to_world ) ) );
-    }
-    if( key == "field_solution" ) {
-        if( m_project ) {
-            string value;
-            stateElement->getValue<string>( value );
-            for(unsigned int i=0; i<m_project->solutions(); i++ ) {
-                if( value == m_project->solutionName(i) ) {
-                    m_solution_index = i;
-                    break;
-                }
+    else if( key == "field_solution" && m_project ) {
+        string value;
+        stateElement->getValue<string>( value );
+        for(unsigned int i=0; i<m_project->solutions(); i++ ) {
+            if( value == m_project->solutionName(i) ) {
+                m_solution_index = i;
+                break;
             }
-            Project<float>::Solution sol;
-            if( m_project->solution( sol, m_solution_index, m_report_step_index ) ) {
-                if( m_async_reader->issueReadSolution( sol ) ) {
-                }
+        }
+        Project<float>::Solution sol;
+        if( m_project->solution( sol, m_solution_index, m_report_step_index ) ) {
+            if( m_async_reader->issueReadSolution( sol ) ) {
             }
         }
     }
-    else if( key == "field_report_step" ) {
+    else if( key == "field_report_step" && m_project ) {
         int value;
         stateElement->getValue<int>( value );
         m_report_step_index = value;
@@ -570,50 +464,52 @@ CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             }
         }
     }
-    else if( key == "edge_render_mode" ) {
-        m_do_update_subset = true;
-        m_do_update_renderlist = true;
-    }
     else if( key == "plane_select_PX" && handleButtonClick(stateElement) ) {
-        if( m_clip_plane != NULL ) {
+        if( m_clip_plane.get() != NULL ) {
             m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, -0.1*M_PI_4 ) ) );
             m_do_update_subset = true;
-            m_do_update_renderlist = true;
+            if( m_renderlist_state == RENDERLIST_SENT ) {
+                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+            }
         }
     }
     else if( key == "plane_select_NX"  && handleButtonClick(stateElement) ) {
-        if( m_clip_plane != NULL ) {
+        if( m_clip_plane.get() != NULL ) {
             m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, 0.1*M_PI_4 ) ) );
             m_do_update_subset = true;
-            m_do_update_renderlist = true;
+            if( m_renderlist_state == RENDERLIST_SENT ) {
+                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+            }
         }
     }
     else if( key == "plane_select_PY"  && handleButtonClick(stateElement) ) {
-        if( m_clip_plane != NULL ) {
+        if( m_clip_plane.get() != NULL ) {
             m_clip_plane->rotate( glm::quat( glm::vec3( 0.1*M_PI_4, 0.f, 0.f ) ) );
             m_do_update_subset = true;
-            m_do_update_renderlist = true;
+            if( m_renderlist_state == RENDERLIST_SENT ) {
+                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+            }
         }
     }
     else if( key == "plane_select_NY"  && handleButtonClick(stateElement) ) {
-        if( m_clip_plane != NULL ) {
+        if( m_clip_plane.get() != NULL ) {
             m_clip_plane->rotate( glm::quat( glm::vec3( -0.1*M_PI_4, 0.f, 0.f ) ) );
             m_do_update_subset = true;
-            m_do_update_renderlist = true;
+            if( m_renderlist_state == RENDERLIST_SENT ) {
+                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+            }
         }
     }
     else if( key == "plane_select_shift" ) {
         int value;
         stateElement->getValue<int>( value );
-        if( m_clip_plane != NULL ) {
+        if( m_clip_plane.get() != NULL ) {
             m_clip_plane->setOffset( (1.7f/1000.f)*(value) );
             m_do_update_subset = true;
-            m_do_update_renderlist = true;
+            if( m_renderlist_state == RENDERLIST_SENT ) {
+                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+            }
         }
-    }
-    else if( key == "single_surface" ) {
-        m_do_update_subset = true;
-        m_do_update_renderlist = true;
     }
     else if( key == "index_range_select_min_i" ) {
         int min;
@@ -624,7 +520,9 @@ CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_max_i", min );
         }
         m_do_update_subset = true;
-        m_do_update_renderlist = true;
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        }
     }
     else if( key == "index_range_select_max_i" ) {
         int max;
@@ -635,7 +533,9 @@ CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_min_i", max );
         }
         m_do_update_subset = true;
-        m_do_update_renderlist = true;
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        }
     }
     else if( key == "index_range_select_min_j" ) {
         int min;
@@ -646,7 +546,9 @@ CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_max_j", min );
         }
         m_do_update_subset = true;
-        m_do_update_renderlist = true;
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        }
     }
     else if( key == "index_range_select_max_j" ) {
         int max;
@@ -657,7 +559,9 @@ CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_min_j", max );
         }
         m_do_update_subset = true;
-        m_do_update_renderlist = true;
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        }
     }
     else if( key == "index_range_select_min_k" ) {
         int min;
@@ -668,7 +572,9 @@ CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_max_k", min );
         }
         m_do_update_subset = true;
-        m_do_update_renderlist = true;
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        }
     }
     else if( key == "index_range_select_max_k" ) {
         int max;
@@ -679,15 +585,21 @@ CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_min_k", max );
         }
         m_do_update_subset = true;
-        m_do_update_renderlist = true;
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        }
     }
     else if( key == "field_select_min" ) {
         m_do_update_subset = true;
-        m_do_update_renderlist = true;
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        }
     }
     else if( key == "field_select_max" ) {
         m_do_update_subset = true;
-        m_do_update_renderlist = true;
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        }
     }
     else if( key == "surface_subset" ) {
         string value;
@@ -719,50 +631,26 @@ CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "surface_subset_plane", true );
         }
         m_do_update_subset = true;
-        m_do_update_renderlist = true;
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        }
     }
     else if( key == "field_range_enable" ) {
         bool value;
         stateElement->getValue( value );
-        if( !value && m_grid_field != NULL ) {
+        if( !value && m_grid_field.get() != NULL ) {
             m_model->updateElement<double>( "field_range_min", m_grid_field->minValue() );
             m_model->updateElement<double>( "field_range_max", m_grid_field->maxValue() );
         }
     }
     else if( key == "tess_flip_orientation" ) {
         m_do_update_subset = true;
-        m_do_update_renderlist = true;
-    }
-    else if( key == "z_scale" ) {
-        m_do_update_renderlist = true;
-        if( m_render_clip_plane ) {
-            m_do_update_subset = true;
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
     }
-    else if( key == "rendering_quality" ) {
-        int value;
-        stateElement->getValue( value );
-        switch( value ) {
-        case 0:
-            m_model->updateElement<string>( "rendering_quality_string", "crappy" );
-            break;
-        case 1:
-            m_model->updateElement<string>( "rendering_quality_string", "low" );
-            break;
-        case 2:
-            m_model->updateElement<string>( "rendering_quality_string", "medium" );
-            break;
-        case 3:
-            m_model->updateElement<string>( "rendering_quality_string", "high" );
-            break;
-        }
-    }
-
-    if( m_load_color_field ) {
-        //        LOGGER_DEBUG( log, "report_step_index=" << m_report_step_index << ", solution=" << m_solution_index );
-    }
-    m_policies_changed = true;
     m_care_about_updates = true;
+    doLogic();
 }
 
 void
@@ -773,57 +661,65 @@ CPViewJob::triggerRedraw( const string& viewer_key )
     m_model->updateElement( viewer_key, viewer );
 }
 
-
 void
 CPViewJob::updateModelMatrices()
 {
-    glm::vec3 bbmin( m_grid_tess->minBBox()[0], m_grid_tess->minBBox()[1], m_grid_tess->minBBox()[2] );
-    glm::vec3 bbmax( m_grid_tess->maxBBox()[0], m_grid_tess->maxBBox()[1], m_grid_tess->maxBBox()[2] );
+    if( m_has_pipeline ) {
+        glm::vec3 bbmin( m_grid_tess->minBBox()[0], m_grid_tess->minBBox()[1], m_grid_tess->minBBox()[2] );
+        glm::vec3 bbmax( m_grid_tess->maxBBox()[0], m_grid_tess->maxBBox()[1], m_grid_tess->maxBBox()[2] );
+        glm::vec3 shift = -0.5f*( bbmin + bbmax );
+        float scale_xy = std::max( (bbmax.x-bbmin.x),
+                                   (bbmax.y-bbmin.y) );
 
-    glm::vec3 shift = -0.5f*( bbmin + bbmax );
-    float scale_xy = std::max( (bbmax.x-bbmin.x),
-                               (bbmax.y-bbmin.y) );
-    double scale_z;
-    m_model->getElementValue( "z_scale", scale_z );
+        float scale_z = m_grid_stats.zScale();
+        if( m_project.get() != NULL ) {
+            scale_z = scale_z*(m_project->cornerPointZScale()/m_project->cornerPointXYScale());
+        }
+        m_local_to_world = glm::mat4();
+        m_local_to_world = glm::translate( m_local_to_world, glm::vec3(0.5f ) );
+        m_local_to_world = glm::scale( m_local_to_world, glm::vec3( 1.f/scale_xy, 1.f/scale_xy, scale_z/scale_xy) );
+        m_local_to_world = glm::translate( m_local_to_world, shift );
 
-    m_local_to_world = glm::mat4();
-    m_local_to_world = glm::translate( m_local_to_world, glm::vec3(0.5f ) );
-    m_local_to_world = glm::scale( m_local_to_world, glm::vec3( 1.f/scale_xy, 1.f/scale_xy, scale_z/scale_xy) );
-    m_local_to_world = glm::translate( m_local_to_world, shift );
+        m_local_from_world = glm::mat4();
+        m_local_from_world = glm::translate( m_local_from_world, -shift );
+        m_local_from_world = glm::scale( m_local_from_world, glm::vec3( scale_xy, scale_xy, scale_xy/scale_z ) );
+        m_local_from_world = glm::translate( m_local_from_world, -glm::vec3(0.5f ) );
 
-
-
-    m_local_from_world = glm::mat4();
-    m_local_from_world = glm::translate( m_local_from_world, -shift );
-    m_local_from_world = glm::scale( m_local_from_world, glm::vec3( scale_xy, scale_xy, scale_xy/scale_z ) );
-    m_local_from_world = glm::translate( m_local_from_world, -glm::vec3(0.5f ) );
-
-
-    m_bbox_to_world = glm::translate( glm::mat4(), glm::vec3( -0.1f ) );
-    m_bbox_to_world = glm::scale( m_bbox_to_world, glm::vec3( 1.2f ) );
-    m_bbox_from_world = glm::inverse( m_bbox_to_world );
+        m_bbox_to_world = glm::translate( glm::mat4(), glm::vec3( -0.1f ) );
+        m_bbox_to_world = glm::scale( m_bbox_to_world, glm::vec3( 1.2f ) );
+        m_bbox_from_world = glm::inverse( m_bbox_to_world );
+    }
+    else {
+        m_local_to_world = glm::mat4();
+        m_local_from_world = glm::mat4();
+        m_bbox_to_world = glm::mat4();
+        m_bbox_from_world = glm::mat4();
+    }
 }
 
 void
 CPViewJob::updateProxyMatrices()
 {
-    const float* t = m_proxy_transform;
-
-    m_proxy_to_world =
-            m_local_to_world *
-            glm::mat4( t[0], t[1], t[2], t[3],
-                       t[4], t[5], t[6], t[7],
-                       t[8], t[9], t[10], t[11],
-                       t[12], t[13], t[14], t[15] );
-
-    m_proxy_to_world = glm::translate( m_proxy_to_world, glm::vec3( m_proxy_box_min[0],
-                                                                    m_proxy_box_min[1],
-                                                                    m_proxy_box_min[2] ) );
-    m_proxy_to_world = glm::scale( m_proxy_to_world, glm::vec3( m_proxy_box_max[0]-m_proxy_box_min[0],
-                                                                m_proxy_box_max[1]-m_proxy_box_min[1],
-                                                                m_proxy_box_max[2]-m_proxy_box_min[2] ) );
-    m_proxy_from_world = glm::inverse( m_proxy_to_world );
-
+    if( m_has_pipeline ) {
+        const float* t = m_proxy_transform;
+        m_proxy_to_world =
+                m_local_to_world *
+                glm::mat4( t[0],  t[1],  t[2],  t[3],
+                           t[4],  t[5],  t[6],  t[7],
+                           t[8],  t[9],  t[10], t[11],
+                           t[12], t[13], t[14], t[15] );
+        m_proxy_to_world = glm::translate( m_proxy_to_world, glm::vec3( m_proxy_box_min[0],
+                                           m_proxy_box_min[1],
+                                           m_proxy_box_min[2] ) );
+        m_proxy_to_world = glm::scale( m_proxy_to_world, glm::vec3( m_proxy_box_max[0]-m_proxy_box_min[0],
+                                       m_proxy_box_max[1]-m_proxy_box_min[1],
+                                       m_proxy_box_max[2]-m_proxy_box_min[2] ) );
+        m_proxy_from_world = glm::inverse( m_proxy_to_world );
+    }
+    else {
+        m_proxy_to_world = glm::mat4();
+        m_proxy_from_world = glm::mat4();
+    }
 }
 
 #ifndef APIENTRY
@@ -862,30 +758,28 @@ static void APIENTRY debugLogger( GLenum source,
     case GL_DEBUG_TYPE_OTHER: type_str = "other"; break;
     }
 
+    Logger log = getLogger( std::string("GL_KHR_debug.") + source_str + "." + type_str );
     const char* severity_str = "---";
     switch( severity ) {
-    case GL_DEBUG_SEVERITY_HIGH: severity_str = "high"; break;
-    case GL_DEBUG_SEVERITY_MEDIUM: severity_str = "medium"; break;
-    case GL_DEBUG_SEVERITY_LOW: severity_str = "low"; break;
+    case GL_DEBUG_SEVERITY_HIGH:
+        LOGGER_FATAL( log, message );
+        break;
+    case GL_DEBUG_SEVERITY_MEDIUM:
+        LOGGER_ERROR( log, message );
+        break;
+    case GL_DEBUG_SEVERITY_LOW:
+        LOGGER_DEBUG( log, message );
+        break;
     }
-
-    std::cerr << "GL [severity=" << severity_str
-              << "src=" << source_str
-              << ", type=" << type_str
-              << "] " << message << std::endl;
 }
 
 bool
 CPViewJob::initGL()
 {
     Logger log = getLogger( "CPViewJob.initGL" );
-    if( m_grid_tess != NULL ) {
-        LOGGER_ERROR( log, "initGL invoked multiple times." );
-        return false;
-    }
     glewInit();
 
-    if( glewIsSupported( "GL_KHR_debug" ) ) {
+    if( false && glewIsSupported( "GL_KHR_debug" ) ) {
         glEnable( GL_DEBUG_OUTPUT );
         glDebugMessageCallback( debugLogger, NULL );
         glDebugMessageControl( GL_DONT_CARE,
@@ -894,64 +788,129 @@ CPViewJob::initGL()
                                0, NULL, GL_TRUE );
 
     }
-
-
-    m_well_labels = new TextRenderer();
-    m_clip_plane = new ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) );
-    m_grid_tess = new GridTess;
-    m_faults_surface = new GridTessSurf;
-    m_subset_surface = new GridTessSurf;
-    m_boundary_surface = new GridTessSurf;
-    m_grid_tess_surf_builder = new GridTessSurfBuilder;
-    m_grid_field = new GridField( m_grid_tess );
-    m_tess_renderer = new GridTessSurfRenderer;
-    m_all_selector = new AllSelector;
-    m_field_selector = new FieldSelector;
-    m_index_selector = new IndexSelector;
-    m_plane_selector = new PlaneSelector;
-    m_half_plane_selector = new HalfPlaneSelector;
-    m_grid_tess_subset = new GridTessSubset;
-    m_grid_cube_renderer = new GridCubeRenderer;
-    m_well_renderer = new WellRenderer();
-    m_coordsys_renderer = new CoordSysRenderer;
-    m_grid_voxelizer = new GridVoxelization;
-    m_voxel_surface = new VoxelSurface;
-
+    m_has_context = true;
+    if( m_project.get() != NULL ) {
+        setupPipeline();
+    }
     return true;
 }
 
+void
+CPViewJob::releasePipeline()
+{
+    if( !m_has_context ) {
+        return;
+    }
+    m_well_labels = std::shared_ptr<render::TextRenderer>();
+    m_clip_plane = std::shared_ptr<render::ClipPlane>();
+    m_grid_tess = std::shared_ptr<render::GridTess>();
+    m_faults_surface = std::shared_ptr<render::GridTessSurf>();
+    m_subset_surface = std::shared_ptr<render::GridTessSurf>();
+    m_boundary_surface = std::shared_ptr<render::GridTessSurf>();
+    m_grid_tess_surf_builder = std::shared_ptr<render::GridTessSurfBuilder>();
+    m_grid_field = std::shared_ptr<render::GridField>();
+    m_tess_renderer = std::shared_ptr<render::GridTessSurfRenderer>();
+    m_all_selector = std::shared_ptr<render::AllSelector>();
+    m_field_selector = std::shared_ptr<render::FieldSelector>();
+    m_index_selector = std::shared_ptr<render::IndexSelector>();
+    m_plane_selector = std::shared_ptr<render::PlaneSelector>();
+    m_half_plane_selector = std::shared_ptr<render::HalfPlaneSelector>();
+    m_grid_tess_subset = std::shared_ptr<render::GridTessSubset>();
+    m_grid_cube_renderer = std::shared_ptr<render::GridCubeRenderer>();
+    m_well_renderer = std::shared_ptr<render::WellRenderer>();
+    m_coordsys_renderer = std::shared_ptr<render::CoordSysRenderer>();
+    m_grid_voxelizer = std::shared_ptr<render::GridVoxelization>();
+    m_voxel_surface = std::shared_ptr<render::VoxelSurface>();
+    m_has_pipeline = false;
+}
+
+bool CPViewJob::setupPipeline()
+{
+    if( !m_has_context ) {
+        return false;
+    }
+    try {
+        m_well_labels.reset( new render::TextRenderer() );
+        m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
+        m_grid_tess.reset( new render::GridTess );
+        m_faults_surface.reset( new render::GridTessSurf );
+        m_subset_surface.reset( new render::GridTessSurf );
+        m_boundary_surface.reset( new render::GridTessSurf );
+        m_grid_tess_surf_builder.reset( new render::GridTessSurfBuilder );
+        m_grid_field.reset(  new render::GridField( m_grid_tess ) );
+        m_tess_renderer.reset(  new render::GridTessSurfRenderer );
+        m_all_selector.reset( new render::AllSelector );
+        m_field_selector.reset( new render::FieldSelector );
+        m_index_selector.reset( new render::IndexSelector );
+        m_plane_selector.reset( new render::PlaneSelector );
+        m_half_plane_selector.reset( new render::HalfPlaneSelector );
+        m_grid_tess_subset.reset( new render::GridTessSubset );
+        m_grid_cube_renderer.reset( new render::GridCubeRenderer );
+        m_well_renderer.reset( new render::WellRenderer );
+        m_coordsys_renderer.reset( new render::CoordSysRenderer );
+        m_grid_voxelizer.reset( new render::GridVoxelization );
+        m_voxel_surface.reset( new render::VoxelSurface );
+        m_has_pipeline = true;
+    }
+    catch( std::runtime_error& e ) {
+        Logger log = getLogger( "CPViewJob.setupPipeline" );
+        LOGGER_ERROR( log, "Failed to set up pipeline: " << e.what() );
+        releasePipeline();
+    }
+    return m_has_pipeline;
+}
+
+void
+CPViewJob::doLogic()
+{
+    if( m_zscale != m_grid_stats.zScale() ) {
+        m_zscale = m_grid_stats.zScale();
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        }
+//        if( !m_do_update_renderlist ) {
+//            m_do_update_renderlist = true;
+            // trigger render list update
+//        }
+
+        if( m_render_clip_plane ) {
+            m_do_update_subset = true;
+        }
+    }
+
+    models::Appearance::VisibilityMask new_mask = m_appearance.visibilityMask();
+    if( (m_visibility_mask != new_mask) || m_under_the_hood.profilingEnabled() ) {
+        m_do_update_subset = true;
+        if( m_renderlist_state == RENDERLIST_SENT ) {
+            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        }
+//        m_do_update_renderlist = true;
+        m_visibility_mask = new_mask;
+    }
 
 
-bool CPViewJob::renderFrame( const string&  session,
-                             const string&  key,
-                             unsigned int        fbo,
-                             const size_t        width,
-                             const size_t        height )
+    if( m_renderlist_state == RENDERLIST_CHANGED_NOTIFY_CLIENTS ) {
+        m_renderlist_state = RENDERLIST_CHANGED_CLIENTS_NOTIFIED;
+        int val;
+        m_model->getElementValue( "renderlist", val );
+        m_model->updateElement( "renderlist", val+1 );
+   }
+}
+
+bool
+CPViewJob::renderFrame( const string&  session,
+                        const string&  key,
+                        unsigned int        fbo,
+                        const size_t        width,
+                        const size_t        height )
 {
     Logger log = getLogger( "CPViewJob.renderFrame" );
-
-    if( m_grid_tess == NULL ) {
+    if( !m_has_context ) {
         LOGGER_ERROR( log, "renderFrame invoked before initGL" );
         return false;
     }
-    bool profile;
-    m_model->getElementValue( "profile" , profile );
-    if( profile ) {
-        m_profile_proxy_gen.update();
-        m_profile_surface_gen.update();
-        m_profile_surface_render.update();
-
-        PerfTimer curr;
-        if( PerfTimer::delta( m_profile_update_timer, curr ) > 1.0 ) {
-            m_profile_update_timer.reset();
-            m_model->updateElement<double>( "profile_proxy_gen", m_profile_proxy_gen.average() );
-            m_model->updateElement<double>( "profile_surface_gen", m_profile_surface_gen.average() );
-            m_model->updateElement<double>( "profile_surface_render", m_profile_surface_render.average() );
-            m_model->updateElement<double>( "profile_proxy_gen_s", m_profile_proxy_gen.samples() );
-            m_model->updateElement<double>( "profile_surface_gen_s", m_profile_surface_gen.samples() );
-            m_model->updateElement<double>( "profile_surface_render_s", m_profile_surface_render.samples() );
-        }
-    }
+    doLogic();
+    m_under_the_hood.update();
 
     fetchData();
     updateModelMatrices();
@@ -964,7 +923,6 @@ bool CPViewJob::renderFrame( const string&  session,
             fbo,
             width,
             height );
-
 
 
     return true;

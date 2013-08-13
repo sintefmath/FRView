@@ -316,8 +316,6 @@ protected:
 
 
         glm::vec2 size = m_viewer->getWindowSize();
-        CHECK_GL;
-
 
         try {
             glBindFramebuffer( GL_FRAMEBUFFER, 0 );

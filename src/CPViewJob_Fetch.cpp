@@ -4,32 +4,34 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "CPViewJob.hpp"
 #include "Project.hpp"
-#include "GridTess.hpp"
-#include "GridField.hpp"
 #include "Logger.hpp"
-#include "GridTessBridge.hpp"
-#include "TextRenderer.hpp"
-#include "WellRenderer.hpp"
 #include "ASyncReader.hpp"
-#include "EclipseReader.hpp"
+#include "eclipse/EclipseReader.hpp"
+#include "render/GridTess.hpp"
+#include "render/GridField.hpp"
+#include "render/GridTessBridge.hpp"
+#include "render/TextRenderer.hpp"
+#include "render/WellRenderer.hpp"
+
+
 
 void
 CPViewJob::fetchData()
 {
     Logger log = getLogger( "CPViewJob.doCompute" );
-    GLenum error = glGetError();
-    while( error != GL_NO_ERROR ) {
-        LOGGER_ERROR( log, "Entered function with GL error: " << gluGetString(error) );
-        error = glGetError();
-    }
 
+    // import geometry
     if( m_load_geometry ) {
 
-        // Fetch from async reader
         std::shared_ptr< Project<float> > project;
-        std::shared_ptr< GridTessBridge > tess_bridge;
+        std::shared_ptr< render::GridTessBridge > tess_bridge;
         if( m_async_reader->getProject( project, tess_bridge ) ) {
-
+            if( !m_has_pipeline ) {
+                if(!setupPipeline()) {
+                    return;
+                }
+            }
+            m_load_geometry = false;
             m_project = project;
             m_grid_tess->update( *tess_bridge );
 
@@ -37,7 +39,7 @@ CPViewJob::fetchData()
             m_load_geometry = false;
             m_do_update_subset = true;
             m_load_color_field = true;
-            m_faults_surface_tainted = true;
+            m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
 
             // --- update model variables --------------------------------------
             m_model->updateElement<bool>("has_project", true );
@@ -60,7 +62,6 @@ CPViewJob::fetchData()
             m_model->updateConstraints<int>("field_report_step", 0,0,  reportstep_max );
             m_model->updateConstraints<int>( "field_select_report_step", 0, 0, reportstep_max );
 
-            // Grid size
             const unsigned int nx = m_project->nx();
             const unsigned int ny = m_project->ny();
             const unsigned int nz = m_project->nz();
@@ -74,30 +75,24 @@ CPViewJob::fetchData()
             m_model->updateConstraints<int>( "index_range_select_min_k", 0, 0, nz_max );
             m_model->updateConstraints<int>( "index_range_select_max_k", nz_max, 0, nz_max );
 
-            std::stringstream o;
-            o << "[ " << nx << " x " << ny << " x " << nz << " ]";
-            m_model->updateElement( "grid_dim", o.str() );
+            m_grid_stats.update( m_project, m_grid_tess );
 
-            o.str("");
-            o << (nx*ny*nz);
-            m_model->updateElement( "grid_total_cells", o.str() );
 
-            o.str("");
-            o << m_grid_tess->cellCount() << " (" << ((100u*m_grid_tess->cellCount())/(nx*ny*nz) ) << "%)";
-            m_model->updateElement( "grid_active_cells", o.str() );
+            m_do_update_subset = true;
 
-            o.str("");
-            o << m_grid_tess->triangleCount() << " triangles";
-            m_model->updateElement( "grid_faces", o.str() );
-
-            m_renderlist_rethink = true;
+            if( m_renderlist_state == RENDERLIST_SENT ) {
+                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+            }
+            //m_do_update_renderlist = true;
+            //m_renderlist_rethink = true;
         }
     }
 
-    if( m_load_color_field  && m_project ) {
+
+    if( m_has_pipeline && m_load_color_field && m_project ) {
         m_has_color_field = false;
 
-        std::shared_ptr<GridFieldBridge> bridge;
+        std::shared_ptr<render::GridFieldBridge> bridge;
         if( m_async_reader->getSolution( bridge ) ) {
 
             if( bridge ) {
@@ -108,8 +103,7 @@ CPViewJob::fetchData()
                 m_has_color_field = false;
             }
             m_load_color_field = false;
-            m_subset_surface_tainted = true;
-            m_boundary_surface_tainted = true;
+            m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
 
             // -- Update wells
             m_well_labels->clear();
@@ -121,10 +115,10 @@ CPViewJob::fetchData()
                     continue;
                 }
                 m_well_labels->add( m_project->wellName(w),
-                                    TextRenderer::FONT_8X12,
+                                    render::TextRenderer::FONT_8X12,
                                     m_project->wellHeadPosition( m_report_step_index, w ),
                                     10.f,
-                                    TextRenderer::ANCHOR_S );
+                                    render::TextRenderer::ANCHOR_S );
                 positions.clear();
                 colors.clear();
                 const unsigned int bN = m_project->wellBranchCount( m_report_step_index, w );
@@ -166,7 +160,10 @@ CPViewJob::fetchData()
                 m_model->updateElement( "field_info_calendar", "[not available]" );
                 m_model->updateElement( "has_field", false );
             }
-            m_renderlist_rethink = true;
+            if( m_renderlist_state == RENDERLIST_SENT ) {
+                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+            }
+//            m_renderlist_rethink = true;
         }
     }
 }

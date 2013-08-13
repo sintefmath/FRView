@@ -14,6 +14,10 @@
 #include "CPViewJob.hpp"
 #include "Logger.hpp"
 
+namespace resources {
+    extern std::string cameramanipulator;
+}
+
 int
 main( int argc, char** argv )
 {
@@ -22,8 +26,11 @@ main( int argc, char** argv )
     for(int i=1; i<argc; i++ ) {
         files.push_back( argv[i] );
     }
-    CPViewJob *job = new CPViewJob( files );
-    tinia::qtcontroller::QTController *qtObserver = new tinia::qtcontroller::QTController();
-    qtObserver->setJob(job);
-    qtObserver->run(argc, argv);
+
+    CPViewJob job( files );
+    tinia::qtcontroller::QTController controller;
+    controller.setJob( &job );
+    controller.addScript( resources::cameramanipulator );
+    controller.run( argc, argv );
+    return 0;
 }

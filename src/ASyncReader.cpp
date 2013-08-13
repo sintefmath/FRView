@@ -9,9 +9,8 @@
 #include <atomic>
 #include "Logger.hpp"
 #include "ASyncReader.hpp"
-#include "PolygonTessellator.hpp"
-#include "CornerPointTessellator.hpp"
-#include "EclipseReader.hpp"
+#include "cornerpoint/Tessellator.hpp"
+#include "eclipse/EclipseReader.hpp"
 #include "PerfTimer.hpp"
 
 static const std::string package = "ASyncReader";
@@ -29,12 +28,20 @@ ASyncReader::ASyncReader( std::shared_ptr<tinia::model::ExposedModel> model )
 }
 
 bool
-ASyncReader::issueReadProject( const std::list<std::string>& files )
+ASyncReader::issueReadProject( const std::string& file,
+                               const int refine_i,
+                               const int refine_j,
+                               const int refine_k,
+                               const bool triangulate)
 {
     Logger log = getLogger( package + ".read" );
     Command cmd;
     cmd.m_type = Command::READ_PROJECT;
-    cmd.m_project_files = files;
+    cmd.m_project_file = file;
+    cmd.m_refine_i = refine_i;
+    cmd.m_refine_j = refine_j;
+    cmd.m_refine_k = refine_k;
+    cmd.m_triangulate = triangulate;
     postCommand( cmd );
     return true;
 }
@@ -52,7 +59,7 @@ ASyncReader::issueReadSolution( const Project<float>::Solution& solution_locatio
 
 bool
 ASyncReader::getProject( std::shared_ptr< Project<float> >& project,
-                         std::shared_ptr< GridTessBridge>&  tess_bridge )
+                         std::shared_ptr< render::GridTessBridge>&  tess_bridge )
 {
     std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
     for(auto it = m_rsp_queue.begin(); it!=m_rsp_queue.end(); ++it ) {
@@ -67,7 +74,7 @@ ASyncReader::getProject( std::shared_ptr< Project<float> >& project,
 }
 
 bool
-ASyncReader::getSolution( std::shared_ptr< GridFieldBridge >& field_bridge )
+ASyncReader::getSolution( std::shared_ptr< render::GridFieldBridge >& field_bridge )
 {
     // We kill of all but the latest request of correct type
     bool found_any = false;
@@ -114,15 +121,18 @@ ASyncReader::handleReadProject( const Command& cmd )
         m_model->updateElement<std::string>( "asyncreader_what", "Indexing files..." );
         m_model->updateElement<int>( "asyncreader_progress", 0 );
 
-        std::shared_ptr< Project<float> > project( new Project<float>( cmd.m_project_files ) );
+        std::shared_ptr< Project<float> > project( new Project<float>( cmd.m_project_file,
+                                                                       cmd.m_refine_i,
+                                                                       cmd.m_refine_j,
+                                                                       cmd.m_refine_k ) );
         if( project->geometryType() == Project<float>::GEOMETRY_CORNERPOINT_GRID ) {
 
-            std::shared_ptr< GridTessBridge > tess_bridge( new GridTessBridge );
+            std::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
 
-            PolygonTessellator<GridTessBridge> triangulator( *tess_bridge );
-            CornerPointTessellator< PolygonTessellator<GridTessBridge> > tess( triangulator );
+            m_field_remap = project->fieldRemap();
 
-            // tessellate cornerpoint grid
+
+            cornerpoint::Tessellator< render::GridTessBridge > tess( *tess_bridge );
             tess.tessellate( m_model,
                              "asyncreader_what",
                              "asyncreader_progress",
@@ -133,11 +143,6 @@ ASyncReader::handleReadProject( const Command& cmd )
                              project->cornerPointCoord(),
                              project->cornerPointZCorn(),
                              project->cornerPointActNum() );
-
-            // triangulate tessellation
-            triangulator.process( m_model,
-                                  "asyncreader_what",
-                                  "asyncreader_progress" );
 
             // organize data
             m_model->updateElement<std::string>( "asyncreader_what", "Organizing data..." );
@@ -151,11 +156,13 @@ ASyncReader::handleReadProject( const Command& cmd )
             postResponse( cmd, rsp );
         }
         else {
-            LOGGER_ERROR( log, "Unsupported geometry type" );
+            m_model->updateElement<std::string>( "asyncreader_what", "Unsupported geometry type" );
+            sleep(2);
         }
     }
     catch( std::runtime_error& e ) {
-        LOGGER_ERROR( log, "Got exception: " << e.what() );
+        m_model->updateElement<std::string>( "asyncreader_what", e.what() );
+        sleep(2);
     }
     m_model->updateElement<bool>( "asyncreader_working", false );
 }
@@ -169,13 +176,30 @@ ASyncReader::handleReadSolution( const Command& cmd )
     Response rsp;
     rsp.m_type = Response::SOLUTION;
     if( cmd.m_solution_location.m_reader == Project<float>::READER_UNFORMATTED_ECLIPSE ) {
-        rsp.m_solution.reset( new GridFieldBridge( cmd.m_solution_location.m_location.m_unformatted_eclipse.m_size ) );
 
-        Eclipse::Reader reader( cmd.m_solution_location.m_path );
-        reader.blockContent( rsp.m_solution->values(),
-                             rsp.m_solution->minimum(),
-                             rsp.m_solution->maximum(),
-                             cmd.m_solution_location.m_location.m_unformatted_eclipse );
+        if( !m_field_remap.empty() ) {
+            rsp.m_solution.reset( new render::GridFieldBridge( m_field_remap.size() ) );
+
+            std::vector<float> tmp( cmd.m_solution_location.m_location.m_unformatted_eclipse.m_size );
+            eclipse::Reader reader( cmd.m_solution_location.m_path );
+            reader.blockContent( tmp.data(),
+                                 rsp.m_solution->minimum(),
+                                 rsp.m_solution->maximum(),
+                                 cmd.m_solution_location.m_location.m_unformatted_eclipse );
+            for(size_t i=0; i<m_field_remap.size(); i++ ) {
+                rsp.m_solution->values()[i] = tmp[ m_field_remap[i] ];
+            }
+
+        }
+        else {
+            rsp.m_solution.reset( new render::GridFieldBridge( cmd.m_solution_location.m_location.m_unformatted_eclipse.m_size ) );
+
+            eclipse::Reader reader( cmd.m_solution_location.m_path );
+            reader.blockContent( rsp.m_solution->values(),
+                                 rsp.m_solution->minimum(),
+                                 rsp.m_solution->maximum(),
+                                 cmd.m_solution_location.m_location.m_unformatted_eclipse );
+        }
 
     }
     else {

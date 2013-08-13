@@ -7,6 +7,7 @@
  *
  ******************************************************************************/
 #pragma once
+#include <GL/glew.h>
 #include <log4cxx/logger.h>
 
 typedef log4cxx::LoggerPtr Logger;

@@ -14,7 +14,6 @@ OPTION( USE_SSE4 "Use SSE4.1 and SSE4.2 intrinsics" ON )
 OPTION( CHECK_INVARIANTS "Check invariants throughout the code" OFF )
 OPTION( DEBUG_GRAPHICS "Enable debug graphics" OFF )
 OPTION( OMIT_GEOMETRIC_EDGES "Omit extraction of geometric edges" OFF )
-OPTION( GPU_TRIANGULATOR "Use GPU triangulator" OFF )
 
 IF( EXTEND_CMAKE_MODULE_PATH )
   SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
@@ -98,9 +97,6 @@ IF( UNIX )
     IF( DEBUG_GRAPHICS )
         SET( CMAKE_CXX_FLAGS "-DDEBUG_GRAPHICS ${CMAKE_CXX_FLAGS}" )
     ENDIF( DEBUG_GRAPHICS )
-    IF( GPU_TRIANGULATOR )
-        SET( CMAKE_CXX_FLAGS "-DGPU_TRIANGULATOR ${CMAKE_CXX_FLAGS}" )
-    ENDIF( GPU_TRIANGULATOR )
     IF( USE_SSE4 )
         SET( CMAKE_CXX_FLAGS "-msse4 ${CMAKE_CXX_FLAGS}" )
     ELSE( USE_SSE4 )
@@ -126,9 +122,9 @@ INCLUDE_DIRECTORIES(
 
 # --- Compile and link eclipse io library --------------------------------------
 ADD_LIBRARY( eclipseio
-     "src/Eclipse.cpp"
-     "src/EclipseParser.cpp"
-     "src/EclipseReader.cpp"
+     "src/eclipse/Eclipse.cpp"
+     "src/eclipse/EclipseParser.cpp"
+     "src/eclipse/EclipseReader.cpp"
      "src/Logger.cpp"
      "src/PerfTimer.cpp"
 )
@@ -142,39 +138,47 @@ FOREACH( file ${cpview_core_SHADERS} )
     LIST( APPEND SHADER_LIBS ${symbol} )
 ENDFOREACH()
 
+# --- javscript scriptlets -----------------------------------------------------
+FILE( GLOB cpview_core_JS "js/*.js" )
+FOREACH( file ${cpview_core_JS} )
+    GET_FILENAME_COMPONENT( symbol ${file} NAME_WE)
+    ADD_TEXT_FILE( ${symbol} "resources::${symbol}" ${file} )
+    LIST( APPEND JS_LIBS ${symbol} )
+ENDFOREACH()
+
 # --- Compile and link code that is common for all eclipse viz apps ------------
 ADD_LIBRARY( cpview_core
+             "src/models/Appearance.cpp"
+             "src/models/GridStats.cpp"
+             "src/models/File.cpp"
+             "src/models/UnderTheHood.cpp"
              "src/Project.cpp"
-             "src/ClipPlane.cpp"
-             "src/CellSelector.cpp"
-             "src/GridTess.cpp"
-             "src/GridTessBridge.cpp"
-             "src/GridTessSubset.cpp"
-             "src/GridTessSurf.cpp"
-             "src/GridTessSurfBuilder.cpp"
-             "src/GridTessSurfRenderer.cpp"
-             "src/GridFieldBridge.cpp"
-             "src/GridCubeRenderer.cpp"
-             "src/PolygonTessellator.cpp"
-             "src/GridField.cpp"
-             "src/CornerPointTessellatorSimple.cpp"
-             "src/CornerPointTessellator.cpp"
-             "src/PillarFloorSampler.cpp"
-             "src/PillarWallSampler.cpp"
+             "src/render/ClipPlane.cpp"
+             "src/render/CellSelector.cpp"
+             "src/render/GridTess.cpp"
+             "src/render/GridTessBridge.cpp"
+             "src/render/GridTessSubset.cpp"
+             "src/render/GridTessSurf.cpp"
+             "src/render/GridTessSurfBuilder.cpp"
+             "src/render/GridTessSurfRenderer.cpp"
+             "src/render/GridFieldBridge.cpp"
+             "src/render/GridCubeRenderer.cpp"
+             "src/render/GridField.cpp"
+             "src/cornerpoint/Tessellator.cpp"
+             "src/cornerpoint/PillarFloorSampler.cpp"
+             "src/cornerpoint/PillarWallSampler.cpp"
              "src/FooBarParser.cpp"
              "src/CellSanityChecker.cpp"
-             "src/TextRenderer.cpp"
-             "src/TextRendererFont.cpp"
-             "src/WellRenderer.cpp"
-             "src/PrintExporter.cpp"
-             "src/CoordSysRenderer.cpp"
-             "src/TikZExporter.cpp"
-             "src/GridVoxelization.cpp"
-             "src/VoxelSurface.cpp"
-             "src/TimerQuery.cpp"
+             "src/render/TextRenderer.cpp"
+             "src/render/TextRendererFont.cpp"
+             "src/render/WellRenderer.cpp"
+             "src/render/CoordSysRenderer.cpp"
+             "src/render/GridVoxelization.cpp"
+             "src/render/VoxelSurface.cpp"
+             "src/render/TimerQuery.cpp"
 )
 
-TARGET_LINK_LIBRARIES( cpview_core ${SHADER_LIBS} )
+TARGET_LINK_LIBRARIES( cpview_core ${SHADER_LIBS} ${JS_LIBS} )
 
 # --- Compile and link job (common to both desktop and cloud jobs) -------------
 ADD_LIBRARY( cpview_job "src/CPViewJob.cpp"

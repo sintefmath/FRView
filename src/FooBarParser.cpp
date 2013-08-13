@@ -16,7 +16,7 @@
 #include <stdexcept>
 #include "Logger.hpp"
 #include "FooBarParser.hpp"
-#include "GridField.hpp"
+#include "render/GridField.hpp"
 
 void
 FooBarParser::parseGeometry( unsigned int&         nx,

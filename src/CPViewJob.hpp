@@ -14,34 +14,42 @@
 #include <tinia/jobcontroller/OpenGLJob.hpp>
 #include <tinia/model/StateListener.hpp>
 #include <tinia/renderlist/DataBase.hpp>
-#include "TimerQuery.hpp"
 #include "PerfTimer.hpp"
+#include "models/Logic.hpp"
+#include "models/Appearance.hpp"
+#include "models/GridStats.hpp"
+#include "models/File.hpp"
+#include "models/UnderTheHood.hpp"
+#include "render/TimerQuery.hpp"
 
 template<typename REAL> class Project;
 
-class ClipPlane;
-class GridTess;
-class GridTessSubset;
-class GridTessSurf;
-class GridTessSurfBuilder;
-class GridField;
-class GridCubeRenderer;
-class GridTessSurfRenderer;
-class AllSelector;
-class FieldSelector;
-class IndexSelector;
-class PlaneSelector;
-class HalfPlaneSelector;
-class TextRenderer;
-class WellRenderer;
-class CoordSysRenderer;
-class GridVoxelization;
-class VoxelSurface;
 class ASyncReader;
+namespace render {
+    class ClipPlane;
+    class GridTess;
+    class GridTessSubset;
+    class GridTessSurf;
+    class GridTessSurfBuilder;
+    class GridField;
+    class GridCubeRenderer;
+    class GridTessSurfRenderer;
+    class AllSelector;
+    class FieldSelector;
+    class IndexSelector;
+    class PlaneSelector;
+    class HalfPlaneSelector;
+    class TextRenderer;
+    class WellRenderer;
+    class CoordSysRenderer;
+    class GridVoxelization;
+    class VoxelSurface;
+} // of namespace render
 
 class CPViewJob
         : public tinia::jobcontroller::OpenGLJob,
-          public tinia::model::StateListener
+          public tinia::model::StateListener,
+          public models::Logic
 {
 public:
     CPViewJob( const std::list<std::string>& files );
@@ -70,66 +78,105 @@ public:
     void
     updateRenderList( );
 
+    void
+    doLogic();
+
+    void
+    loadFile( const std::string& filename,
+              int refine_i,
+              int refine_j,
+              int refine_k,
+              bool triangulate );
 
 private:
-    std::shared_ptr<ASyncReader>        m_async_reader;
-    std::shared_ptr<Project<float> >    m_project;
-    bool                    m_cares_about_renderlists;
-    bool                    m_policies_changed;
-    bool                    m_renderlist_rethink;
-    tinia::renderlist::DataBase m_renderlist_db;
-    TextRenderer*           m_well_labels;
-    ClipPlane*              m_clip_plane;
-    GridTess*               m_grid_tess;
-    GridTessSubset*         m_grid_tess_subset;
-    GridTessSurf*           m_faults_surface;
-    bool                    m_faults_surface_tainted;
-    GridTessSurf*           m_subset_surface;
-    bool                    m_subset_surface_tainted;
-    GridTessSurf*           m_boundary_surface;
-    bool                    m_boundary_surface_tainted;
-    GridTessSurfBuilder*    m_grid_tess_surf_builder;
-    GridField*              m_grid_field;
-    GridTessSurfRenderer*   m_tess_renderer;
-    AllSelector*            m_all_selector;
-    FieldSelector*          m_field_selector;
-    IndexSelector*          m_index_selector;
-    PlaneSelector*          m_plane_selector;
-    HalfPlaneSelector*      m_half_plane_selector;
-    GridCubeRenderer*       m_grid_cube_renderer;
-    WellRenderer*           m_well_renderer;
-    CoordSysRenderer*       m_coordsys_renderer;
-    GridVoxelization*       m_grid_voxelizer;
-    VoxelSurface*           m_voxel_surface;
-
-    PerfTimer               m_profile_update_timer;
-    TimerQuery              m_profile_proxy_gen;
-    TimerQuery              m_profile_surface_gen;
-    TimerQuery              m_profile_surface_render;
-
-    bool                    m_load_geometry;
-    bool                    m_load_color_field;
-    bool                    m_has_color_field;
-    bool                    m_do_update_subset;
-    bool                    m_do_update_renderlist;
-    bool                    m_care_about_updates;
-    bool                    m_render_clip_plane;
-    unsigned int            m_solution_index;
-    unsigned int            m_report_step_index;
 
 
+    models::File                                    m_file;
+    models::UnderTheHood                            m_under_the_hood;
+    models::Appearance                              m_appearance;
+    models::Appearance::VisibilityMask              m_visibility_mask;
+    models::Appearance::Theme                       m_theme;
+    models::GridStats                               m_grid_stats;
+    float                                           m_zscale;
+    /** True if job initGL has been called, and glew is set up. */
+    bool                                            m_has_context;
+    std::shared_ptr<ASyncReader>                    m_async_reader;
 
-    float                   m_proxy_box_min[3];
-    float                   m_proxy_box_max[3];
-    float                   m_proxy_transform[16];
+    /** @{ */
+    enum {
+        PROJECT_NO_FILE,
+        PROJECT_LOAD_GEOMETRY,
+        PROJECT_LOAD_FIELD,
+        PROJECT_UPDATE_SUBSET,
+        PROJECT_OK
+    }                                               m_project_state;
+    std::shared_ptr<Project<float> >                m_project;
+    /** @} */
 
-    glm::mat4               m_bbox_to_world;
-    glm::mat4               m_bbox_from_world;
+    /** @{ */
+    /** True if observer has asked at least once for renderlists. */
+    bool                                            m_renderlist_initialized;
+    enum {
+        /** Renderlist should be modified, trigger update from client. */
+        RENDERLIST_CHANGED_NOTIFY_CLIENTS,
+        /** Renderlist modification notified, do geometry creation. */
+        RENDERLIST_CHANGED_CLIENTS_NOTIFIED,
+        /** Client should have latest version of renderlist. */
+        RENDERLIST_SENT
+    }                                               m_renderlist_state;
+    tinia::renderlist::DataBase                     m_renderlist_db;
+    /** @} */
 
-    glm::mat4               m_local_to_world;
-    glm::mat4               m_local_from_world;
-    glm::mat4               m_proxy_to_world;
-    glm::mat4               m_proxy_from_world;
+    /** @{ */
+    /** True if all GPU objects has been built. */
+    bool                                            m_has_pipeline;
+    std::shared_ptr<render::TextRenderer>           m_well_labels;
+    std::shared_ptr<render::ClipPlane>              m_clip_plane;
+    std::shared_ptr<render::GridTess>               m_grid_tess;
+    std::shared_ptr<render::GridTessSubset>         m_grid_tess_subset;
+    std::shared_ptr<render::GridTessSurf>           m_faults_surface;
+    std::shared_ptr<render::GridTessSurf>           m_subset_surface;
+    std::shared_ptr<render::GridTessSurf>           m_boundary_surface;
+    std::shared_ptr<render::GridTessSurfBuilder>    m_grid_tess_surf_builder;
+    std::shared_ptr<render::GridField>              m_grid_field;
+    std::shared_ptr<render::GridTessSurfRenderer>   m_tess_renderer;
+    std::shared_ptr<render::AllSelector>            m_all_selector;
+    std::shared_ptr<render::FieldSelector>          m_field_selector;
+    std::shared_ptr<render::IndexSelector>          m_index_selector;
+    std::shared_ptr<render::PlaneSelector>          m_plane_selector;
+    std::shared_ptr<render::HalfPlaneSelector>      m_half_plane_selector;
+    std::shared_ptr<render::GridCubeRenderer>       m_grid_cube_renderer;
+    std::shared_ptr<render::WellRenderer>           m_well_renderer;
+    std::shared_ptr<render::CoordSysRenderer>       m_coordsys_renderer;
+    std::shared_ptr<render::GridVoxelization>       m_grid_voxelizer;
+    std::shared_ptr<render::VoxelSurface>           m_voxel_surface;
+    /** @} */
+
+
+    bool                                            m_load_geometry;
+    bool                                            m_load_color_field;
+    bool                                            m_has_color_field;
+    bool                                            m_do_update_subset;
+    bool                                            m_care_about_updates;
+    bool                                            m_render_clip_plane;
+    unsigned int                                    m_solution_index;
+    unsigned int                                    m_report_step_index;
+    float                                           m_proxy_box_min[3];
+    float                                           m_proxy_box_max[3];
+    float                                           m_proxy_transform[16];
+    glm::mat4                                       m_local_to_world;
+    glm::mat4                                       m_local_from_world;
+    glm::mat4                                       m_bbox_to_world;
+    glm::mat4                                       m_bbox_from_world;
+    glm::mat4                                       m_proxy_to_world;
+    glm::mat4                                       m_proxy_from_world;
+
+
+    void
+    releasePipeline();
+
+    bool
+    setupPipeline();
 
 
     /** Fetches data, if needed. */
