@@ -1,3 +1,11 @@
+/******************************************************************************
+ *
+ *  Author(s): Christopher Dyken <christopher.dyken@sintef.no>
+ *
+ *
+ *  Copyright (C) 2009 by SINTEF.  All rights reserved.
+ *
+ ******************************************************************************/
 #pragma once
 
 #include <vector>
@@ -26,6 +34,8 @@ private:
     static const unsigned int   end_flag;
     static const unsigned int   end_mask;
 
+
+
     /** A boundary between cells along a wall between two pillars.
       *
       * The boundary can be on either (or both) sides of the wall, i.e.,
@@ -44,6 +54,8 @@ private:
         unsigned int    m_cell_over[2];
         /** The index of the cell under (decreasing k) this boundary, for side a and b. */
         unsigned int    m_cell_under[2];
+        /** True if cells above are logical neighbours. */
+        bool            m_match_over;
     };
 
     /** An intersection between two boundary lines. */
@@ -144,7 +156,8 @@ private:
                       const unsigned int          active_cell_count_b,
                       const int* const            cell_map_a,
                       const int* const            cell_map_b,
-                      const unsigned int          stride );
+                      const unsigned int          stride,
+                      const unsigned int          adjacent_stride );
 
     /** Find intersections on a pillar wall, defining line segments for affected edges. */
     static
@@ -153,7 +166,9 @@ private:
                         std::vector<Intersection>&    intersections,
                         std::vector<unsigned int>&    chains,
                         unsigned int*                 chain_offsets,
-                        const std::vector<WallLine>&  wall_lines );
+                        const std::vector<WallLine>&  wall_lines,
+                        const float*                  pillar_a,
+                        const float*                  pillar_b );
 
     /** Extract wireframe edges across a pillar wall. */
     static
@@ -182,6 +197,16 @@ private:
                                        const std::vector<Intersection>&    intersections,
                                        const std::vector<unsigned int>&    chains,
                                        const unsigned int* const           chain_offsets );
+
+
+    static
+    void
+    intersectionArcsPolygon( Bridge& bridge,
+                            std::vector<typename Bridge::Segment>&  segments,
+                            const typename Bridge::Orientation  orientation,
+                            const std::vector<Intersection>&    intersections,
+                            const unsigned int first_upper_isec,
+                            const unsigned int first_lower_isec );
 
     /** Stitch the quadrilaterals between cells in a stack of cells. */
     static
@@ -214,7 +239,9 @@ private:
     unsigned int
     segmentIntersection( Bridge& bridge,
                          const unsigned int a0, const unsigned int a1,
-                         const unsigned int b0, const unsigned int b1 );
+                         const unsigned int b0, const unsigned int b1,
+                         const float* pillar_a,
+                         const float* pillar_b );
 
     static
     REAL

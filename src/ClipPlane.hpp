@@ -1,3 +1,11 @@
+/******************************************************************************
+ *
+ *  Author(s): Christopher Dyken <christopher.dyken@sintef.no>
+ *
+ *
+ *  Copyright (C) 2009 by SINTEF.  All rights reserved.
+ *
+ ******************************************************************************/
 #pragma once
 
 #include <glm/glm.hpp>
@@ -22,6 +30,9 @@ public:
     void
     shift( const float delta );
 
+    void
+    setOffset( const float offset );
+
     const glm::vec4
     plane() const { return glm::vec4( m_plane_n.x,
                                       m_plane_n.y,
@@ -41,5 +52,7 @@ protected:
     float       m_plane_d;
     glm::vec3   m_aabbox_center;
     float       m_shift;
+
+
 };
 

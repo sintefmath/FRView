@@ -1,76 +1,31 @@
 #version 330
-#extension GL_ARB_texture_gather : enable
+#extension GL_ARB_shading_language_420pack : enable
+/******************************************************************************
+ *
+ *  Author(s): Christopher Dyken <christopher.dyken@sintef.no>
+ *
+ *
+ *  Copyright (C) 2009 by SINTEF.  All rights reserved.
+ *
+ ******************************************************************************/
 
-in vec2 normalized;
-
-layout(location=0) out vec3 frag_color;
-
-#ifdef FIELD
-uniform samplerBuffer   field;
-uniform vec2            linear_map;
-#endif
-uniform usampler2D      cell_index;
-uniform sampler2D       normal;
-uniform sampler2D       depth;
-uniform bool            wireframe;
+layout(location=0)  out vec4            frag_color;
+layout(binding=0)   uniform sampler2D   transparent_color;
+layout(binding=1)   uniform sampler2D   transparent_complexity;
 
 void main(void)
 {
-    ivec2 fc = ivec2( gl_FragCoord.xy );
-    uvec4 cells = textureGather( cell_index, normalized );
-    vec4 depths = textureGather( depth, normalized );
-
-
-
-    float line = 0.f;
-    float depth = depths.x;
-    float ldepth = min( min( depths.x, depths.y ), depths.w );
-
-    if( wireframe ) {
-
-        if( cells.x != cells.y ) {
-            line = 1.0f;
-            depth = ldepth;
-        }
-        if( cells.x != cells.w ) {
-            line = 1.0f;
-            depth = ldepth;
-        }
-
+    ivec2 coord = ivec2( gl_FragCoord.xy );
+    float complexity = texelFetch( transparent_complexity, coord, 0 ).r;
+    if( complexity < 1.f ) {
+        discard;
     }
 
-    /*
-    if( wireframe ) {
-        if( cells.x != cells.y ) {
-            line += 0.25f;
-        }
-        if( cells.z != cells.w ) {
-            line += 0.25f;
-        }
-        if( cells.x != cells.w ) {
-            line += 0.25;
-        }
-        if( cells.y != cells.z ) {
-            line += 0.25;
-        }
+    vec4 transparent = texelFetch( transparent_color, coord, 0 );
+    float acc = transparent.w;
+    if( acc > 0.001f ) {
+        acc = 1.f/acc;
     }
-*/
-
-
-
-    uint cell = cells.x & 0x1fffffffu;
-    vec3 n = texelFetch( normal, ivec2( gl_FragCoord.xy ), 0 ).rgb;
-#ifdef FIELD
-    float scalar = linear_map.y*(texelFetch( field, int(cell) ).r - linear_map.x);
-    vec3 diffuse = max( vec3(0.f),
-                        sin( vec3( 4.14f*(scalar - 0.5f),
-                                   3.14f*(scalar),
-                                   4.14f*(scalar + 0.5f) ) ) );
-#else
-    vec3 diffuse = vec3(  0.2*float( int( cell & 8u  ) == 0 ) + 0.2*float( int( cell & 1u ) == 0  ) + 0.2,
-                          0.2*float( int( cell & 16u ) == 0 ) + 0.2*float( int( cell & 2u ) == 0  ) + 0.2,
-                          0.2*float( int( cell & 32u ) == 0 ) + 0.2*float( int( cell & 4u ) == 0  ) + 0.2 );
-#endif
-    frag_color = max(0.0,n.z)*diffuse + vec3(line);
-    gl_FragDepth = depth;
+    float avg_alpha = transparent.w/complexity;
+    frag_color = vec4( acc*transparent.rgb, avg_alpha );
 }

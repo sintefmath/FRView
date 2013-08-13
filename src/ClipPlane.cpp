@@ -1,7 +1,16 @@
+/******************************************************************************
+ *
+ *  Author(s): Christopher Dyken <christopher.dyken@sintef.no>
+ *
+ *
+ *  Copyright (C) 2009 by SINTEF.  All rights reserved.
+ *
+ ******************************************************************************/
 #include <vector>
 #include <GL/glew.h>
 #include "ClipPlane.hpp"
 #include <glm/gtc/type_ptr.hpp>
+#include <siut2/gl_utils/GLSLtools.hpp>
 
 
 ClipPlane::ClipPlane( const glm::vec3&  aabbox_min,
@@ -56,9 +65,19 @@ ClipPlane::shift( const float delta )
 }
 
 void
+ClipPlane::setOffset( const float offset )
+{
+    m_shift = offset;
+    m_plane_d = -glm::dot( m_aabbox_center, m_plane_n ) - m_shift;
+    m_tainted = true;
+}
+
+
+void
 ClipPlane::render( const float* projection,
                    const float* modelview )
 {
+    CHECK_GL;
     bool inside[8];
 
     for(int i=0; i<8; i++) {
@@ -115,19 +134,23 @@ ClipPlane::render( const float* projection,
     }
 
 
+    CHECK_GL;
 
 
     glMatrixMode( GL_PROJECTION );
     glLoadMatrixf( projection );
     glMatrixMode( GL_MODELVIEW );
     glLoadMatrixf( modelview );
+    CHECK_GL;
 
     glColor3f( 1.f, 1.f, 0.5f );
+    CHECK_GL;
     glBegin( GL_LINE_LOOP );
     for(size_t i=0; i<isec.size(); i++ ) {
         glVertex3fv( glm::value_ptr( isec[i]) );
     }
     glEnd();
+    CHECK_GL;
 
 }
 

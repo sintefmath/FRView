@@ -1,64 +1,124 @@
 PROJECT( cpview )
-cmake_minimum_required(VERSION 2.4)
-
-OPTION(EXTEND_CMAKE_MODULE_PATH
-       "Extend the CMAKE_MODULE_PATH variable with user directories?"
-        ON)
+CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )
+OPTION( EXTEND_CMAKE_MODULE_PATH
+  "Extend the CMAKE_MODULE_PATH variable with user directories?"
+  ON )
 IF( EXTEND_CMAKE_MODULE_PATH )
-    SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
-                           "./cmake/Modules"
-                           "~/cmake/Modules"
-                           "$ENV{HOMEPATH}/cmake/Modules"
-                           "../siut/cmakemacros"
-                           "../siut"
-                           "."
+  SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
+    "./cmake/Modules"
+    "~/cmake/Modules"
+    "$ENV{HOMEPATH}/cmake/Modules"
+    "../siut/cmakemacros"
+    "../siut"
+    "."
     )
 ENDIF( EXTEND_CMAKE_MODULE_PATH )
 
-INCLUDE_DIRECTORIES(
-        "./src"
-)
+OPTION( USE_SSE2 "Use SSE2 intrinsics" ON )
+OPTION( USE_SSSE3 "Use SSSE3 intrinsics" ON )
+OPTION( CHECK_INVARIANTS "Check invariants throughout the code" OFF )
 
-IF( UNIX )
-#        SET( CMAKE_CXX_FLAGS "-Wall -fprofile-arcs -ftest-coverage -pg -g2 -O2 -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
-        SET( CMAKE_CXX_FLAGS "-Wall -O2 -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
-ENDIF( UNIX )
+# Versioning
+SET( svn_revision $ENV{SVN_REVISION} )
+IF ( NOT DEFINED svn_revision )
+    SET( svn_revision 0 )
+ENDIF( NOT  DEFINED svn_revision )
 
+SET( build_number $ENV{BUILD_NUMBER} )
+IF ( NOT DEFINED build_number )
+    SET( build_number 0 )
+ENDIF( NOT  DEFINED build_number )
 
-FIND_PACKAGE(Qt4 REQUIRED)
+SET( version_number "0.${svn_revision}.${build_number}" )
 
-ADD_DEFINITIONS( -DUSE_GLEW )
-ADD_DEFINITIONS( -DHAVE_FREEGLUT )
+# Debian package
+SET( CPACK_GENERATOR "DEB" )
+SET( CPACK_DEBIAN_PACKAGE_NAME "qtobserver" )
+SET( CPACK_PACKAGE_VERSION ${version_number} )
+SET( CPACK_DEBIAN_PACKAGE_MAINTAINER "kjetil.olsen.lye@sintef.no" )
+SET( CPACK_COMPONENTS_ALL libraries headers )
+SET( CPACK_COMPONENT_HEADERS_DEPENDS libraries )
+SET( CPACK_PACKAGE_INSTALL_DIRECTORY "/" )
+include ( CPack )
+
+#set( CMAKE_INSTALL_PREFIX "/usr/local" )
+
+set( BUILDDIR "build" )
+set( CMAKE_CXX_FLAGS "-std=c++0x -Wall" )
 
 
 FIND_LIBRARY( GLEW
               NAMES GLEW glew32
               PATHS ${LIB_PATHS} )
-FIND_PACKAGE( OpenGL REQUIRED )
-FIND_PACKAGE( Freeglut REQUIRED )
-FIND_PACKAGE( siut REQUIRED )
+FIND_PACKAGE(Freeglut)
+ADD_DEFINITIONS(-DHAVE_FREEGLUT)
+FIND_PACKAGE(Qt4 REQUIRED)
+FIND_PACKAGE(OpenGL REQUIRED)
+FIND_PACKAGE(PolicyLib REQUIRED)
+FIND_PACKAGE(JobObserver REQUIRED)
+#FIND_PACKAGE(Boost REQUIRED COMPONENTS thread unit_test_framework prg_exec_monitor test_exec_monitor)
 FIND_PACKAGE( GLM REQUIRED )
+FIND_PACKAGE(SIUT2 REQUIRED)
 FIND_LIBRARY(LOG4CXX_LOG4CXX_LIBRARY log4cxx
     /usr/lib
     /usr/local/lib
 )
+FIND_LIBRARY(QTOBSERVER QtObserver
+    /work/projects/qtobserver
+)
+
 FIND_PATH(LOG4CXX_INCLUDE_DIR log4cxx/logger.h)
 SET(LOG4CXX_LIBRARIES ${LOG4CXX_LOG4CXX_LIBRARY})
 
+ADD_DEFINITIONS( -DUSE_GLEW )
+
+#ADD_DEFINITIONS( -DHAVE_FREEGLUT )
+#FIND_PACKAGE( Freeglut REQUIRED )
+#FIND_PACKAGE( siut REQUIRED )
+
+IF( UNIX )
+#        SET( CMAKE_CXX_FLAGS "-Wall -fprofile-arcs -ftest-coverage -pg -g2 -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
+#        SET( CMAKE_CXX_FLAGS "-Wall -O3 -msse2 -mfpmath=sse -g2 -DCHECK_INVARIANTS -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
+    SET( CMAKE_CXX_FLAGS "-Wall -O3 -g2 -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
+    IF( CHECK_INVARIANTS )
+        SET( CMAKE_CXX_FLAGS "-DCHECK_INVARIANTS ${CMAKE_CXX_FLAGS}" )
+    ENDIF( CHECK_INVARIANTS )
+    IF( USE_SSSE3 )
+        SET( CMAKE_CXX_FLAGS "-mssse3 -mfpmath=sse ${CMAKE_CXX_FLAGS}" )
+    ELSE( USE_SSSE3 )
+        IF( USE_SSE2 )
+            SET( CMAKE_CXX_FLAGS "-msse2 -mfpmath=sse ${CMAKE_CXX_FLAGS}" )
+        ELSE( USE_SSE2 )
+            MESSAGE( "Sure that the CPU doesn't have SSE capabilites?" )
+        ENDIF( USE_SSE2 )
+    ENDIF( USE_SSSE3 )
+ENDIF( UNIX )
+
+
+#OPTION( USE_SSE2 "Use SSE2 intrinsics" ON )
+#OPTION( USE_SSSE3 "Use SSSE3 intrinsics" ON )
+
+
+INCLUDE(${QT_USE_FILE})
+SET(QT_USE_QTOPENGL TRUE)
 
 INCLUDE_DIRECTORIES(
-        "./include"
-        "../include"
-        ${GLEW_INCLUDE_DIR}
-        ${siut_INCLUDE_DIR}
-        ${Freeglut_INCLUDE_DIR}
-        ${GLM_INCLUDE_DIRS}
-        ${LOG4CXX_INCLUDE_DIR}
+    "./src"
+    "/work/projects/qtobserver/include"
+    "/work/projects/PolicyLib2/include"
+    "/work/projects/jobobserver/include"
+    "/work/tmp/glm-0.9.1.1"
+    ${SIUT2_INCLUDE_DIR}
+    ${QT_INCLUDE_DIR}
+    ${PolicyLib_INCLUDE_DIR}
+    ${QT_QTOPENGL_INCLUDE_DIR}
+    ${JobObserver_INCLUDE_DIR}
+    ${Freeglut_INCLUDE_DIR}
 )
 
-SET( SRC
-     "src/main.cpp"
+SET( VIEWJOB_SRC
      "src/Logger.cpp"
+     "src/PerfTimer.cpp"
      "src/Project.cpp"
      "src/Eclipse.cpp"
      "src/EclipseParser.cpp"
@@ -66,68 +126,58 @@ SET( SRC
      "src/ClipPlane.cpp"
      "src/CellSelector.cpp"
      "src/GridTess.cpp"
-     "src/GridTessRenderer.cpp"
+     "src/GridTessBridge.cpp"
+     "src/GridTessSubset.cpp"
+     "src/GridTessSurf.cpp"
+     "src/GridTessSurfBuilder.cpp"
+     "src/GridTessSurfRenderer.cpp"
      "src/GridField.cpp"
      "src/CornerPointTessellatorSimple.cpp"
      "src/CornerPointTessellator.cpp"
      "src/FooBarParser.cpp"
+     "src/CellSanityChecker.cpp"
+     "src/TextRenderer.cpp"
+     "src/TextRendererFont.cpp"
 )
+
+SET( CPVIEWJOB_SRC "src/main_job.cpp" "src/CPViewJob.cpp" ${VIEWJOB_SRC} )
+ADD_EXECUTABLE( cpview_job ${CPVIEWJOB_SRC} )
+TARGET_LINK_LIBRARIES( cpview_job
+                       ${QTOBSERVER}
+                       ${GLEW}
+                       ${OPENGL_LIBRARIES}
+                       ${QT_LIBRARIES}
+                       ${QT_QTOPENGL_LIBRARIES}
+                       ${PolicyLib_LIBRARIES}
+                       ${JobObserver_LIBRARIES}
+                       ${Boost_LIBRARIES}
+                       ${LOG4CXX_LIBRARIES}
+)
+
+SET( CPVIEWGLUT_SRC "src/main_glut.cpp" ${VIEWJOB_SRC} )
+ADD_EXECUTABLE( cpview_glut ${CPVIEWGLUT_SRC} )
+TARGET_LINK_LIBRARIES( cpview_glut
+                       ${SIUT2_LIBRARY}
+                       ${Freeglut_LIBRARY}
+                       ${GLEW}
+                       ${OPENGL_LIBRARIES}
+                       ${QT_LIBRARIES}
+                       ${QT_QTOPENGL_LIBRARIES}
+                       ${PolicyLib_LIBRARIES}
+                       ${JobObserver_LIBRARIES}
+                       ${Boost_LIBRARIES}
+                       ${LOG4CXX_LIBRARIES}
+)
+
+ADD_EXECUTABLE( sseplayground "src/SSEPlayGround.cpp" )
+TARGET_LINK_LIBRARIES( sseplayground rt )
 
 SET( ECLIPSESCAN_SRC
   "src/eclipsescan.cpp"
   "src/Eclipse.cpp"
   "src/EclipseReader.cpp"
+  "src/PerfTimer.cpp"
   "src/Logger.cpp"
 )
 ADD_EXECUTABLE( eclipsescan ${ECLIPSESCAN_SRC} )
 TARGET_LINK_LIBRARIES( eclipsescan ${LOG4CXX_LIBRARIES} )
-
-
-SET(QT_USE_QTOPENGL TRUE)
-SET(QT_USE_QTUITOOLS TRUE)
-SET( qcpview_SOURCES
-    "src/qcpview.cpp"
-    "src/QAppWindow.cpp"
-    "src/QViewerWidget.cpp"
-    "src/Logger.cpp"
-    "src/Project.cpp"
-    "src/EclipseReader.cpp"
-    "src/EclipseParser.cpp"
-    "src/Eclipse.cpp"
-)
-SET( qcpview_HEADERS
-    "src/QAppWindow.hpp"
-    "src/QViewerWidget.hpp"
-)
-SET( qcpview_FORMS )
-SET( qcpview_RESOURCES )
-
-QT4_WRAP_CPP( qcpview_HEADERS_MOC ${qcpview_HEADERS} )
-QT4_WRAP_UI( qcpview_FORMS_HEADERS ${qcpview_FORMS} )
-QT4_ADD_RESOURCES( qcpview_RESOURCES_RCC ${qcpview_RESOURCES} )
-INCLUDE(${QT_USE_FILE})
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
-ADD_DEFINITIONS(${QT_DEFINITIONS})
-
-#ADD_EXECUTABLE( qcpview
-#                ${qcpview_SOURCES}
-#                ${qcpview_HEADERS_MOC}
-#                ${qcpview_FORMS_HEADERS}
-#                ${qcpview_RESOURCES_RCC}
-#)
-#TARGET_LINK_LIBRARIES( qcpview
-#                       ${GLEW}
-#                       ${QT_LIBRARIES}
-#                       ${LOG4CXX_LIBRARIES}
-#)
-
-ADD_EXECUTABLE( cpview_job ${SRC} )
-
-TARGET_LINK_LIBRARIES( cpview_job
-                       ${GLEW}
-                       ${Freeglut_LIBRARY}
-                       ${OPENGL_LIBRARIES}
-                       ${GLUT_LIBRARIES}
-                       ${LOG4CXX_LIBRARIES}
-)
-

@@ -1,11 +1,20 @@
+/******************************************************************************
+ *
+ *  Author(s): Christopher Dyken <christopher.dyken@sintef.no>
+ *
+ *
+ *  Copyright (C) 2009 by SINTEF.  All rights reserved.
+ *
+ ******************************************************************************/
 #pragma once
-#include <vector>
 #include <GL/glew.h>
+#include <vector>
 #include <boost/utility.hpp>
 
 class GridField;
 class CellSelector;
 class GridTessBridge;
+class GridTessSubset;
 
 class GridTess : public boost::noncopyable
 {
@@ -22,6 +31,9 @@ public:
     GLuint
     vertexTexture() const { return m_vertices.m_texture; }
 
+    GLuint
+    cellGlobalIndexTexture() const { return m_cell_index.m_texture; }
+
     size_t
     activeCells() const { return m_cell_index.m_body.size(); }
 
@@ -32,37 +44,18 @@ public:
     triangleCount() const { return m_triangles.m_index_count/3; }
 
     GLuint
+    triangleVertexArray() const { return m_triangle_vao; }
+
+    GLuint
     triangleInfoTexture() const { return m_tri_info.m_texture; }
 
     GLuint
     triangleIndexBuffer() const { return m_triangles.m_ibo; }
 
-    GLsizei
-    triangleCompactCount() const { return m_triangle_compact_count; }
-
-    GLuint
-    triangleCompactIndexBuffer() const { return m_triangle_compact_indices_buffer; }
-
-    GLuint
-    triangleCompactCellTexture() const { return m_triangle_compact_cell_texture; }
-
-
-    GLsizei
-    cellCount() const { return m_cells; }
-
-    GLuint
-    cellSubsetBuffer() const { return m_cell_subset_buffer; }
-
-    GLuint
-    cellSubsetTexture() const { return m_cell_subset_texture; }
-
 
     /** Maps the compacted cell indices to the 'real' cell indices. */
     const std::vector<unsigned int>&
     getCellIndices() const { return m_cell_index.m_body; }
-
-    void
-    update( unsigned int cells );
 
     const float*
     scale() const { return m_scale; }
@@ -82,22 +75,7 @@ protected:
     float               m_bb_min[3];
     float               m_bb_max[3];
 
-
-    GLsizei             m_cells;
-    GLuint              m_cell_subset_buffer;
-    GLuint              m_cell_subset_texture;
-
-    GLuint              m_triangle_compact_prog;
-    GLuint              m_triangle_compact_vs;
-    GLuint              m_triangle_compact_gs;
-
     GLuint              m_triangle_vao;
-    GLuint              m_triangle_compact_cell_buffer;
-    GLuint              m_triangle_compact_cell_texture;
-    GLuint              m_triangle_compact_indices_buffer;
-    GLuint              m_triangle_compact_query;
-    GLsizei             m_triangle_compact_count;
-    GLsizei             m_triangle_compact_allocated;
 
     struct {
         GLuint          m_buffer;
@@ -128,11 +106,5 @@ protected:
 
     void
     import( GridTessBridge& bridge );
-
-    void
-    allocTriangleCompactBuffers();
-
-    void
-    triangleCompactionPass();
 
 };

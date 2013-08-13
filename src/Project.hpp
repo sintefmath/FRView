@@ -1,3 +1,11 @@
+/******************************************************************************
+ *
+ *  Author(s): Christopher Dyken <christopher.dyken@sintef.no>
+ *
+ *
+ *  Copyright (C) 2009 by SINTEF.  All rights reserved.
+ *
+ ******************************************************************************/
 #pragma once
 #include <string>
 #include <list>
@@ -35,6 +43,16 @@ public:
 
     unsigned int
     reportStepSeqNum( unsigned int step_index ) const;
+
+    unsigned int
+    nx() const;
+
+    unsigned int
+    ny() const;
+
+    unsigned int
+    nz() const;
+
 
     struct Well
     {

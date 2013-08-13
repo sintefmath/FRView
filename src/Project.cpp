@@ -1,3 +1,11 @@
+/******************************************************************************
+ *
+ *  Author(s): Christopher Dyken <christopher.dyken@sintef.no>
+ *
+ *
+ *  Copyright (C) 2009 by SINTEF.  All rights reserved.
+ *
+ ******************************************************************************/
 #include <algorithm>
 #include <stdexcept>
 #include "EclipseParser.hpp"
@@ -161,7 +169,7 @@ Project<REAL>::refresh( )
                     break;
                 }
                 m_unprocessed_files.erase( it );
-//                m_geometry_set = true;
+                break;
             }
             else if( it->m_filetype == FOOBAR_TXT_GRID_FILE ) {
 
@@ -483,6 +491,28 @@ Project<REAL>::reportSteps() const
     return m_report_steps.size();
 }
 
+template<typename REAL>
+unsigned int
+Project<REAL>::nx() const
+{
+    return m_cornerpoint_geometry.m_nx;
+}
+
+template<typename REAL>
+unsigned int
+Project<REAL>::ny() const
+{
+    return m_cornerpoint_geometry.m_ny;
+}
+
+template<typename REAL>
+unsigned int
+Project<REAL>::nz() const
+{
+    return m_cornerpoint_geometry.m_nz;
+}
+
+
 
 template<typename REAL>
 const std::vector<typename Project<REAL>::Well>&
@@ -531,7 +561,10 @@ Project<REAL>::field( Bridge& bridge, const unsigned int solution, const unsigne
     Solution& sol = m_report_steps[ step ].m_solutions[ solution ];
     if( sol.m_reader == READER_UNFORMATTED_ECLIPSE ) {
         Eclipse::Reader reader( sol.m_path );
-        reader.blockContent( bridge.values(), sol.m_location.m_unformatted_eclipse );
+        reader.blockContent( bridge.values(),
+                             bridge.minimum(),
+                             bridge.maximum(),
+                             sol.m_location.m_unformatted_eclipse );
     }
     else {
         throw std::runtime_error( "No valid field for this solution and report step" );

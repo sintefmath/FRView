@@ -1,7 +1,16 @@
+/******************************************************************************
+ *
+ *  Author(s): Christopher Dyken <christopher.dyken@sintef.no>
+ *
+ *
+ *  Copyright (C) 2009 by SINTEF.  All rights reserved.
+ *
+ ******************************************************************************/
 #pragma once
 #include <vector>
 #include <boost/utility.hpp>
 
+#include "Logger.hpp"
 class GridTess;
 
 class GridTessBridge : public boost::noncopyable
@@ -15,70 +24,49 @@ public:
         ORIENTATION_K = 2  // in IJ-plane
     };
 
+    struct Segment {
+        Segment() {}
+
+        Segment( unsigned int v, unsigned int flags )
+            : m_v(v), m_flags(flags)
+        {}
+        unsigned int m_v;
+        unsigned int m_flags;   // bit 0: edge on side a, bit1: edge on side b.
+    };
+
     GridTessBridge( GridTess& owner );
 
     ~GridTessBridge();
 
     void
-    reserveVertices( unsigned int N )
-    {
-        m_vertices.reserve( 4*N );
-    }
+    reserveVertices( unsigned int N );
 
     void
-    reserveEdges( unsigned int N )
-    {
-    }
+    reserveEdges( unsigned int N );
 
     void
-    reserveTriangles( unsigned int N )
-    {
-        m_triangle_info.reserve( 3*N ); // ??
-        m_triangles.reserve( 3*N );
-    }
+    reserveTriangles( unsigned int N );
 
     void
-    reserveCells( unsigned int N )
-    {
-        m_cell_index.resize( N );
-        m_cell_corner.resize( 8*N );
-    }
+    reserveCells( unsigned int N );
 
 
     void
-    addVertex( const float x, const float y, const float z, const float w = 1.f )
-    {
-        m_vertices.push_back( x );
-        m_vertices.push_back( y );
-        m_vertices.push_back( z );
-        m_vertices.push_back( w );
-    }
+    addVertex( const float x, const float y, const float z, const float w = 1.f );
 
     void
     addEdge( const unsigned int ix0, const unsigned int ix1,
              const unsigned int cell_a, const unsigned cell_b,
-             const unsigned int cell_c, const unsigned cell_d )
-    {
-    }
+             const unsigned int cell_c, const unsigned cell_d );
 
     unsigned int
-    vertexCount() const
-    {
-        return m_vertices.size()/4;
-    }
+    vertexCount() const;
 
     unsigned int
-    cellCount() const
-    {
-        return m_cell_index.size();
-    }
+    cellCount() const;
 
     void
-    setCellCount( unsigned int N )
-    {
-        m_cell_index.resize( N );
-        m_cell_corner.resize( 8*N );
-    }
+    setCellCount( unsigned int N );
 
     void
     addCell( const unsigned int global_index,
@@ -89,18 +77,7 @@ public:
              const unsigned int vertex_4,
              const unsigned int vertex_5,
              const unsigned int vertex_6,
-             const unsigned int vertex_7 )
-    {
-        m_cell_index.push_back( global_index );
-        m_cell_corner.push_back( vertex_0 );
-        m_cell_corner.push_back( vertex_1 );
-        m_cell_corner.push_back( vertex_2 );
-        m_cell_corner.push_back( vertex_3 );
-        m_cell_corner.push_back( vertex_4 );
-        m_cell_corner.push_back( vertex_5 );
-        m_cell_corner.push_back( vertex_6 );
-        m_cell_corner.push_back( vertex_7 );
-    }
+             const unsigned int vertex_7 );
 
     void
     setCell( const unsigned int index,
@@ -112,47 +89,112 @@ public:
              const unsigned int vertex_4,
              const unsigned int vertex_5,
              const unsigned int vertex_6,
-             const unsigned int vertex_7 )
-    {
-        m_cell_index[ index ] = global_index;
-        m_cell_corner[ 8*index + 0 ] = vertex_0;
-        m_cell_corner[ 8*index + 1 ] = vertex_1;
-        m_cell_corner[ 8*index + 2 ] = vertex_2;
-        m_cell_corner[ 8*index + 3 ] = vertex_3;
-        m_cell_corner[ 8*index + 4 ] = vertex_4;
-        m_cell_corner[ 8*index + 5 ] = vertex_5;
-        m_cell_corner[ 8*index + 6 ] = vertex_6;
-        m_cell_corner[ 8*index + 7 ] = vertex_7;
-    }
+             const unsigned int vertex_7 );
 
     void
     addTriangle( const Orientation orientation,
-                 const unsigned int cell_a, const unsigned cell_b,
-                 const unsigned int ix0, const unsigned ix1, const unsigned ix2 )
-    {
-        const unsigned int flags = (unsigned int)(orientation)<<29u;
-        m_triangle_info.push_back( flags | cell_a );
-        m_triangle_info.push_back( flags | cell_b );
-        m_triangles.push_back( ix0 );
-        m_triangles.push_back( ix1 );
-        m_triangles.push_back( ix2 );
-    }
+                 const bool is_fault,
+                 const unsigned int cell_a,
+                 const bool edge_a_0_1,
+                 const bool edge_a_1_2,
+                 const bool edge_a_2_0,
+                 const unsigned cell_b,
+                 const bool edge_b_0_1,
+                 const bool edge_b_1_2,
+                 const bool edge_b_2_0,
+                 const unsigned int ix0, const unsigned ix1, const unsigned ix2 );
 
+    void
+    addPolygon(  const Orientation,
+                 const bool          is_fault,
+                 const unsigned int  cell_a,
+                 const unsigned int  cell_b,
+                 const Segment*      segments,
+                 const unsigned int  N,
+                 const unsigned int  split_hint = ~0u );
+
+
+
+    void
+    addQuadrilateral( const Orientation orientation,
+                      const bool is_fault,
+                      const unsigned int cell_a,
+                      const bool edge_a_0_1,
+                      const bool edge_a_1_2,
+                      const bool edge_a_2_3,
+                      const bool edge_a_3_0,
+                      const unsigned cell_b,
+                      const bool edge_b_0_1,
+                      const bool edge_b_1_2,
+                      const bool edge_b_2_3,
+                      const bool edge_b_3_0,
+                      const unsigned int ix0,
+                      const unsigned int ix1,
+                      const unsigned int ix2,
+                      const unsigned int ix3 );
+
+    void
+    addPentagon( const Orientation orientation,
+                      const bool is_fault,
+                      const unsigned int cell_a,
+                      const bool edge_a_0_1,
+                      const bool edge_a_1_2,
+                      const bool edge_a_2_3,
+                      const bool edge_a_3_4,
+                      const bool edge_a_4_0,
+                      const unsigned cell_b,
+                      const bool edge_b_0_1,
+                      const bool edge_b_1_2,
+                      const bool edge_b_2_3,
+                      const bool edge_b_3_4,
+                      const bool edge_b_4_0,
+                      const unsigned int ix0,
+                      const unsigned int ix1,
+                      const unsigned int ix2,
+                      const unsigned int ix3,
+                      const unsigned int ix4 );
+
+    void
+    addHexagon( const Orientation orientation,
+                const bool is_fault,
+                const unsigned int cell_a,
+                const bool edge_a_0_1,
+                const bool edge_a_1_2,
+                const bool edge_a_2_3,
+                const bool edge_a_3_4,
+                const bool edge_a_4_5,
+                const bool edge_a_5_0,
+                const unsigned cell_b,
+                const bool edge_b_0_1,
+                const bool edge_b_1_2,
+                const bool edge_b_2_3,
+                const bool edge_b_3_4,
+                const bool edge_b_4_5,
+                const bool edge_b_5_0,
+                const unsigned int ix0,
+                const unsigned int ix1,
+                const unsigned int ix2,
+                const unsigned int ix3,
+                const unsigned int ix4,
+                const unsigned int ix5 );
 
     const REAL&
-    vertexX( const unsigned int index ) const {
-        return m_vertices[ 4*index + 0 ];
-    }
+    vertexX( const unsigned int index ) const;
 
     const REAL&
-    vertexY( const unsigned int index ) const {
-        return m_vertices[ 4*index + 1 ];
-    }
+    vertexY( const unsigned int index ) const;
 
     const REAL&
-    vertexZ( const unsigned int index ) const {
-        return m_vertices[ 4*index + 2 ];
-    }
+    vertexZ( const unsigned int index ) const;
+
+    const size_t
+    triangleCount() const;
+
+    void
+    triangle( unsigned int& cell_a,
+              unsigned int& cell_b,
+              unsigned int& v0, unsigned int& v1, unsigned int& v2,
+              const unsigned int i );
 
 protected:
     GridTess&                  m_owner;
