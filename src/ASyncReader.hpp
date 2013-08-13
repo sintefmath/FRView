@@ -22,7 +22,7 @@ public:
     typedef uint    Ticket;
     static const Ticket IllegalTicket = ~0u;
 
-    ASyncReader( std::shared_ptr<tinia::model::ExposedModel> model );
+    ASyncReader( boost::shared_ptr<tinia::model::ExposedModel> model );
 
     /** Asynchronously read files and create project object.
      *
@@ -40,12 +40,12 @@ public:
     issueReadSolution( const Project<float>::Solution& solution_location );
 
     bool
-    getProject( std::shared_ptr< Project<float> >& project,
-                std::shared_ptr< render::GridTessBridge>&  tess_bridge );
+    getProject( boost::shared_ptr< Project<float> >& project,
+                boost::shared_ptr< render::GridTessBridge>&  tess_bridge );
 
 
     bool
-    getSolution( std::shared_ptr< render::GridFieldBridge >& field_bridge );
+    getSolution( boost::shared_ptr< render::GridFieldBridge >& field_bridge );
 
 
 protected:
@@ -72,13 +72,13 @@ protected:
             PROJECT,
             SOLUTION
         }                                       m_type;
-        std::shared_ptr< Project<float> >       m_project;
-        std::shared_ptr< render::GridTessBridge >       m_project_grid;
-        std::shared_ptr< render::GridFieldBridge >      m_solution;
+        boost::shared_ptr< Project<float> >       m_project;
+        boost::shared_ptr< render::GridTessBridge >       m_project_grid;
+        boost::shared_ptr< render::GridFieldBridge >      m_solution;
     };
 
     Ticket                                      m_ticket_counter;
-    std::shared_ptr<tinia::model::ExposedModel> m_model;
+    boost::shared_ptr<tinia::model::ExposedModel> m_model;
     std::list<Command>                          m_cmd_queue;
     std::mutex                                  m_cmd_queue_lock;
     std::condition_variable                     m_cmd_queue_wait;

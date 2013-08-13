@@ -23,8 +23,8 @@ CPViewJob::fetchData()
     // import geometry
     if( m_load_geometry ) {
 
-        std::shared_ptr< Project<float> > project;
-        std::shared_ptr< render::GridTessBridge > tess_bridge;
+        boost::shared_ptr< Project<float> > project;
+        boost::shared_ptr< render::GridTessBridge > tess_bridge;
         if( m_async_reader->getProject( project, tess_bridge ) ) {
             if( !m_has_pipeline ) {
                 if(!setupPipeline()) {
@@ -92,7 +92,7 @@ CPViewJob::fetchData()
     if( m_has_pipeline && m_load_color_field && m_project ) {
         m_has_color_field = false;
 
-        std::shared_ptr<render::GridFieldBridge> bridge;
+        boost::shared_ptr<render::GridFieldBridge> bridge;
         if( m_async_reader->getSolution( bridge ) ) {
 
             if( bridge ) {

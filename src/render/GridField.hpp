@@ -8,6 +8,7 @@
  ******************************************************************************/
 #pragma once
 #include <memory>
+#include <boost/shared_ptr.hpp>
 #include <GL/glew.h>
 #include <string>
 #include "render/ManagedGL.hpp"
@@ -22,7 +23,7 @@ class GridField
 {
     friend class GridFieldBridge;
 public:
-    GridField( std::shared_ptr<GridTess> grid );
+    GridField( boost::shared_ptr<GridTess> grid );
 
     /** Get texture buffer sampling the field (indexed by local cell indices). */
     GLuint
@@ -47,7 +48,7 @@ public:
     import( GridFieldBridge& bridge );
 
 protected:
-    std::shared_ptr<GridTess>   m_grid;
+    boost::shared_ptr<GridTess>   m_grid;
     bool                        m_has_data;
     GLBuffer                    m_buffer;
     GLTexture                   m_texture;

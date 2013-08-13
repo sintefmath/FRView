@@ -8,6 +8,7 @@
  ******************************************************************************/
 #pragma once
 #include <memory>
+#include <boost/shared_ptr.hpp>
 #include <GL/glew.h>
 #include <boost/utility.hpp>
 #include "render/ManagedGL.hpp"
@@ -51,7 +52,7 @@ public:
      * To be invoked by \ref CellSelector derivatives.
      */
     void
-    populateBuffer( std::shared_ptr<const GridTess> tess, GLuint transform_feedback_index = 0u );
+    populateBuffer( boost::shared_ptr<const GridTess> tess, GLuint transform_feedback_index = 0u );
 
 private:
     GLsizei             m_cells_total;              ///< Number of cells in GridTess.

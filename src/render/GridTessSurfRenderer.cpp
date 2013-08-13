@@ -281,8 +281,8 @@ GridTessSurfRenderer::renderCells(GLuint                          fbo,
                                    const GLsizei                   height,
                                    const GLfloat*                  modelview,
                                    const GLfloat*                  projection,
-                                   std::shared_ptr<const GridTess> tess,
-                                   std::shared_ptr<const GridField> field,
+                                   boost::shared_ptr<const GridTess> tess,
+                                   boost::shared_ptr<const GridField> field,
                                    const std::vector<GridTessSurfRenderer::RenderItem>&  render_items,
                                    const unsigned int              quality )
 {
@@ -491,8 +491,8 @@ GridTessSurfRenderer::drawTwoPass( const GLfloat*                  modelview,
                                    const GLfloat*                  normal_transform,
                                    const GLsizei                   width,
                                    const GLsizei                   height,
-                                   std::shared_ptr<const GridTess>                 tess,
-                                   std::shared_ptr<const GridField>                field,
+                                   boost::shared_ptr<const GridTess>                 tess,
+                                   boost::shared_ptr<const GridField>                field,
                                    const std::vector<RenderItem>&  render_items,
                                    const bool                      solid_pass )
 {
@@ -564,8 +564,8 @@ GridTessSurfRenderer::drawSinglePass(const GLfloat*                  modelview,
                                       const GLfloat*                  normal_transform,
                                       const GLsizei                   width,
                                       const GLsizei                   height,
-                                      std::shared_ptr<const GridTess> tess,
-                                      std::shared_ptr<const GridField> field,
+                                      boost::shared_ptr<const GridTess> tess,
+                                      boost::shared_ptr<const GridField> field,
                                       const std::vector<RenderItem>&  render_items )
 {
     glBindVertexArray( tess->vertexPositonsAsVertexArrayObject() );
@@ -632,8 +632,8 @@ GridTessSurfRenderer::drawCrappy(const GLfloat*                  modelview,
                                   const GLfloat*                  normal_transform,
                                   const GLsizei                   width,
                                   const GLsizei                   height,
-                                  const std::shared_ptr<const GridTess> tess,
-                                  const std::shared_ptr<const GridField> field,
+                                  const boost::shared_ptr<const GridTess> tess,
+                                  const boost::shared_ptr<const GridField> field,
                                   const std::vector<RenderItem>&  render_items )
 {
     glBindVertexArray( tess->vertexPositonsAsVertexArrayObject() );

@@ -17,8 +17,7 @@ VoxelSurface::VoxelSurface()
     m_volume_dim[0] = ~0u;
     m_volume_dim[1] = ~0u;
     m_volume_dim[2] = ~0u;
-    m_hpmc_c = HPMCcreateConstants( HPMC_TARGET_GL33_GLSL330,
-                                    HPMC_DEBUG_NONE );
+    m_hpmc_c = HPMCcreateConstants( 4, 4 );
     m_hpmc_hp = NULL;
     m_hpmc_th = NULL;
 
@@ -35,19 +34,31 @@ VoxelSurface::VoxelSurface()
 VoxelSurface::~VoxelSurface()
 {
     if( m_hpmc_th != NULL ) {
-        HPMCdestroyIsoSurfaceRenderer( m_hpmc_th );
+        HPMCdestroyTraversalHandle( m_hpmc_th );
     }
     if( m_hpmc_hp != NULL ) {
-        //    HPMCdestroy Handle( m_hpmc_hp );  // Missing, bug in HPMC?
+        //HPMCdestroyHandle( m_hpmc_hp );
     }
     HPMCdestroyConstants( m_hpmc_c );
 }
 
 void
-VoxelSurface::build( std::shared_ptr<const GridVoxelization> voxels,
-                     std::shared_ptr<const GridField> field )
+VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
+                     boost::shared_ptr<const GridField> field )
 {
+    
     Logger log = getLogger( "VoxelSurface.build" );
+    { 
+        GLenum gl_error = glGetError();
+        if( gl_error != GL_NONE ) {
+            do {
+                LOGGER_WARN( log, "Entered with GL error " << glewGetErrorString( gl_error ) );
+                gl_error = glGetError();
+            } while( gl_error != GL_NONE );
+        }
+    }
+    
+    
     GLsizei voxel_dim[3];
     voxels->dimension( voxel_dim );
 
@@ -58,7 +69,7 @@ VoxelSurface::build( std::shared_ptr<const GridVoxelization> voxels,
     {
         // release old instances
         if( m_hpmc_th != NULL ) {
-            HPMCdestroyIsoSurfaceRenderer( m_hpmc_th );
+            HPMCdestroyTraversalHandle( m_hpmc_th );
         }
         if( m_hpmc_hp != NULL ) {
 //            HPMCdestroyHandle();
@@ -70,7 +81,7 @@ VoxelSurface::build( std::shared_ptr<const GridVoxelization> voxels,
 
 
         // set up histopyramid
-        m_hpmc_hp = HPMCcreateIsoSurface( m_hpmc_c );
+        m_hpmc_hp = HPMCcreateHistoPyramid( m_hpmc_c );
         HPMCsetLatticeSize( m_hpmc_hp,
                             voxel_dim[0],
                             voxel_dim[1],
@@ -88,14 +99,46 @@ VoxelSurface::build( std::shared_ptr<const GridVoxelization> voxels,
         HPMCsetFieldAsBinary( m_hpmc_hp );
 
         GLuint builder = HPMCgetBuilderProgram( m_hpmc_hp );
+        if( builder == 0 ) {
+            LOGGER_ERROR( log, "HPMC provided builder program = 0." );
+        }
+        
+        { 
+            GLenum gl_error = glGetError();
+            if( gl_error != GL_NONE ) {
+                do {
+                    LOGGER_WARN( log, "A Entered with GL error " << glewGetErrorString( gl_error ) );
+                    gl_error = glGetError();
+                } while( gl_error != GL_NONE );
+            }
+        }
+
         glUseProgram( builder );
         glUniform1i( glGetUniformLocation( builder, "voxels" ), 1 );
 
+        { 
+            GLenum gl_error = glGetError();
+            if( gl_error != GL_NONE ) {
+                do {
+                    LOGGER_WARN( log, "B Entered with GL error " << glewGetErrorString( gl_error ) );
+                    gl_error = glGetError();
+                } while( gl_error != GL_NONE );
+            }
+        }
+
+
+        
+
         // set up extraction pass
-        m_hpmc_th = HPMCcreateIsoSurfaceRenderer( m_hpmc_hp );
+        m_hpmc_th = HPMCcreateTraversalHandle( m_hpmc_hp );
         m_extraction_program = glCreateProgram();
 
-        char* traversal_code = HPMCisoSurfaceRendererShaderSource( m_hpmc_th );
+        char* traversal_code = HPMCgetTraversalShaderFunctions( m_hpmc_th );
+        if( traversal_code == NULL ) {
+            LOGGER_FATAL( log, "Failed to get HPMC traversal shader functions." );
+            return;
+        }
+        
         GLuint vs = siut2::gl_utils::compileShader( resources::voxel_surface_extractor_vs +
                                                     traversal_code,
                                                     GL_VERTEX_SHADER, true );
@@ -112,7 +155,7 @@ VoxelSurface::build( std::shared_ptr<const GridVoxelization> voxels,
         m_extraction_loc_shift = glGetUniformLocation( m_extraction_program, "shift" );
         glUniform1i( glGetUniformLocation( m_extraction_program, "voxels"), 3 );
         glUniform1i( glGetUniformLocation( m_extraction_program, "field"), 4 );
-        if(!HPMCsetIsoSurfaceRendererProgram( m_hpmc_th, m_extraction_program, 0, 1, 2 )) {
+        if(!HPMCsetTraversalHandleProgram( m_hpmc_th, m_extraction_program, 0, 1, 2 )) {
             LOGGER_ERROR( log, "Failed to set HPMC extraction program"  );
         }
     }
@@ -120,7 +163,7 @@ VoxelSurface::build( std::shared_ptr<const GridVoxelization> voxels,
     // Bind voxel texture to sampler 1
     glActiveTexture( GL_TEXTURE1 );
     glBindTexture( GL_TEXTURE_3D, voxels->voxelTexture() );
-    HPMCbuildIsoSurface( m_hpmc_hp, 0.5f );
+    HPMCbuildHistopyramid( m_hpmc_hp, 0.5f );
 
     GLsizei N = HPMCacquireNumberOfVertices( m_hpmc_hp );
     //LOGGER_DEBUG( log, "HPMC reported " << N << " vertices in iso-surface" );
@@ -139,7 +182,7 @@ VoxelSurface::build( std::shared_ptr<const GridVoxelization> voxels,
     }
 
 
-    HPMCbuildIsoSurface( m_hpmc_hp, 0.5f );
+    HPMCbuildHistopyramid( m_hpmc_hp, 0.5f );
     glUseProgram( m_extraction_program );
 
 
@@ -173,7 +216,7 @@ VoxelSurface::build( std::shared_ptr<const GridVoxelization> voxels,
 
     glEnable( GL_RASTERIZER_DISCARD );
     glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, m_surface_buf );
-    HPMCextractVerticesTransformFeedback( m_hpmc_th, GL_FALSE );
+    HPMCextractVerticesTransformFeedback( m_hpmc_th );
     glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, 0 );
     glDisable( GL_RASTERIZER_DISCARD );
 

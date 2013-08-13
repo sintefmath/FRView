@@ -16,7 +16,7 @@
 
 namespace render {
 
-GridField::GridField(std::shared_ptr<GridTess> grid )
+GridField::GridField(boost::shared_ptr<GridTess> grid )
     : m_grid( grid ),
       m_has_data( false ),
       m_buffer( "GridField.m_buffer" ),

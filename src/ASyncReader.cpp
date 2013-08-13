@@ -15,7 +15,7 @@
 
 static const std::string package = "ASyncReader";
 
-ASyncReader::ASyncReader( std::shared_ptr<tinia::model::ExposedModel> model )
+ASyncReader::ASyncReader( boost::shared_ptr<tinia::model::ExposedModel> model )
     : m_ticket_counter(1),
       m_model( model ),
       m_worker( worker, this )
@@ -58,8 +58,8 @@ ASyncReader::issueReadSolution( const Project<float>::Solution& solution_locatio
 
 
 bool
-ASyncReader::getProject( std::shared_ptr< Project<float> >& project,
-                         std::shared_ptr< render::GridTessBridge>&  tess_bridge )
+ASyncReader::getProject( boost::shared_ptr< Project<float> >& project,
+                         boost::shared_ptr< render::GridTessBridge>&  tess_bridge )
 {
     std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
     for(auto it = m_rsp_queue.begin(); it!=m_rsp_queue.end(); ++it ) {
@@ -74,7 +74,7 @@ ASyncReader::getProject( std::shared_ptr< Project<float> >& project,
 }
 
 bool
-ASyncReader::getSolution( std::shared_ptr< render::GridFieldBridge >& field_bridge )
+ASyncReader::getSolution( boost::shared_ptr< render::GridFieldBridge >& field_bridge )
 {
     // We kill of all but the latest request of correct type
     bool found_any = false;
@@ -121,13 +121,13 @@ ASyncReader::handleReadProject( const Command& cmd )
         m_model->updateElement<std::string>( "asyncreader_what", "Indexing files..." );
         m_model->updateElement<int>( "asyncreader_progress", 0 );
 
-        std::shared_ptr< Project<float> > project( new Project<float>( cmd.m_project_file,
+        boost::shared_ptr< Project<float> > project( new Project<float>( cmd.m_project_file,
                                                                        cmd.m_refine_i,
                                                                        cmd.m_refine_j,
                                                                        cmd.m_refine_k ) );
         if( project->geometryType() == Project<float>::GEOMETRY_CORNERPOINT_GRID ) {
 
-            std::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
+            boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
 
             m_field_remap = project->fieldRemap();
 

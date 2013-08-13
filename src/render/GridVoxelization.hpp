@@ -8,6 +8,7 @@
  ******************************************************************************/
 #pragma once
 #include <memory>
+#include <boost/shared_ptr.hpp>
 #include <boost/utility.hpp>
 
 namespace render {
@@ -34,8 +35,8 @@ public:
 
     /** Populate the voxel set. */
     void
-    build( std::shared_ptr<const GridTess> tess,
-           std::shared_ptr<const GridTessSubset> subset,
+    build( boost::shared_ptr<const GridTess> tess,
+           boost::shared_ptr<const GridTessSubset> subset,
            const GLfloat* local_from_world );
 
 protected:

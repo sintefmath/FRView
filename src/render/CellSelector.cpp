@@ -49,8 +49,8 @@ AllSelector::AllSelector()
 }
 
 void
-AllSelector::apply(std::shared_ptr<GridTessSubset> tess_subset,
-                   std::shared_ptr<const GridTess> tess)
+AllSelector::apply(boost::shared_ptr<GridTessSubset> tess_subset,
+                   boost::shared_ptr<const GridTess> tess)
 {
     glUseProgram( m_program );
     tess_subset->populateBuffer( tess );
@@ -66,9 +66,9 @@ FieldSelector::FieldSelector()
 }
 
 void
-FieldSelector::apply( std::shared_ptr<GridTessSubset> tess_subset,
-                     std::shared_ptr<const GridTess> tess,
-                     std::shared_ptr<const GridField> field,
+FieldSelector::apply( boost::shared_ptr<GridTessSubset> tess_subset,
+                     boost::shared_ptr<const GridTess> tess,
+                     boost::shared_ptr<const GridField> field,
                      const float minval,
                      const float maxval)
 {
@@ -95,8 +95,8 @@ IndexSelector::IndexSelector()
 
 
 void
-IndexSelector::apply( std::shared_ptr<GridTessSubset> tess_subset,
-                      std::shared_ptr<const GridTess> tess,
+IndexSelector::apply( boost::shared_ptr<GridTessSubset> tess_subset,
+                      boost::shared_ptr<const GridTess> tess,
                       unsigned int n_i,
                       unsigned int n_j,
                       unsigned int n_k,
@@ -132,8 +132,8 @@ HalfPlaneSelector::HalfPlaneSelector()
 }
 
 void
-HalfPlaneSelector::apply(std::shared_ptr<GridTessSubset> tess_subset,
-                          std::shared_ptr<const GridTess> tess,
+HalfPlaneSelector::apply(boost::shared_ptr<GridTessSubset> tess_subset,
+                          boost::shared_ptr<const GridTess> tess,
                           const float *equation )
 {
     glUseProgram( m_program );
@@ -162,8 +162,8 @@ PlaneSelector::PlaneSelector()
 }
 
 void
-PlaneSelector::apply(std::shared_ptr<GridTessSubset> tess_subset,
-                      std::shared_ptr<const GridTess> tess,
+PlaneSelector::apply(boost::shared_ptr<GridTessSubset> tess_subset,
+                      boost::shared_ptr<const GridTess> tess,
                       const float *equation )
 {
     glUseProgram( m_program );

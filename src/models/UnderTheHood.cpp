@@ -10,7 +10,7 @@ namespace models {
     static const string profile_surface_gen_key = "profile_surface_gen";
     static const string profile_surface_render_key = "profile_surface_render";
 
-UnderTheHood::UnderTheHood( std::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic )
+UnderTheHood::UnderTheHood( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic )
     : m_model( model ),
       m_logic( logic ),
       m_profiling_enabled( false ),

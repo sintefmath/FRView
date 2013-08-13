@@ -16,7 +16,7 @@ namespace models {
 //    static const std::string _key = "";
 
 
-File::File( std::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic )
+File::File( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic )
     : m_model( model ),
       m_logic( logic )
 {

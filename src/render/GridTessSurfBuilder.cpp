@@ -125,11 +125,11 @@ GridTessSurfBuilder::rebuildTriangulationProgram( GLsizei max_vertices )
 
 
 void
-GridTessSurfBuilder::buildSurfaces( std::shared_ptr<GridTessSurf> surf_subset,
-                                    std::shared_ptr<GridTessSurf> surf_subset_boundary,
-                                    std::shared_ptr<GridTessSurf> surf_faults,
-                                    std::shared_ptr<const GridTessSubset> subset,
-                                    std::shared_ptr<const GridTess> tess,
+GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
+                                    boost::shared_ptr<GridTessSurf> surf_subset_boundary,
+                                    boost::shared_ptr<GridTessSurf> surf_faults,
+                                    boost::shared_ptr<const GridTessSubset> subset,
+                                    boost::shared_ptr<const GridTess> tess,
                                     bool                     flip_faces )
 {
     Logger log = getLogger( "GridTessSurfBuilder.buildSurfaces" );

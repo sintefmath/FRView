@@ -95,15 +95,15 @@ CPViewJob::doCompute()
             m_subset_surface->setTriangleCount( 0 );
             m_boundary_surface->setTriangleCount( 0 );
             m_faults_surface->setTriangleCount( 0 );
-            std::shared_ptr<render::GridTessSurf> subset_surf;
+            boost::shared_ptr<render::GridTessSurf> subset_surf;
             if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_SUBSET ) {
                 subset_surf = m_subset_surface;
             }
-            std::shared_ptr<render::GridTessSurf> boundary_surf;
+            boost::shared_ptr<render::GridTessSurf> boundary_surf;
             if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_BOUNDARY ) {
                 boundary_surf = m_boundary_surface;
             }
-            std::shared_ptr<render::GridTessSurf> faults_surf;
+            boost::shared_ptr<render::GridTessSurf> faults_surf;
             if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS ) {
                 faults_surf = m_faults_surface;
             }

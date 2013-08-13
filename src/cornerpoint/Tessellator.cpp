@@ -106,7 +106,7 @@ Tessellator<Tessellation>::Tessellator( Tessellation& tessellation )
 
 template<typename Tessellation>
 void
-Tessellator<Tessellation>::tessellate( std::shared_ptr<tinia::model::ExposedModel> model,
+Tessellator<Tessellation>::tessellate( boost::shared_ptr<tinia::model::ExposedModel> model,
                                                   const std::string& what_key,
                                                   const std::string& progress_key,
                                                   const Index             nx,

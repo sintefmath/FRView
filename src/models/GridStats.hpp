@@ -16,7 +16,7 @@ class GridStats
         : public tinia::model::StateListener
 {
 public:
-    GridStats( std::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic );
+    GridStats( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic );
 
     ~GridStats();
 
@@ -33,11 +33,11 @@ public:
     update( );
 
     void
-    update( std::shared_ptr<Project<float> > project,
-            std::shared_ptr<render::GridTess> tessellation );
+    update( boost::shared_ptr<Project<float> > project,
+            boost::shared_ptr<render::GridTess> tessellation );
 
 protected:
-    std::shared_ptr<tinia::model::ExposedModel> m_model;
+    boost::shared_ptr<tinia::model::ExposedModel> m_model;
     Logic&                                      m_logic;
     float                                       m_zscale;
 };

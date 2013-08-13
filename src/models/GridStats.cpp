@@ -16,7 +16,7 @@ static const string grid_faces_key = "_grid_faces";
 static const string grid_triangles_key = "_grid_triangles";
 static const string grid_max_poly_key = "_grid_max_poly";
 
-GridStats::GridStats( std::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic )
+GridStats::GridStats( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic )
     : m_model( model ),
       m_logic( logic ),
       m_zscale( 1.f )
@@ -43,14 +43,14 @@ GridStats::~GridStats()
 void
 GridStats::update( )
 {
-    std::shared_ptr<Project<float> > project;
-    std::shared_ptr<render::GridTess> tessellation;
+    boost::shared_ptr<Project<float> > project;
+    boost::shared_ptr<render::GridTess> tessellation;
     update( project, tessellation );
 }
 
 void
-GridStats::update( std::shared_ptr<Project<float> > project,
-                   std::shared_ptr<render::GridTess> tessellation )
+GridStats::update( boost::shared_ptr<Project<float> > project,
+                   boost::shared_ptr<render::GridTess> tessellation )
 {
     int nx = 0;
     int ny = 0;

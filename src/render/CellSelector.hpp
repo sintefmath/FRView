@@ -8,6 +8,7 @@
  ******************************************************************************/
 #pragma once
 #include <memory>
+#include <boost/shared_ptr.hpp>
 #include <GL/glew.h>
 #include <string>
 
@@ -44,8 +45,8 @@ public:
 
     /** Populates a \ref GridTessSubset by selecting all cells in a \ref GridTess. */
     void
-    apply( std::shared_ptr<GridTessSubset> tess_subset,
-           std::shared_ptr<GridTess const> tess );
+    apply( boost::shared_ptr<GridTessSubset> tess_subset,
+           boost::shared_ptr<GridTess const> tess );
 
 protected:
 };
@@ -78,8 +79,8 @@ public:
      * \param max_k        Maximum k of index range (inclusive).
      */
     void
-    apply( std::shared_ptr<GridTessSubset> tess_subset,
-           std::shared_ptr<const GridTess> tess,
+    apply( boost::shared_ptr<GridTessSubset> tess_subset,
+           boost::shared_ptr<const GridTess> tess,
            unsigned int n_i,
            unsigned int n_j,
            unsigned int n_k,
@@ -115,9 +116,9 @@ public:
      * \param maxval       Maximum value for the range (inclusive).
      */
     void
-    apply( std::shared_ptr<GridTessSubset>  tess_subset,
-           std::shared_ptr<const GridTess>  tess,
-           std::shared_ptr<const GridField> field,
+    apply( boost::shared_ptr<GridTessSubset>  tess_subset,
+           boost::shared_ptr<const GridTess>  tess,
+           boost::shared_ptr<const GridField> field,
            const float      minval,
            const float      maxval );
 
@@ -142,8 +143,8 @@ public:
      * \param equation     The plane equation to use (4 components).
      */
     void
-    apply( std::shared_ptr<GridTessSubset>  tess_subset,
-           std::shared_ptr<const GridTess>  tess,
+    apply( boost::shared_ptr<GridTessSubset>  tess_subset,
+           boost::shared_ptr<const GridTess>  tess,
            const float*     equation );
 
 protected:
@@ -166,8 +167,8 @@ public:
      * \param equation     The plane equation to use (4 components).
      */
     void
-    apply( std::shared_ptr<GridTessSubset>  tess_subset,
-           std::shared_ptr<const GridTess>  tess,
+    apply( boost::shared_ptr<GridTessSubset>  tess_subset,
+           boost::shared_ptr<const GridTess>  tess,
            const float*     equation );
 
 protected:

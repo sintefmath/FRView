@@ -29,7 +29,7 @@ class GridTessSurfRenderer : public boost::noncopyable
 {
 public:
     struct RenderItem {
-        std::shared_ptr<const GridTessSurf> m_surf;
+        boost::shared_ptr<const GridTessSurf> m_surf;
         bool                m_field;
         bool                m_field_log_map;
         float               m_field_min;
@@ -57,8 +57,8 @@ public:
                  const GLsizei                   height,
                  const GLfloat*                  modelview,
                  const GLfloat*                  projection,
-                 std::shared_ptr<const GridTess>                 tess,
-                 std::shared_ptr<const GridField>                field,
+                 boost::shared_ptr<const GridTess>                 tess,
+                 boost::shared_ptr<const GridField>                field,
                  const std::vector<RenderItem>&  render_items,
                  const unsigned int              quality );
 
@@ -139,8 +139,8 @@ private:
                 const GLfloat*                  normal_transform,
                 const GLsizei                   width,
                 const GLsizei                   height,
-                const std::shared_ptr<const GridTess>                 tess,
-                const std::shared_ptr<const GridField>                field,
+                const boost::shared_ptr<const GridTess>                 tess,
+                const boost::shared_ptr<const GridField>                field,
                 const std::vector<RenderItem>&  render_items );
 
 
@@ -151,8 +151,8 @@ private:
           const GLfloat*                  normal_transform,
           const GLsizei                   width,
           const GLsizei                   height,
-          std::shared_ptr<const GridTess>                 tess,
-          std::shared_ptr<const GridField>                field,
+          boost::shared_ptr<const GridTess>                 tess,
+          boost::shared_ptr<const GridField>                field,
           const std::vector<RenderItem>&  render_items );
 
     void
@@ -162,8 +162,8 @@ private:
           const GLfloat*                  normal_transform,
           const GLsizei                   width,
           const GLsizei                   height,
-          std::shared_ptr<const GridTess>                 tess,
-          std::shared_ptr<const GridField>                field,
+          boost::shared_ptr<const GridTess>                 tess,
+          boost::shared_ptr<const GridField>                field,
           const std::vector<RenderItem>&  render_items,
           const bool                      solid_pass );
 

@@ -23,7 +23,7 @@ public:
 
     typedef int Theme;
 
-    Appearance( std::shared_ptr<tinia::model::ExposedModel>& model );
+    Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model );
 
     ~Appearance();
 
@@ -92,7 +92,7 @@ public:
     theme() const { return m_theme; }
 
 protected:
-    std::shared_ptr<tinia::model::ExposedModel> m_model;
+    boost::shared_ptr<tinia::model::ExposedModel> m_model;
     int                                         m_render_quality;
     Theme                                       m_theme;
     bool                                        m_render_grid;

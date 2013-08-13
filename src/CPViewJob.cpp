@@ -396,7 +396,7 @@ CPViewJob::loadFile( const std::string& filename,
 
     m_load_geometry = false;
     m_load_color_field = false;
-    m_project = std::shared_ptr< Project<float> >();
+    m_project = boost::shared_ptr< Project<float> >();
     std::list<std::string> solutions = {"none"};
     m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
     m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
@@ -801,26 +801,26 @@ CPViewJob::releasePipeline()
     if( !m_has_context ) {
         return;
     }
-    m_well_labels = std::shared_ptr<render::TextRenderer>();
-    m_clip_plane = std::shared_ptr<render::ClipPlane>();
-    m_grid_tess = std::shared_ptr<render::GridTess>();
-    m_faults_surface = std::shared_ptr<render::GridTessSurf>();
-    m_subset_surface = std::shared_ptr<render::GridTessSurf>();
-    m_boundary_surface = std::shared_ptr<render::GridTessSurf>();
-    m_grid_tess_surf_builder = std::shared_ptr<render::GridTessSurfBuilder>();
-    m_grid_field = std::shared_ptr<render::GridField>();
-    m_tess_renderer = std::shared_ptr<render::GridTessSurfRenderer>();
-    m_all_selector = std::shared_ptr<render::AllSelector>();
-    m_field_selector = std::shared_ptr<render::FieldSelector>();
-    m_index_selector = std::shared_ptr<render::IndexSelector>();
-    m_plane_selector = std::shared_ptr<render::PlaneSelector>();
-    m_half_plane_selector = std::shared_ptr<render::HalfPlaneSelector>();
-    m_grid_tess_subset = std::shared_ptr<render::GridTessSubset>();
-    m_grid_cube_renderer = std::shared_ptr<render::GridCubeRenderer>();
-    m_well_renderer = std::shared_ptr<render::WellRenderer>();
-    m_coordsys_renderer = std::shared_ptr<render::CoordSysRenderer>();
-    m_grid_voxelizer = std::shared_ptr<render::GridVoxelization>();
-    m_voxel_surface = std::shared_ptr<render::VoxelSurface>();
+    m_well_labels = boost::shared_ptr<render::TextRenderer>();
+    m_clip_plane = boost::shared_ptr<render::ClipPlane>();
+    m_grid_tess = boost::shared_ptr<render::GridTess>();
+    m_faults_surface = boost::shared_ptr<render::GridTessSurf>();
+    m_subset_surface = boost::shared_ptr<render::GridTessSurf>();
+    m_boundary_surface = boost::shared_ptr<render::GridTessSurf>();
+    m_grid_tess_surf_builder = boost::shared_ptr<render::GridTessSurfBuilder>();
+    m_grid_field = boost::shared_ptr<render::GridField>();
+    m_tess_renderer = boost::shared_ptr<render::GridTessSurfRenderer>();
+    m_all_selector = boost::shared_ptr<render::AllSelector>();
+    m_field_selector = boost::shared_ptr<render::FieldSelector>();
+    m_index_selector = boost::shared_ptr<render::IndexSelector>();
+    m_plane_selector = boost::shared_ptr<render::PlaneSelector>();
+    m_half_plane_selector = boost::shared_ptr<render::HalfPlaneSelector>();
+    m_grid_tess_subset = boost::shared_ptr<render::GridTessSubset>();
+    m_grid_cube_renderer = boost::shared_ptr<render::GridCubeRenderer>();
+    m_well_renderer = boost::shared_ptr<render::WellRenderer>();
+    m_coordsys_renderer = boost::shared_ptr<render::CoordSysRenderer>();
+    m_grid_voxelizer = boost::shared_ptr<render::GridVoxelization>();
+    m_voxel_surface = boost::shared_ptr<render::VoxelSurface>();
     m_has_pipeline = false;
 }
 

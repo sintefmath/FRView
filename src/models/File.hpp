@@ -12,7 +12,7 @@ class File
         : public tinia::model::StateListener
 {
 public:
-    File( std::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic );
+    File( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic );
 
     ~File();
 
@@ -29,7 +29,7 @@ public:
     guiFactory() const;
 
 protected:
-    std::shared_ptr<tinia::model::ExposedModel> m_model;
+    boost::shared_ptr<tinia::model::ExposedModel> m_model;
     Logic&                                      m_logic;
 
 

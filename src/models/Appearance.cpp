@@ -67,7 +67,7 @@ Appearance::setDarkTheme()
 }
 
 
-Appearance::Appearance( std::shared_ptr<tinia::model::ExposedModel>& model )
+Appearance::Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model )
     : m_model( model ),
       m_render_quality( 3 ),
       m_render_grid( false ),

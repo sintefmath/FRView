@@ -36,7 +36,7 @@ GridTessSubset::~GridTessSubset()
 }
 
 void
-GridTessSubset::populateBuffer( std::shared_ptr<const GridTess> tess,
+GridTessSubset::populateBuffer( boost::shared_ptr<const GridTess> tess,
                                 GLuint transform_feedback_index )
 {
     if( tess->cellCount() == 0 ) {

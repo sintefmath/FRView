@@ -40,7 +40,7 @@ public:
     Tessellator( Tessellation& tessellation );
 
     void
-    tessellate( std::shared_ptr<tinia::model::ExposedModel> model,
+    tessellate( boost::shared_ptr<tinia::model::ExposedModel> model,
                 const std::string& what_key,
                 const std::string& progress_key,
                 const Index                  nx,

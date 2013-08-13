@@ -15,7 +15,7 @@ class UnderTheHood
         : public tinia::model::StateListener
 {
 public:
-    UnderTheHood( std::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic );
+    UnderTheHood( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic );
 
     ~UnderTheHood();
 
@@ -45,7 +45,7 @@ public:
 
 
 protected:
-    std::shared_ptr<tinia::model::ExposedModel> m_model;
+    boost::shared_ptr<tinia::model::ExposedModel> m_model;
     Logic&                                      m_logic;
     bool                                        m_profiling_enabled;
 

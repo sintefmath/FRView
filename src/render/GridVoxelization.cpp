@@ -130,8 +130,8 @@ GridVoxelization::dimension( GLsizei* dim ) const
 }
 
 void
-GridVoxelization::build( std::shared_ptr<const GridTess> tess,
-                         std::shared_ptr<const GridTessSubset> subset,
+GridVoxelization::build( boost::shared_ptr<const GridTess> tess,
+                         boost::shared_ptr<const GridTessSubset> subset,
                          const GLfloat* world_from_local )
 {
     Logger log = getLogger( "GridVoxelization.build" );

@@ -25,11 +25,11 @@ public:
     ~GridTessSurfBuilder();
 
     void
-    buildSurfaces( std::shared_ptr<GridTessSurf>            surf_subset,
-                   std::shared_ptr<GridTessSurf>            surf_subset_boundary,
-                   std::shared_ptr<GridTessSurf>            surf_faults,
-                   std::shared_ptr<const GridTessSubset>    subset,
-                   std::shared_ptr<const GridTess>          tess,
+    buildSurfaces( boost::shared_ptr<GridTessSurf>            surf_subset,
+                   boost::shared_ptr<GridTessSurf>            surf_subset_boundary,
+                   boost::shared_ptr<GridTessSurf>            surf_faults,
+                   boost::shared_ptr<const GridTessSubset>    subset,
+                   boost::shared_ptr<const GridTess>          tess,
                    bool                     flip_faces );
 
 protected:
