@@ -20,11 +20,12 @@ namespace Eclipse {
 
 static
 void
-parseRestartStep( std::list<ReportStep>&        report_steps,
-                  Reader&                       reader,
-                  const std::list<Block>::iterator&   first,
-                  const std::list<Block>::iterator&   last,
-                  const unsigned int            seqnum )
+parseRestartStep( std::list<ReportStep>&            report_steps,
+                  Reader&                           reader,
+                  const std::list<Block>::iterator& first,
+                  const std::list<Block>::iterator& last,
+                  const std::vector<int>&           actnum,
+                  const unsigned int                seqnum )
 {
     Logger log = getLogger( "Eclipse.parseRestartStep" );
 
@@ -37,15 +38,20 @@ parseRestartStep( std::list<ReportStep>&        report_steps,
     unsigned int ncwma = 0;     // max no of completions per well
     unsigned int nwgmax = 0;    // max no of wells in any well group
     unsigned int ngmaxz = 0;   // max no of wells in field
-    unsigned int niwel = 0;     // no of data elements per well in IWEL array
-    unsigned int nzwel = 0;
-    unsigned int nicon = 0;     // no of data elements per completion in ICON array
+    unsigned int niwelz = 0;     // no of data elements per well in IWEL array
+    unsigned int nzwelz = 0;
+    unsigned int niconz = 0;     // no of data elements per completion in ICON array
     unsigned int nigrpz = 0;    // no of data elements per group in IGRP array
 
     unsigned int nswlmx = 0;    // max no of segmented wells
     unsigned int nsegmx = 0;    // max no of segments per well
     unsigned int nisegz = 0;    // no of data elements per segment in ISEG array.
 
+
+    std::vector<int>            iseg;
+    std::vector<int>            iwel;
+    std::vector<std::string>    zwel;
+    std::vector<int>            icon;
 
     report_steps.push_back( ReportStep() );
     ReportStep& step = report_steps.back();
@@ -58,9 +64,9 @@ parseRestartStep( std::list<ReportStep>&        report_steps,
             if( intehead.size() < 95 ) {
                 throw std::runtime_error( "INTEHEAD < 95 elements" );
             }
-            step.m_properties["isnum"] = intehead[0];
+            step.m_properties["isnum"] = intehead[ ITEM_INTEHEAD_ISNUM ];
 
-            switch( intehead[2] ) {
+            switch( intehead[ ITEM_INTEHEAD_UNITS ] ) {
             case 1:
                 step.m_properties["units"] = "metric";
                 break;
@@ -73,16 +79,16 @@ parseRestartStep( std::list<ReportStep>&        report_steps,
             default:
                 break;
             }
-            nx = intehead[8];
-            ny = intehead[9];
-            nz = intehead[10];
-            nactive = intehead[11];
+            nx = intehead[ ITEM_INTEHEAD_NX ];
+            ny = intehead[ ITEM_INTEHEAD_NY ];
+            nz = intehead[ ITEM_INTEHEAD_NZ ];
+            nactive = intehead[ ITEM_INTEHEAD_NACTIV ];
 
-            step.m_properties["nx"] = intehead[8];
-            step.m_properties["ny"] = intehead[9];
-            step.m_properties["nz"] = intehead[10];
-            step.m_properties["nactive"] = intehead[11];
-            switch( intehead[14] ) {
+            step.m_properties["nx"] = intehead[ ITEM_INTEHEAD_NX ];
+            step.m_properties["ny"] = intehead[ ITEM_INTEHEAD_NY ];
+            step.m_properties["nz"] = intehead[ ITEM_INTEHEAD_NZ ];
+            step.m_properties["nactive"] = intehead[ ITEM_INTEHEAD_NACTIV ];
+            switch( intehead[ ITEM_INTEHEAD_IPHS ] ) {
             case 1:
                 step.m_properties["iphs"] = "oil";
                 break;
@@ -107,28 +113,29 @@ parseRestartStep( std::list<ReportStep>&        report_steps,
             default:
                 break;
             }
-            nwell  = intehead[16];
-            ncwma  = intehead[17];
-            nwgmax = intehead[19];
-            ngmaxz = intehead[20];
-            niwel  = intehead[24];
-            nzwel  = intehead[27];
-            nicon  = intehead[32];
-            nigrpz = intehead[36];
+            nwell  = intehead[16];      // Number of wells
+            ncwma  = intehead[17];      // Max # completions per well.
+            nwgmax = intehead[19];      // Max number of wells in any well group.
+            ngmaxz = intehead[20];      // Maximum number of groups in field.
+            niwelz = intehead[24];      // Number of data elements per well in IWEL.
+            nzwelz = intehead[27];      // Number of 8-character strings per well in ZWEL
+            niconz = intehead[32];      // Number of data elements per completion in ICON.
+            nigrpz = intehead[36];      // Number of data elements per group in ZGRP.
 
 
-            step.m_properties["nwell"] = intehead[16];
-            step.m_properties["ncwma"] = intehead[17];
-            step.m_properties["nwgmax"] = intehead[19];
-            step.m_properties["ngmaxz"] = intehead[20];
-            step.m_properties["niwel"] = intehead[24];
-            step.m_properties["nzwel"] = intehead[27];
-            step.m_properties["nicon"] = intehead[32];
-            step.m_properties["nigrpz"] = intehead[36];
-            step.m_properties["iday"] = intehead[64];
-            step.m_properties["imon"] = intehead[65];
-            step.m_properties["iyear"] = intehead[66];
-            switch( intehead[94] ) {
+            step.m_properties["nwell"] = intehead[ ITEM_INTEHEAD_NWELLS ];
+            step.m_properties["ncwmax"] = intehead[ ITEM_INTEHEAD_NCWMAX ];
+            step.m_properties["nwgmax"] = intehead[ ITEM_INTEHEAD_NWGMAX ];
+            step.m_properties["ngmaxz"] = intehead[ ITEM_INTEHEAD_NGMAXZ ];
+            step.m_properties["niwel"] = intehead[ ITEM_INTEHEAD_NIWELZ ];
+            step.m_properties["nzwel"] = intehead[ ITEM_INTEHEAD_NZWELZ ];
+            step.m_properties["nicon"] = intehead[ ITEM_INTEHEAD_NICONZ ];
+            step.m_properties["nigrpz"] = intehead[ ITEM_INTEHEAD_NIGRPZ ];
+
+            step.m_date.m_day   = intehead[ ITEM_INTEHEAD_IDAY ];
+            step.m_date.m_month = intehead[ ITEM_INTEHEAD_IMON ];
+            step.m_date.m_year  = intehead[ ITEM_INTEHEAD_IYEAR ];
+            switch( intehead[ ITEM_INTEHEAD_IPROG ] ) {
             case 100:
                 step.m_properties["simulator"] = "eclipse 100";
                 break;
@@ -140,12 +147,12 @@ parseRestartStep( std::list<ReportStep>&        report_steps,
                 break;
             }
             if( intehead.size() > 180 ) {
-                nswlmx = intehead[175];
-                nsegmx = intehead[176];
-                nisegz = intehead[178];
-                step.m_properties["nswlmx"] = intehead[175];
-                step.m_properties["nsegmx"] = intehead[176];
-                step.m_properties["nisegz"] = intehead[178];
+                nswlmx = intehead[ ITEM_INTEHEAD_NSWLMX ];
+                nsegmx = intehead[ ITEM_INTEHEAD_NSEGMX ];
+                nisegz = intehead[ ITEM_INTEHEAD_NISEGZ ];
+                step.m_properties["nswlmx"] = intehead[ ITEM_INTEHEAD_NSWLMX ];
+                step.m_properties["nsegmx"] = intehead[ ITEM_INTEHEAD_NSEGMX ];
+                step.m_properties["nisegz"] = intehead[ ITEM_INTEHEAD_NISEGZ ];
             }
         }
         else if( it->m_keyword == KEYWORD_LOGIHEAD ) {
@@ -158,89 +165,17 @@ parseRestartStep( std::list<ReportStep>&        report_steps,
             // currently ignored
         }
         else if( it->m_keyword == KEYWORD_ISEG ) {
-            // currently ignored
+            reader.blockContent( iseg, *it );
         }
         else if( it->m_keyword == KEYWORD_IWEL ) {  // well info
-            std::vector<int> iwel;
             reader.blockContent( iwel, *it );
-            if( iwel.size() != niwel*nwell  ) {
-                throw std::runtime_error( "IWEL.size != NIWEL*NWELL" );
-            }
-            if( step.m_wells.size() != nwell ) {
-                step.m_wells.resize( nwell );
-            }
-            for(unsigned int i=0; i<nwell; i++ ) {
-                Well& well = step.m_wells[i];
-                well.m_head_i = iwel[ niwel*i + 0 ];
-                well.m_head_j = iwel[ niwel*i + 1 ];
-                well.m_head_k = iwel[ niwel*i + 2 ];
-                well.m_completions.resize( iwel[ niwel*i + 4 ] );
-                well.m_group = iwel[ niwel*i + 5 ];
-                switch( iwel[ niwel*i+6] ) {
-                case 1: well.m_type = WELL_PRODUCER; break;
-                case 2: well.m_type = WELL_OIL_INJECTION; break;
-                case 3: well.m_type = WELL_WATER_INJECTION; break;
-                case 4: well.m_type = WELL_GAS_INJECTION; break;
-                default:
-                    LOGGER_FATAL( log, "ILLEGAL WELL TYPE: well_type=" << iwel[ niwel*i+6] );
-                    well.m_type = WELL_PRODUCER;
-                    //throw std::runtime_error( "Illegal well type in IWEL" );
-                }
-                well.m_open = iwel[ niwel*i + 10] > 0;
-                well.m_segmented_well_id = iwel[ niwel*i + 70 ];
-            }
+
         }
         else if( it->m_keyword == KEYWORD_ZWEL ) {  // well names
-            std::vector<std::string> zwel;
             reader.blockContent( zwel, *it );
-            if( zwel.size() != nzwel * nwell ) {
-                throw std::runtime_error( "ZWEL.size != NZWEL*NWELL" );
-            }
-            if( step.m_wells.size() != nwell ) {
-                step.m_wells.resize( nwell );
-            }
-            for(unsigned int i=0; i<nwell; i++ ) {
-                Well& well = step.m_wells[i];
-                well.m_name.clear();
-                for(unsigned int k=0; k<nzwel; k++) {
-                    well.m_name += zwel[ nzwel*i+k ];
-                }
-                size_t pos = well.m_name.find_last_not_of( ' ' );
-                if( pos != std::string::npos ) {
-                    well.m_name = well.m_name.substr( 0, pos+1 );
-                }
-            }
         }
         else if( it->m_keyword == KEYWORD_ICON ) {
-            std::vector<int> icon;
             reader.blockContent( icon, *it );
-            if( icon.size() != nicon*ncwma*nwell ) {
-                throw std::runtime_error( "ICON.size != NICON*NCWMA*NWELL" );
-            }
-            if( step.m_wells.size() != nwell ) {
-                step.m_wells.resize( nwell );
-            }
-            for(unsigned int i=0; i<nwell; i++ ) {
-                Well& well = step.m_wells[i];
-                for(unsigned int j=0; j<well.m_completions.size(); j++ ) {
-                    unsigned int ix = icon[ nicon*(ncwma*i + j) + 0 ]-1;
-                    Completion& completion = well.m_completions[j];
-                    completion.m_connection_index = icon[ nicon*(ncwma*i + j) + 0 ];
-                    completion.m_i                = icon[ nicon*(ncwma*i + j) + 1 ];
-                    completion.m_j                = icon[ nicon*(ncwma*i + j) + 2 ];
-                    completion.m_k                = icon[ nicon*(ncwma*i + j) + 3 ];
-                    completion.m_open             = icon[ nicon*(ncwma*i + j) + 5 ] > 0;
-                    completion.m_segment          = icon[ nicon*(ncwma*i + j) + 14 ];
-                    switch( icon[ nicon*(ncwma*i + j) + 13 ] ) {
-                    case 1: completion.m_penetration = PENETRATION_X; break;
-                    case 2: completion.m_penetration = PENETRATION_Y; break;
-                    case 3: completion.m_penetration = PENETRATION_Z; break;
-                    case 4: completion.m_penetration = PENETRATION_FRACTURED_X; break;
-                    case 5: completion.m_penetration = PENETRATION_FRACTURED_Y; break;
-                    default:completion.m_penetration = PENETRATION_Z; break;
-                    }
-                }
-            }
         }
         else if( it->m_keyword == KEYWORD_HIDDEN ) {
             // currently ignored
@@ -292,11 +227,194 @@ parseRestartStep( std::list<ReportStep>&        report_steps,
             //LOGGER_WARN( log, "Unknown keyword: " << string( it->m_keyword_string, it->m_keyword_string+8 ) );
         }
     }
+
+    LOGGER_INFO( log, "Parsed report step " << step.m_sequence_number );
+
+    // extract well info
+    if( nwell != 0 ) {
+        if( actnum.size() != nx*ny*nz ) {
+            LOGGER_FATAL( log, "Dimension mismatch, actnum.size()=" << actnum.size() << ", nx*ny*nz=" << (nx*ny*nz) );
+            return;
+        }
+
+        if( iwel.size() != niwelz*nwell  ) {
+            throw std::runtime_error( "IWEL.size != NIWEL*NWELL" );
+        }
+        if( zwel.size() != nzwelz * nwell ) {
+            throw std::runtime_error( "ZWEL.size != NZWEL*NWELL" );
+        }
+        if( icon.size() != niconz*ncwma*nwell ) {
+            throw std::runtime_error( "ICON.size != NICON*NCWMA*NWELL" );
+        }
+        if( nsegmx > 1 ) {
+            LOGGER_INFO( log, "DSADSADSADSDS" );
+            if( iseg.size() != nisegz*nsegmx*nswlmx ) {
+                LOGGER_FATAL( log, "seg.size()=" << iseg.size()
+                              << ", nisegz=" << nisegz
+                              << ", nsegmx=" << nsegmx
+                              << ", nswlmx=" << nswlmx
+                              << ", expected=" << (nisegz*nsegmx*nswlmx) );
+                throw std::runtime_error( "ISEG.size != NISEGZ*NSEGMX*NSWLMX" );
+            }
+        }
+
+        if( step.m_wells.size() != nwell ) {
+            step.m_wells.resize( nwell );
+        }
+
+        for(unsigned int i=0; i<nwell; i++ ) {
+            const unsigned int iwel_offset = niwelz * i;
+            const unsigned int zwel_offset = nzwelz * i;
+
+
+            Well& well = step.m_wells[i];
+            well.m_head_i = iwel[ iwel_offset + ITEM_IWEL_WELLHEAD_I ]-1;
+            well.m_head_j = iwel[ iwel_offset + ITEM_IWEL_WELLHEAD_J ]-1;
+            well.m_head_k = iwel[ iwel_offset + ITEM_IWEL_WELLHEAD_K ]-1;
+
+            if( (nx <= well.m_head_i) || (ny <= well.m_head_j) ) {
+                LOGGER_ERROR( log, "Well head indices [" <<
+                              well.m_head_i << ", " <<
+                              well.m_head_j << "] is out of range (nx=" <<
+                              nx << ", ny=" <<
+                              ny << "), giving up." );
+                step.m_wells.clear();
+                break;
+            }
+
+            well.m_head_min_k = well.m_head_max_k = ~0u;
+            for( unsigned int k=0; k<nz; k++ ) {
+                if( actnum[well.m_head_i + nx*well.m_head_j + k*nx*ny] != 0 ) {
+                    well.m_head_min_k = k;
+                    well.m_head_max_k = k;
+                    break;
+                }
+            }
+            if( nz <= well.m_head_min_k ) {
+                LOGGER_ERROR( log, "No active cells in well head column, giving up" );
+                step.m_wells.clear();
+                break;
+            }
+            for( unsigned int k=well.m_head_min_k; k<nz; k++ ) {
+                if( actnum[well.m_head_i + nx*well.m_head_j + k*nx*ny] != 0 ) {
+                    well.m_head_max_k = k;
+                }
+            }
+
+            if(  (nz <= well.m_head_k) ) {
+                LOGGER_DEBUG( log, "Well head has illegal k-coordinate, snapping to k-min." );
+                well.m_head_k = well.m_head_min_k;
+            }
+
+
+            int ncomp = iwel[ niwelz*i + ITEM_IWEL_N_COMP ];
+            well.m_group = iwel[ iwel_offset + ITEM_IWEL_GRP_IX ];
+            switch( iwel[ iwel_offset + ITEM_IWEL_TYPE ] ) {
+            case 1: well.m_type = WELL_PRODUCER; break;
+            case 2: well.m_type = WELL_OIL_INJECTION; break;
+            case 3: well.m_type = WELL_WATER_INJECTION; break;
+            case 4: well.m_type = WELL_GAS_INJECTION; break;
+            default:
+                LOGGER_FATAL( log, "ILLEGAL WELL TYPE: well_type=" << iwel[ iwel_offset+6] );
+                well.m_type = WELL_PRODUCER;
+                //throw std::runtime_error( "Illegal well type in IWEL" );
+            }
+            well.m_open = iwel[ iwel_offset + ITEM_IWEL_STATUS ] > 0;
+            if( iwel[ iwel_offset + ITEM_IWEL_SEG ] > 0 ) {
+
+            }
+
+            unsigned int seg_well_no = iwel[ iwel_offset + ITEM_IWEL_SEG ];
+            bool msw = seg_well_no > 0 ;
+            if( msw ) {
+                seg_well_no = seg_well_no -1;
+            }
+
+
+
+            // well name
+            well.m_name.clear();
+            for(unsigned int k=0; k<nzwelz; k++) {
+                well.m_name += zwel[ zwel_offset+k ];
+            }
+            size_t pos = well.m_name.find_last_not_of( ' ' );
+            if( pos != std::string::npos ) {
+                well.m_name = well.m_name.substr( 0, pos+1 );
+            }
+
+            for(unsigned int comp_no=0; comp_no<ncomp; comp_no++ ) {
+                Completion completion;
+
+                const unsigned int icon_offset = niconz*(ncwma*i + comp_no);
+                completion.m_i                = icon[ icon_offset + ITEM_ICON_I       ]-1;
+                completion.m_j                = icon[ icon_offset + ITEM_ICON_J       ]-1;
+                completion.m_k                = icon[ icon_offset + ITEM_ICON_K       ]-1;
+                if( (nx <= completion.m_i) || (ny <= completion.m_j) || (nz <= completion.m_k) ) {
+                    LOGGER_ERROR( log, "Completion has illegal coordinate [" <<
+                                  completion.m_i << ", " <<
+                                  completion.m_j << ", " <<
+                                  completion.m_k << "], nx="<<
+                                  nx << ", ny=" <<
+                                  ny << ", nz=" <<
+                                  nz << ", skipping." );
+                    continue;
+                }
+
+                if( actnum[ completion.m_i + nx*completion.m_j + nx*ny*completion.m_k ] == 0 ) {
+                    LOGGER_ERROR( log, "Completion in inactive cell ["  <<
+                                  completion.m_i << ", " <<
+                                  completion.m_j << ", " <<
+                                  completion.m_k << "], skipping." );
+                    continue;
+                }
+
+                completion.m_open             = icon[ icon_offset + ITEM_ICON_STATUS  ] > 0;
+                switch( icon[ icon_offset + ITEM_ICON_PDIR ] ) {
+                case 1: completion.m_penetration = PENETRATION_X; break;
+                case 2: completion.m_penetration = PENETRATION_Y; break;
+                case 3: completion.m_penetration = PENETRATION_Z; break;
+                case 4: completion.m_penetration = PENETRATION_FRACTURED_X; break;
+                case 5: completion.m_penetration = PENETRATION_FRACTURED_Y; break;
+                default:completion.m_penetration = PENETRATION_Z; break;
+                }
+
+                // determine branch
+                int branch = 0;
+                completion.m_segment = icon[ icon_offset + ITEM_ICON_SEGMENT ]-1;
+                if( completion.m_segment >= 0 ) {
+                    const unsigned int iseg_offset = nisegz*( nsegmx*seg_well_no + completion.m_segment );
+                    branch = iseg[ iseg_offset + ITEM_ISEG_BRANCH ];
+                }
+
+                if( well.m_branches.size() <= branch ) {
+                    well.m_branches.resize( branch+1 );
+                }
+                well.m_branches[ branch ].push_back( completion );
+            }
+        }
+    }
+
+
+    if( step.m_wells.empty() ) {
+        LOGGER_INFO( log, "No wells" );
+    }
+    else {
+        for( size_t w=0; w<step.m_wells.size(); w++ ) {
+            const Well& well = step.m_wells[w];
+#if 0
+            LOGGER_INFO( log, "Well " << w << ": " << well.m_name
+                         << ", head: [" << well.m_head_i
+                         << ", " << well.m_head_j
+                         << ", " << well.m_head_k << "]" );
+#endif
+        }
+    }
 }
 
 
 void
 parseRestartFile( std::list<ReportStep>&  report_steps,
+                  const std::vector<int>& actnum,
                   const std::string&      path )
 {
     Logger log = getLogger( "Eclipse.parseUnifiedRestartFile" );
@@ -316,11 +434,17 @@ parseRestartFile( std::list<ReportStep>&  report_steps,
     }
     Reader reader( path );
     list<Block> blocks = reader.blocks();
-    parseRestartStep( report_steps, reader, blocks.begin(), blocks.end(), seqnum );
+    parseRestartStep( report_steps,
+                      reader,
+                      blocks.begin(),
+                      blocks.end(),
+                      actnum,
+                      seqnum );
 }
 
 void
 parseUnifiedRestartFile( std::list<ReportStep>&  report_steps,
+                         const std::vector<int>& actnum,
                          const std::string&      path )
 {
     Logger log = getLogger( "Eclipse.parseUnifiedRestartFile" );
@@ -340,7 +464,12 @@ parseUnifiedRestartFile( std::list<ReportStep>&  report_steps,
         while( next != blocks.end() && next->m_keyword != KEYWORD_SEQNUM ) {
             next++;
         }
-        parseRestartStep( report_steps, reader, prev, next, seqnum[0] );
+        parseRestartStep( report_steps,
+                          reader,
+                          prev,
+                          next,
+                          actnum,
+                          seqnum[0] );
         prev = next;
     }
 }

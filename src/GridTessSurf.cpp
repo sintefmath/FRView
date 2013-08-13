@@ -75,7 +75,7 @@ GridTessSurf::populateBuffer( const GridTess*  tess,
             LOGGER_DEBUG( log, "Allocated space for " << m_tri_alloc << " triangles" );
             glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_tri_cell_buffer );
             glBufferData( GL_ELEMENT_ARRAY_BUFFER,
-                          sizeof(GLuint)*m_tri_alloc,
+                          sizeof(GLuint)*4*m_tri_alloc,
                           NULL,
                           GL_STREAM_DRAW );
 
@@ -122,6 +122,6 @@ GridTessSurf::populateBuffer( const GridTess*  tess,
 
     // We do this at last to avoid messing with the bound shader program.
     glBindTexture( GL_TEXTURE_BUFFER, m_tri_cell_texture );
-    glTexBuffer( GL_TEXTURE_BUFFER, GL_R32UI, m_tri_cell_buffer );
+    glTexBuffer( GL_TEXTURE_BUFFER, GL_RGBA32UI, m_tri_cell_buffer );
     glBindTexture( GL_TEXTURE_BUFFER, 0 );
 }

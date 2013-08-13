@@ -7,12 +7,20 @@
  *
  ******************************************************************************/
 #include <siut2/gl_utils/GLSLtools.hpp>
-#include <siut2/io_utils/snarf.hpp>
 
 #include "GridTess.hpp"
 #include "GridTessSubset.hpp"
 #include "GridTessSurf.hpp"
 #include "GridTessSurfBuilder.hpp"
+
+namespace resources {
+    extern const std::string compact_common_gs;
+    extern const std::string compact_vs;
+    extern const std::string compact_subset_gs;
+    extern const std::string compact_subset_boundary_gs;
+    extern const std::string compact_fault_gs;
+    extern const std::string compact_boundary_gs;
+}
 
 
 GridTessSurfBuilder::GridTessSurfBuilder()
@@ -23,11 +31,11 @@ GridTessSurfBuilder::GridTessSurfBuilder()
         "indices"
     };
 
-    GLuint vs                 = siut2::gl_utils::compileShader( siut2::io_utils::snarfFile( "shaders/compact_vs.glsl" ), GL_VERTEX_SHADER, true );
-    GLuint subset_gs          = siut2::gl_utils::compileShader( siut2::io_utils::snarfFile( "shaders/compact_subset_gs.glsl" ), GL_GEOMETRY_SHADER, true );
-    GLuint subset_boundary_gs = siut2::gl_utils::compileShader( siut2::io_utils::snarfFile( "shaders/compact_subset_boundary_gs.glsl" ), GL_GEOMETRY_SHADER, true );
-    GLuint fault_gs           = siut2::gl_utils::compileShader( siut2::io_utils::snarfFile( "shaders/compact_fault_gs.glsl"), GL_GEOMETRY_SHADER, true );
-    GLuint boundary_gs        = siut2::gl_utils::compileShader( siut2::io_utils::snarfFile( "shaders/compact_boundary_gs.glsl"), GL_GEOMETRY_SHADER, true );
+    GLuint vs                 = siut2::gl_utils::compileShader( resources::compact_vs, GL_VERTEX_SHADER, true );
+    GLuint subset_gs          = siut2::gl_utils::compileShader( resources::compact_common_gs + resources::compact_subset_gs, GL_GEOMETRY_SHADER, true );
+    GLuint subset_boundary_gs = siut2::gl_utils::compileShader( resources::compact_common_gs + resources::compact_subset_boundary_gs, GL_GEOMETRY_SHADER, true );
+    GLuint fault_gs           = siut2::gl_utils::compileShader( resources::compact_common_gs + resources::compact_fault_gs, GL_GEOMETRY_SHADER, true );
+    GLuint boundary_gs        = siut2::gl_utils::compileShader( resources::compact_common_gs + resources::compact_boundary_gs, GL_GEOMETRY_SHADER, true );
 
     m_compact_subset_prog = glCreateProgram();
     glAttachShader( m_compact_subset_prog, vs );

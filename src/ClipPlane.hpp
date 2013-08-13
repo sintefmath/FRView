@@ -40,6 +40,9 @@ public:
                                       m_plane_d ); }
 
     void
+    getLineLoop( std::vector<float>& vertices ) const;
+
+    void
     render( const float* projection,
             const float* modelview );
 

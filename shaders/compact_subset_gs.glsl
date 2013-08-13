@@ -1,4 +1,3 @@
-#version 420
 /******************************************************************************
  *
  *  Author(s): Christopher Dyken <christopher.dyken@sintef.no>
@@ -7,18 +6,7 @@
  *  Copyright (C) 2009 by SINTEF.  All rights reserved.
  *
  ******************************************************************************/
-layout(points, invocations=1) in;
-layout(points, max_vertices=1) out;
 
-
-in VG {
-    uvec2 info;
-    uvec3 indices;
-} in_gs[];
-
-layout(location=0)  out uint        cell;
-layout(location=1)  out uvec3       indices;
-                    uniform bool    flip_faces;
 layout(binding=0)   uniform usamplerBuffer  cell_subset;
 
 bool
@@ -32,31 +20,20 @@ selected( uint cell )
     return s == 1u;
 }
 
-
-void
-main()
+bool
+predicate( out uint cell, out bool flip, in uint cell_a, in uint cell_b )
 {
-    uvec2 info;
-    if( flip_faces ) {
-        info = in_gs[0].info.yx;
+    bvec2 inside = bvec2( selected( cell_a ),
+                          selected( cell_b ) );
+    if( inside.x && !inside.y ) {
+        cell = cell_a;
+        flip = false;
+        return true;
     }
-    else {
-        info = in_gs[0].info.xy;
+    else if( inside.y && !inside.x ) {
+        cell = cell_b;
+        flip = true;
+        return true;
     }
-
-
-    bvec2 inside = bvec2( selected( info.x ),
-                          selected( info.y ) );
-
-
-    if( inside.y && !inside.x ) {
-        cell    = info.y;
-        indices = in_gs[0].indices;
-        EmitVertex();
-    }
-    else if( inside.x && !inside.y ) {
-        cell    = info.x;
-        indices = in_gs[0].indices.zyx;
-        EmitVertex();
-    }
+    return false;
 }

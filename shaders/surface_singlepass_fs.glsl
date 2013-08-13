@@ -13,6 +13,7 @@ in GO {
     flat vec3   boundary_a;
     flat vec3   boundary_b;
     flat vec3   boundary_c;
+    vec3        normal;
 } in_f;
 
 layout(location=0)  out vec3                frag_color;

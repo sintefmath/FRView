@@ -9,9 +9,11 @@
  ******************************************************************************/
 layout(location=0) in vec2  spos;
 layout(location=1) in vec2  tpos;
+layout(location=2) in vec3  position;
+
 
 uniform mat4                mvp;
-uniform vec3                position;
+//uniform vec3                position;
 uniform vec2                size;
 uniform vec2                scale;
 

@@ -32,11 +32,48 @@ public:
     void
     field( Bridge& bridge, const unsigned int solution, const unsigned int step );
 
+    const unsigned int
+    wellCount() const { return m_well_names.size(); }
+
+
+    const std::string&
+    wellName( unsigned int well_ix ) const { return m_well_names[ well_ix ]; }
+
+    const bool
+    wellDefined( const unsigned int report_step_ix,
+                 const unsigned int well_ix ) const;
+
+    const float*
+    wellHeadPosition( const unsigned int report_step_ix,
+                      const unsigned int well_ix ) const
+    {
+        return m_report_steps[ report_step_ix ].m_wells[ well_ix ].m_head;
+    }
+
+    const unsigned int
+    wellBranchCount( const unsigned int report_step_ix,
+                     const unsigned int well_ix ) const
+    {
+        return m_report_steps[ report_step_ix ].m_wells[ well_ix ].m_branches.size();
+    }
+
+    const std::vector<float>&
+    wellBranchPositions( const unsigned int report_step_ix,
+                         const unsigned int well_ix,
+                         const unsigned int branch_ix )
+    {
+        return m_report_steps[ report_step_ix ].m_wells[ well_ix ].m_branches[ branch_ix ];
+    }
+
+
     unsigned int
     solutions() const;
 
     const std::string&
     solutionName( unsigned int name_index ) const;
+
+    const std::string&
+    reportStepDate( unsigned int step ) const;
 
     unsigned int
     reportSteps() const;
@@ -56,8 +93,10 @@ public:
 
     struct Well
     {
+        bool                                        m_defined;
         std::string                                 m_name;
-        std::vector<float>                          m_points;
+        float                                       m_head[3];
+        std::vector< std::vector<float> >           m_branches;
     };
 
     // HACK, will be replaced by bridge API
@@ -109,6 +148,7 @@ private:
 
     struct ReportStep {
         unsigned int                                m_seqnum;
+        std::string                                 m_date;
         std::vector<Solution>                       m_solutions;
         std::vector<Well>                           m_wells;
     };
@@ -117,6 +157,9 @@ private:
 
     std::vector<std::string>                        m_solution_names;
     std::unordered_map<std::string,unsigned int>    m_solution_name_lut;
+    std::vector<std::string>                        m_well_names;
+    std::unordered_map<std::string,unsigned int>    m_well_name_lut;
+
     std::vector<ReportStep>                         m_report_steps;
     std::list<File>                                 m_unprocessed_files;
 
@@ -140,6 +183,15 @@ private:
 
     void
     addFile( const std::string& file );
+
+    void
+    import( const Eclipse::ReportStep& e_step,
+            const std::string path );
+
+    void
+    addWell( const Eclipse::Well& ewell,
+            const unsigned int sequence_number );
+
 
     void
     refresh();

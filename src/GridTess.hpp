@@ -8,6 +8,7 @@
  ******************************************************************************/
 #pragma once
 #include <GL/glew.h>
+#include <glm/glm.hpp>
 #include <vector>
 #include <boost/utility.hpp>
 
@@ -22,6 +23,10 @@ class GridTess : public boost::noncopyable
 public:
     GridTess();
 
+    void
+    exportTikZ( const std::string& filename,
+                const glm::mat4& transformation );
+
     GLsizei
     vertexCount() const { return m_vertices.m_N; }
 
@@ -30,6 +35,9 @@ public:
 
     GLuint
     vertexTexture() const { return m_vertices.m_texture; }
+
+    GLuint
+    normalTexture() const { return m_normals.m_tex; }
 
     GLuint
     cellGlobalIndexTexture() const { return m_cell_index.m_texture; }
@@ -49,8 +57,24 @@ public:
     GLuint
     triangleInfoTexture() const { return m_tri_info.m_texture; }
 
+
     GLuint
     triangleIndexBuffer() const { return m_triangles.m_ibo; }
+
+    const std::vector<float>&
+    vertexData() const { return m_vertices.m_body; }
+
+    const std::vector<float>&
+    normalData() const { return m_normals.m_body; }
+
+    const std::vector<unsigned int>&
+    vertexIndexData() const { return m_triangles.m_body; }
+
+    const std::vector<uint>&
+    triangleInfoData() const { return m_tri_info.m_body; }
+
+    const std::vector<unsigned int>&
+    normalIndexData() const { return m_tri_nrm_ix.m_body; }
 
 
     /** Maps the compacted cell indices to the 'real' cell indices. */
@@ -78,13 +102,37 @@ protected:
     GLuint              m_triangle_vao;
 
     struct {
+        std::vector<float>          m_body;
+        GLuint                      m_vao;
+        GLuint                      m_vbo;
+        GLuint                      m_texture;
+        GLsizei                     m_N;
+    }                           m_vertices;
+
+    struct {
+        std::vector<float>          m_body;
+        GLsizei                     m_N;
+        GLuint                      m_buf;
+        GLuint                      m_tex;
+    }                           m_normals;
+
+    struct {
+        std::vector<unsigned int>   m_body;
+        GLuint                      m_buf;
+        GLuint                      m_tex;
+    }                           m_tri_nrm_ix;
+
+    struct {
+        std::vector<unsigned int>   m_body;
+        GLuint                      m_ibo;
+        GLsizei                     m_index_count;
+    }                           m_triangles;
+
+    struct {
+        std::vector<unsigned int>   m_body;
         GLuint          m_buffer;
         GLuint          m_texture;
     }                   m_tri_info;
-    struct {
-        GLuint          m_ibo;
-        GLsizei         m_index_count;
-    }                   m_triangles;
 
     struct {
         std::vector<unsigned int>  m_body;
@@ -97,12 +145,6 @@ protected:
         GLuint          m_texture;
     }                   m_cell_corner;
 
-    struct {
-        GLuint          m_vao;
-        GLuint          m_vbo;
-        GLuint          m_texture;
-        GLsizei         m_N;
-    }                   m_vertices;
 
     void
     import( GridTessBridge& bridge );

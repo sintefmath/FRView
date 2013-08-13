@@ -7,12 +7,15 @@
  *
  ******************************************************************************/
 #include <siut2/gl_utils/GLSLtools.hpp>
-#include <siut2/io_utils/snarf.hpp>
 #include "TextRenderer.hpp"
+
+namespace resources {
+    extern const std::string text_vs;
+    extern const std::string text_fs;
+}
 
 using siut2::gl_utils::compileShader;
 using siut2::gl_utils::linkProgram;
-using siut2::io_utils::snarfFile;
 
 TextRenderer::TextRenderer()
 {
@@ -28,8 +31,8 @@ TextRenderer::TextRenderer()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glBindTexture( GL_TEXTURE_2D, 0 );
 
-    GLuint text_vs = compileShader( snarfFile( "shaders/text_vs.glsl" ), GL_VERTEX_SHADER );
-    GLuint text_fs = compileShader( snarfFile( "shaders/text_fs.glsl" ), GL_FRAGMENT_SHADER );
+    GLuint text_vs = compileShader( resources::text_vs, GL_VERTEX_SHADER );
+    GLuint text_fs = compileShader( resources::text_fs, GL_FRAGMENT_SHADER );
 
     m_text_prog = glCreateProgram();
     glAttachShader( m_text_prog, text_vs );
@@ -55,12 +58,12 @@ TextRenderer::TextRenderer()
         }
     }
 
+    /*
     std::string foo = "The quick brown fox jumps over the lazy dog\n0123456789.987654321\n"
             "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG";
 
     unsigned int pos_i = 0;
     unsigned int pos_j = 0;
-
     unsigned int shifts[12] = {
         0, 0,
         1, 0,
@@ -101,7 +104,7 @@ TextRenderer::TextRenderer()
 
         pos_i += w + 1;
     }
-
+*/
 }
 
 TextRenderer::~TextRenderer()
@@ -111,6 +114,112 @@ TextRenderer::~TextRenderer()
     glDeleteBuffers( 1, &m_glyphs_buf );
     glDeleteTextures( 1, &m_glyphs_tex );
 }
+
+void
+TextRenderer::clear()
+{
+    m_vertex.clear();
+    m_texcoords.clear();
+    m_anchor_pos.clear();
+    m_glyphs.clear();
+    m_glyphs_taint = true;
+}
+
+void
+TextRenderer::add( const std::string& text,
+                   const Font         font,
+                   const GLfloat*     anchor_pos,
+                   const GLfloat      anchor_spacing,
+                   const Anchor       anchor_type )
+{
+
+    unsigned int pos_i = 0;
+    unsigned int pos_j = 0;
+    unsigned int shifts[12] = {
+        0, 0,
+        1, 0,
+        1, 1,
+        0, 0,
+        1, 1,
+        0, 1
+    };
+
+
+    size_t start = m_vertex.size();
+
+    unsigned int max_i = 0;
+    unsigned int max_j = 0;
+    for( size_t i=0; i<text.length(); i++ ) {
+        unsigned int symbol = text[i];
+
+        if( symbol == '\n' ) {
+            pos_i = 0;
+            pos_j += 12;
+            continue;
+        }
+        unsigned int w = m_widths[ symbol ];
+        if( w == 0 ) {
+            pos_i += 3;
+            continue;
+        }
+
+        max_i = std::max( max_i, pos_i + w );
+        max_j = std::max( max_j, pos_j + 12 );
+
+        unsigned int tex_i = (symbol)%16u;
+        unsigned int tex_j = (symbol)/16u;
+        for( unsigned int k=0; k<6; k++) {
+            m_texcoords.push_back(  8.f*(tex_i+shifts[2*k+0]) );
+            m_texcoords.push_back( 12.f*(tex_j+shifts[2*k+1]) );
+            m_vertex.push_back(   pos_i + 8.f*(shifts[2*k+0]) );
+            m_vertex.push_back(-( pos_j + 12.f*shifts[2*k+1]) );
+
+            m_anchor_pos.push_back( anchor_pos[0] );
+            m_anchor_pos.push_back( anchor_pos[1] );
+            m_anchor_pos.push_back( anchor_pos[2] );
+        }
+
+        m_glyphs.push_back( 0.5f );
+        m_glyphs.push_back( 0.5f );
+        m_glyphs.push_back( 0.8f );
+        m_glyphs.push_back( w );
+        m_glyphs.push_back( pos_i );
+        m_glyphs.push_back( pos_j );
+        m_glyphs.push_back( tex_i );
+        m_glyphs.push_back( tex_j );
+
+        pos_i += w + 1;
+    }
+
+    float shift_i = 0.f;
+    float shift_j = 0.f;
+
+    switch( anchor_type ) {
+    case ANCHOR_C:
+        shift_i = -(max_i/2.f);
+        shift_j = -(max_j/2.f);
+        break;
+
+    case ANCHOR_S:
+        shift_i = -(max_i/2.f);
+        shift_j = +(max_j/1.f) + anchor_spacing;
+        break;
+    default:
+        break;
+
+    }
+
+
+
+    for( size_t i = start; i<m_vertex.size(); i+=2 ) {
+        m_vertex[ i+0 ] += shift_i;
+        m_vertex[ i+1 ] += shift_j;
+    }
+
+
+    m_glyphs_taint = true;
+}
+
 
 void
 TextRenderer::render( GLsizei           width,
@@ -147,8 +256,8 @@ TextRenderer::render( GLsizei           width,
 
     glUniformMatrix4fv( glGetUniformLocation( m_text_prog, "mvp" ),
                         1, GL_FALSE, modelview_projection );
-    glUniform3f( glGetUniformLocation( m_text_prog, "position"),
-                 0.5f, 0.5f, 0.8f );
+//    glUniform3f( glGetUniformLocation( m_text_prog, "position"),
+//                 0.5f, 0.5f, 0.8f );
     glUniform2f( glGetUniformLocation( m_text_prog, "size" ),
                  0.5f*width, 0.5f*height );
     glUniform2f( glGetUniformLocation( m_text_prog, "scale" ),
@@ -159,6 +268,8 @@ TextRenderer::render( GLsizei           width,
 
     glBegin( GL_TRIANGLES );
     for( unsigned int i=0; i<m_vertex.size()/2; i++ ) {
+//        glVertexAttrib3f( 2, 0.f, 0.f, 0.f );
+        glVertexAttrib3f( 2, m_anchor_pos[3*i+0], m_anchor_pos[3*i+1], m_anchor_pos[3*i+2] );
         glVertexAttrib2f( 1, m_texcoords[2*i+0], m_texcoords[2*i+1] );
         glVertex2f( m_vertex[2*i+0], m_vertex[2*i+1] );
     }

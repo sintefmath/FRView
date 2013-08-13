@@ -7,17 +7,20 @@
  *  Copyright (C) 2009 by SINTEF.  All rights reserved.
  *
  ******************************************************************************/
-layout(location=0) in uvec2 info;
-layout(location=1) in uvec3 indices;
+layout(location=0) in uvec2 cell_ix;
+layout(location=1) in uvec3 vertex_ix;
+layout(location=2) in uvec3 normal_ix;
 
 out VG {
-    uvec2 info;
-    uvec3 indices;
+    uvec2 cell_ix;
+    uvec3 vertex_ix;
+    uvec3 normal_ix;
 } to_gs;
 
 void
 main()
 {
-    to_gs.info = info;
-    to_gs.indices = indices;
+    to_gs.cell_ix = cell_ix;
+    to_gs.vertex_ix = vertex_ix;
+    to_gs.normal_ix = normal_ix;
 }

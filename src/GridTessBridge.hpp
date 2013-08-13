@@ -31,18 +31,23 @@ public:
       */
     struct Segment {
         inline Segment() {}
-        inline Segment( Index vertex, Index flags ) : m_value( vertex | (flags<<30u) ) {}
-        inline Segment( Index vertex ) : m_value( vertex ) {}
-        inline Segment( Index vertex, bool edge_a, bool edge_b )
-            : m_value( vertex | (edge_a?(1u<<30u):0) | (edge_b?(1u<<31u):0) )
+        inline Segment( Index normal, Index vertex, Index flags )
+            : m_normal( normal ), m_value( vertex | (flags<<30u) )
         {}
+
+        //inline Segment( Index vertex ) : m_value( vertex ) {}
+        //inline Segment( Index vertex, bool edge_a, bool edge_b )
+        //    : m_value( vertex | (edge_a?(1u<<30u):0) | (edge_b?(1u<<31u):0) )
+        //{}
 
         inline void clearEdges() { m_value = m_value & (~(3u<<30u)); }
         inline void setEdges(bool edge_a, bool edge_b ) { m_value = (m_value & (~(3u<<30u))) | (edge_a?(1u<<30u):0) | (edge_b?(1u<<31u):0); }
+        inline Index normal() const { return m_normal; }
         inline Index vertex() const { return m_value & (~(3u<<30u)); }
         inline bool edgeA() const { return (m_value & (1u<<30u)) != 0u; }
         inline bool edgeB() const { return (m_value & (1u<<31u)) != 0u; }
-        unsigned int        m_value;
+        unsigned int    m_normal;
+        unsigned int    m_value;
     };
 
 
@@ -105,6 +110,9 @@ public:
     Index
     addVertex( const Real4 pos );
 
+    Index
+    addNormal( const Real4 dir );
+
     void
     addEdge( const Index ix0, const Index ix1,
              const Index cell_a, const Index cell_b,
@@ -148,16 +156,19 @@ public:
     process();
 
 protected:
-    GridTess&                  m_owner;
-    std::vector<Real4>         m_vertices;
-    std::vector<unsigned int>  m_cell_index;
-    std::vector<unsigned int>  m_cell_corner;
+    GridTess&                   m_owner;
+    std::vector<Real4>          m_vertices;
+    std::vector<Real4>          m_normals;
+    std::vector<unsigned int>   m_cell_index;
+    std::vector<unsigned int>   m_cell_corner;
 
     static const Index          m_chunk_size = 10*1024;
     Index                       m_tri_N;
     Index                       m_tri_chunk_N;
+    Index*                      m_tri_nrm_ix;
     Index*                      m_tri_info;
     Index*                      m_tri_vtx;
+    std::list<Index*>           m_tri_nrm_ix_chunks;
     std::list<Index*>           m_tri_info_chunks;
     std::list<Index*>           m_tri_vtx_chunks;
 

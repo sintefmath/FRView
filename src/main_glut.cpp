@@ -419,6 +419,7 @@ protected:
                 glEnd();
 #endif
 
+#if 0
                 for(size_t i=0; i<wells.size(); i++ ) {
                     float p[3] = { wells[i].m_points[0],
                                    wells[i].m_points[1],
@@ -461,7 +462,7 @@ protected:
                         glLineWidth( 1.f );
                     }
                 }
-
+#endif
             }
         }
     }

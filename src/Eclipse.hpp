@@ -151,26 +151,26 @@ struct Block {
 };
 
 struct Completion {
-    int        m_i;
-    int        m_j;
-    int        m_k;
-    int        m_segment;
-    int        m_connection_index;
-    bool       m_open;
-    Penetration m_penetration;
+    unsigned int    m_i;                    ///< Completion grid cell I, from ICON.
+    unsigned int    m_j;                    ///< Completion grid cell J, from ICON.
+    unsigned int    m_k;                    ///< Completion grid cell K, from ICON.
+    int         m_segment;              ///< Segment number of completion (=0 for ordinary wells), from ICON.
+//    int         m_connection_index;     ///< Well connection index ?, from ICON.
+    bool            m_open;                 ///< Connection status (open/shut), from ICON.
+    Penetration     m_penetration;          ///< Direction of penetration, from ICON.
 };
 
 struct Well {
-    int                m_head_i;
-    int                m_head_j;
-    int                m_head_k;
-    int                m_group;
-    WellType                    m_type;
-    bool                        m_open;
-    int                m_segmented_well_id;
-    //unsigned int        m_completion_connections;
-    std::vector<Completion>     m_completions;
-    std::string                 m_name;
+    unsigned int            m_head_i;           ///< Well head grid cell I coordinate, from IWEL.
+    unsigned int            m_head_j;           ///< Well head grid cell J coordinate, from IWEL.
+    unsigned int            m_head_k;           ///< Well head grid cell K coordinate, from IWEL.
+    unsigned int            m_head_min_k;       ///< Minimum valid cell K at (I,J).
+    unsigned int            m_head_max_k;       ///< Maximum valid cell K at (I,J).
+    int                     m_group;            ///< Group index, from IWEL.
+    WellType                m_type;             ///< Well type, from IWEL.
+    bool                    m_open;             ///< Well status (open/shut), from IWEL.
+    std::vector< std::vector< Completion > >    m_branches;
+    std::string             m_name;         ///< Well name, from ZWEL.
 };
 
 struct Solution {
@@ -180,6 +180,11 @@ struct Solution {
 
 struct ReportStep {
     unsigned int        m_sequence_number;
+    struct {
+        int                 m_day;
+        int                 m_month;
+        int                 m_year;
+    }                   m_date;
     Properties          m_properties;
     std::list<Solution> m_solutions;
     std::vector<Well>   m_wells;

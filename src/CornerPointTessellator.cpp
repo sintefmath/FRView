@@ -19,6 +19,8 @@
 #include "GridTessBridge.hpp"
 #include "PolygonTessellator.hpp"
 #include "CornerPointTessellator.hpp"
+#include "PillarFloorSampler.hpp"
+#include "PillarWallSampler.hpp"
 #ifdef CHECK_INVARIANTS
 #include "CellSanityChecker.hpp"
 #endif
@@ -129,6 +131,8 @@ CornerPointTessellator<Tessellation>::triangulate( const Index             nx,
     m_tessellation.reserveEdges( 12*active_cells );
     m_tessellation.reserveTriangles( 2*6*active_cells );
 
+    m_tessellation.addNormal( Real4( 1.f, 0.f, 0.f ) );
+
     LOGGER_DEBUG( log, "active cells = " << active_cells <<
                        " ("  << ((100.f*active_cells)/actnum.size()) << "%)." );
 
@@ -236,6 +240,8 @@ CornerPointTessellator<Tessellation>::triangulate( const Index             nx,
                                       jm1_active_cell_count[ i+1 ],
                                       cell_map.data() + (i-1) + nx*(j-1),
                                       cell_map.data() + (i  ) + nx*(j-1),
+                                      coord.data() + 6*( i + (nx+1)*(j-1) ),
+                                      coord.data() + 6*( i + (nx+1)*j ),
                                       nx*ny,
                                       1u );
 
@@ -254,14 +260,18 @@ CornerPointTessellator<Tessellation>::triangulate( const Index             nx,
 #if 1
                     if( wall_line_intersections.empty() ) {
                         stitchPillarsNoIntersections( ORIENTATION_I,
-                                                      wall_lines );
+                                                      wall_lines,
+                                                      coord.data() + 6*( (i) + (nx+1)*(j-1) ),
+                                                      coord.data() + 6*( (i) + (nx+1)*(j  ) ) );
                     }
                     else {
                         stitchPillarsHandleIntersections( ORIENTATION_I,
                                                           wall_lines,
                                                           wall_line_intersections,
                                                           pi0jm1_d01_chains,
-                                                          pi0jm1_d01_chain_offsets.data() + chain_offset_stride*i );
+                                                          pi0jm1_d01_chain_offsets.data() + chain_offset_stride*i,
+                                                          coord.data() + 6*( (i) + (nx+1)*(j-1) ),
+                                                          coord.data() + 6*( (i) + (nx+1)*(j  ) ) );
                     }
 #endif
 
@@ -313,6 +323,8 @@ CornerPointTessellator<Tessellation>::triangulate( const Index             nx,
                                       jm1_active_cell_count[ i+0 ],
                                       cell_map.data() + (i-1) + nx*(j  ),
                                       cell_map.data() + (i-1) + nx*(j-1),
+                                      coord.data() + 6*( (i-1) + (nx+1)*j ),
+                                      coord.data() + 6*( i + (nx+1)*j ),
                                       nx*ny,
                                       nx );
                     intersectWallLines( wall_line_intersections,
@@ -330,14 +342,18 @@ CornerPointTessellator<Tessellation>::triangulate( const Index             nx,
 
                     if( wall_line_intersections.empty() ) {
                         stitchPillarsNoIntersections( ORIENTATION_J,
-                                                      wall_lines );
+                                                      wall_lines,
+                                                      coord.data() + 6*( (i-1) + (nx+1)*(j) ),
+                                                      coord.data() + 6*( (i  ) + (nx+1)*(j) ) );
                     }
                     else {
                         stitchPillarsHandleIntersections( ORIENTATION_J,
                                                           wall_lines,
                                                           wall_line_intersections,
                                                           pi0j0_d10_chains,
-                                                          pi0j0_d10_chain_offsets.data() + chain_offset_stride*(i-1) );
+                                                          pi0j0_d10_chain_offsets.data() + chain_offset_stride*(i-1),
+                                                          coord.data() + 6*( (i-1) + (nx+1)*(j) ),
+                                                          coord.data() + 6*( (i  ) + (nx+1)*(j) ) );
                     }
 
 #ifdef CHECK_INVARIANTS
@@ -374,6 +390,10 @@ CornerPointTessellator<Tessellation>::triangulate( const Index             nx,
                                      jm1_zcorn_ix.data() + 2*nz*( 4*(i-1) + CELL_CORNER_O10 ),
                                      jm1_zcorn_ix.data() + 2*nz*( 4*(i-1) + CELL_CORNER_O01 ),
                                      jm1_zcorn_ix.data() + 2*nz*( 4*(i-1) + CELL_CORNER_O11 ),
+                                     coord.data() + 6*( (i-1) + (nx+1)*(j-1) ),
+                                     coord.data() + 6*( (i  ) + (nx+1)*(j-1) ),
+                                     coord.data() + 6*( (i-1) + (nx+1)*(j  ) ),
+                                     coord.data() + 6*( (i  ) + (nx+1)*(j  ) ),
                                      pi0j0_d10_chains.data(),
                                      pi0j0_d10_chain_offsets.data() + chain_offset_stride*(i-1),
                                      pi0jm1_d10_chains.data(),
@@ -422,78 +442,6 @@ CornerPointTessellator<Tessellation>::triangulate( const Index             nx,
 
     m_tessellation.process();
 }
-
-template<typename Tessellation>
-typename CornerPointTessellator<Tessellation>::Index
-CornerPointTessellator<Tessellation>::segmentIntersection( const Index a0ix, const Index a1ix,
-                                                           const Index b0ix, const Index b1ix,
-                                                           const SrcReal* pillar_a,
-                                                           const SrcReal* pillar_b )
-{
-    Logger log = getLogger( package + ".segmentIntersection" );
-
-    Real s1_a_z = m_tessellation.vertex( a0ix ).z();
-    Real s1_b_z = m_tessellation.vertex( a1ix ).z();
-    Real s2_a_z = m_tessellation.vertex( b0ix ).z();
-    Real s2_b_z = m_tessellation.vertex( b1ix ).z();
-
-    Real m_z = 0.25f*( s1_a_z + s1_b_z + s2_a_z + s2_b_z );
-    s1_a_z -= m_z;
-    s1_b_z -= m_z;
-    s2_a_z -= m_z;
-    s2_b_z -= m_z;
-
-
-
-    Real s = (s2_a_z - s1_a_z)/( (s1_b_z-s1_a_z) - (s2_b_z-s2_a_z) );
-    if( s < 0.f || 1.f < s ) {
-        LOGGER_ERROR( log, "Inter-pillar blend "<<s<<" is outside [0,1]");
-    }
-
-    Real z = (1.f-s)*s1_a_z + s*s1_b_z + m_z;
-
-    Real ta = (z-pillar_a[2])/(pillar_a[5]-pillar_a[2]);
-    Real tb = (z-pillar_b[2])/(pillar_b[5]-pillar_b[2]);
-
-    Real iax = (1.f-ta)*pillar_a[0] + ta*pillar_a[3];
-    Real ibx = (1.f-tb)*pillar_b[0] + tb*pillar_b[3];
-    Real ix = (1.f-s)*iax + s*ibx;
-
-    Real iay = (1.f-ta)*pillar_a[1] + ta*pillar_a[4];
-    Real iby = (1.f-tb)*pillar_b[1] + tb*pillar_b[4];
-    Real iy = (1.f-s)*iay + s*iby;
-
-    glm::vec3 i = glm::vec3( ix, iy, z );
-
-
-#ifdef CHECK_INVARIANTS
-    glm::vec3 v1( m_tessellation.vertex( a0ix ).x(), m_tessellation.vertex( a0ix ).y(), m_tessellation.vertex( a0ix ).z() );
-    glm::vec3 v2( m_tessellation.vertex( a1ix ).x(), m_tessellation.vertex( a1ix ).y(), m_tessellation.vertex( a1ix ).z() );
-    glm::vec3 v3( m_tessellation.vertex( b0ix ).x(), m_tessellation.vertex( b0ix ).y(), m_tessellation.vertex( b0ix ).z() );
-    glm::vec3 v4( m_tessellation.vertex( b1ix ).x(), m_tessellation.vertex( b1ix ).y(), m_tessellation.vertex( b1ix ).z() );
-
-    glm::vec3 v12 = glm::normalize( v2-v1 );
-    glm::vec3 v1i = glm::normalize( i-v1 );
-    glm::vec3 vi2 = glm::normalize( v2-i );
-    if( (glm::dot( v12,v1i) < 0.0 ) || (glm::dot(v12,vi2) < 0.0 ) ) {
-        LOGGER_ERROR( log, "v12 is wild"
-                      << ", v12=" << glm::to_string( v2-v1 )
-                      << ", v1i=" << glm::to_string( i-v1 )
-                      << ", vi2=" << glm::to_string( v2-i ) );
-    }
-
-    glm::vec3 v34 = glm::normalize( v4-v3 );
-    glm::vec3 v3i = glm::normalize( i-v3 );
-    glm::vec3 vi4 = glm::normalize( v4-i );
-    if( (glm::dot( v34,v3i) < 0.0 ) || (glm::dot(v34,vi4) < 0.0 ) ) {
-        LOGGER_ERROR( log, "v34 is wild" );
-    }
-
-
-#endif
-    return m_tessellation.addVertex( Real4( i.x, i.y, i.z ) );
-}
-
 
 
 template<typename Tessellation>
@@ -733,25 +681,29 @@ CornerPointTessellator<Tessellation>::uniquePillarVertices( vector<Index>&      
 template<typename Tessellation>
 void
 CornerPointTessellator<Tessellation>::stitchTopBottom( const Index* const   ci0j0_active_cell_list,
-                                                 const Index          ci0j0_active_cell_count,
-                                                 const Index* const   o01_d10_wall_line_ix,
-                                                 const Index* const   o00_d10_wall_line_ix,
-                                                 const Index* const   o10_d01_wall_line_ix,
-                                                 const Index* const   o00_d01_wall_line_ix,
-                                                 const Index* const   o00_zcorn_ix,
-                                                 const Index* const   o10_zcorn_ix,
-                                                 const Index* const   o01_zcorn_ix,
-                                                 const Index* const   o11_zcorn_ix,
-                                                 const Index* const   o01_d10_chains,
-                                                 const Index* const   o01_d10_chain_offsets,
-                                                 const Index* const   o00_d10_chains,
-                                                 const Index* const   o00_d10_chain_offsets,
-                                                 const Index* const   o10_d01_chains,
-                                                 const Index* const   o10_d01_chain_offsets,
-                                                 const Index* const   o00_d01_chains,
-                                                 const Index* const   o00_d01_chain_offsets,
-                                                 const Index* const            cell_map,
-                                                 const Index          stride )
+                                                       const Index          ci0j0_active_cell_count,
+                                                       const Index* const   o01_d10_wall_line_ix,
+                                                       const Index* const   o00_d10_wall_line_ix,
+                                                       const Index* const   o10_d01_wall_line_ix,
+                                                       const Index* const   o00_d01_wall_line_ix,
+                                                       const Index* const   o00_zcorn_ix,
+                                                       const Index* const   o10_zcorn_ix,
+                                                       const Index* const   o01_zcorn_ix,
+                                                       const Index* const   o11_zcorn_ix,
+                                                       const SrcReal* const  o00_coord,
+                                                       const SrcReal* const  o10_coord,
+                                                       const SrcReal* const  o01_coord,
+                                                       const SrcReal* const  o11_coord,
+                                                       const Index* const   o01_d10_chains,
+                                                       const Index* const   o01_d10_chain_offsets,
+                                                       const Index* const   o00_d10_chains,
+                                                       const Index* const   o00_d10_chain_offsets,
+                                                       const Index* const   o10_d01_chains,
+                                                       const Index* const   o10_d01_chain_offsets,
+                                                       const Index* const   o00_d01_chains,
+                                                       const Index* const   o00_d01_chain_offsets,
+                                                       const Index* const   cell_map,
+                                                       const Index          stride )
 {
     struct StitchTopBottomHelper {
         Index m_index;
@@ -763,6 +715,7 @@ CornerPointTessellator<Tessellation>::stitchTopBottom( const Index* const   ci0j
     };
 
     Logger log = getLogger( package + ".stitchTopBottom" );
+
 
 
     vector<StitchTopBottomHelper> helper;
@@ -845,41 +798,72 @@ CornerPointTessellator<Tessellation>::stitchTopBottom( const Index* const   ci0j
         last_k = k;
     }
 
+    PillarFloorSampler<Tessellation> floor_sampler( o00_coord, o10_coord, o01_coord, o11_coord );
+
     vector<Segment> segments;
     for( auto it=helper.begin(); it!=helper.end(); ++it ) {
         segments.clear();
+
+        // cell top/bottom index
         const Index b_ix = it->m_index;
 
-        // (0,0) -> (0,1)
-        segments.push_back( Segment( o00_zcorn_ix[ b_ix ], true, true ) );
-        Index o00_d01_0 = o00_d01_chain_offsets[ o00_d01_wall_line_ix[ b_ix ] ];
-        Index o00_d01_1 = o00_d01_chain_offsets[ o00_d01_wall_line_ix[ b_ix ] + 1 ];
-        for( Index i=o00_d01_0; i<o00_d01_1; i++ ) {
-            segments.push_back( Segment( o00_d01_chains[i], true, true ) );
+        const Real4& c00 = m_tessellation.vertex( o00_zcorn_ix[ b_ix ] );
+        const Real4& c01 = m_tessellation.vertex( o01_zcorn_ix[ b_ix ] );
+        const Real4& c10 = m_tessellation.vertex( o10_zcorn_ix[ b_ix ] );
+        const Real4& c11 = m_tessellation.vertex( o11_zcorn_ix[ b_ix ] );
+        floor_sampler.setCellFloor( c00.z(), c01.z(), c10.z(), c11.z() );
+
+        {   // (0,0) -> (0,1)
+            segments.push_back( Segment( m_tessellation.addNormal( floor_sampler.normal( 0.f, 0.f, c00.z() ) ),
+                                         o00_zcorn_ix[ b_ix ], 3u ) );
+            Index o00_d01_0 = o00_d01_chain_offsets[ o00_d01_wall_line_ix[ b_ix ] ];
+            Index o00_d01_1 = o00_d01_chain_offsets[ o00_d01_wall_line_ix[ b_ix ] + 1 ];
+            for( Index i=o00_d01_0; i<o00_d01_1; i++ ) {
+                const Index ii = o00_d01_chains[i];
+                const Real4& p = m_tessellation.vertex( ii );
+                segments.push_back( Segment( m_tessellation.addNormal( floor_sampler.normal( 0.f, p.w(), p.z() ) ),
+                                             ii, 3u ) );
+            }
         }
 
-        // (0,1) -> (1,1)
-        segments.push_back( Segment( o01_zcorn_ix[ b_ix ], true, true ) );
-        Index o01_d10_0 = o01_d10_chain_offsets[ o01_d10_wall_line_ix[ b_ix ] ];
-        Index o01_d10_1 = o01_d10_chain_offsets[ o01_d10_wall_line_ix[ b_ix ] + 1 ];
-        for( Index i=o01_d10_0; i<o01_d10_1; i++ ) {
-            segments.push_back( Segment( o01_d10_chains[i], true, true ) );
+        {   // (0,1) -> (1,1)
+            segments.push_back( Segment( m_tessellation.addNormal( floor_sampler.normal( 0.f, 1.f, c01.z() ) ),
+                                         o01_zcorn_ix[ b_ix ], 3u ) );
+            Index o01_d10_0 = o01_d10_chain_offsets[ o01_d10_wall_line_ix[ b_ix ] ];
+            Index o01_d10_1 = o01_d10_chain_offsets[ o01_d10_wall_line_ix[ b_ix ] + 1 ];
+            for( Index i=o01_d10_0; i<o01_d10_1; i++ ) {
+                const Index ii = o01_d10_chains[i];
+                const Real4& p = m_tessellation.vertex( ii );
+                segments.push_back( Segment( m_tessellation.addNormal( floor_sampler.normal(  p.w(), 1.f, p.z() ) ),
+                                             o01_d10_chains[i], 3u ) );
+            }
         }
 
-        // (1,1) -> (1,0)
-        segments.push_back( Segment( o11_zcorn_ix[ b_ix ], true, true ) );
-        Index o10_d01_0 = o10_d01_chain_offsets[ o10_d01_wall_line_ix[ b_ix ] ];
-        Index o10_d01_1 = o10_d01_chain_offsets[ o10_d01_wall_line_ix[ b_ix ] + 1 ];
-        for( Index i=o10_d01_1; i>o10_d01_0; i-- ) {
-            segments.push_back( Segment( o10_d01_chains[i-1], true, true ) );
+        {   // (1,1) -> (1,0)
+            segments.push_back( Segment( m_tessellation.addNormal( floor_sampler.normal( 1.f, 1.f, c11.z() ) ),
+                                          o11_zcorn_ix[ b_ix ], 3u ) );
+            Index o10_d01_0 = o10_d01_chain_offsets[ o10_d01_wall_line_ix[ b_ix ] ];
+            Index o10_d01_1 = o10_d01_chain_offsets[ o10_d01_wall_line_ix[ b_ix ] + 1 ];
+            for( Index i=o10_d01_1; i>o10_d01_0; i-- ) {
+                const Index ii = o10_d01_chains[i-1];
+                const Real4& p = m_tessellation.vertex( ii );
+                segments.push_back( Segment( m_tessellation.addNormal( floor_sampler.normal( 1.f, p.w(), p.z() ) ),
+                                             o10_d01_chains[i-1], 3u ) );
+            }
         }
 
-        // (1,0) -> (0,0)
-        segments.push_back( Segment( o10_zcorn_ix[ b_ix ], true, true ) );
-        Index o00_d10_0 = o00_d10_chain_offsets[ o00_d10_wall_line_ix[ b_ix ] ];
-        Index o00_d10_1 = o00_d10_chain_offsets[ o00_d10_wall_line_ix[ b_ix ] + 1 ];
-        for( Index i=o00_d10_1; i>o00_d10_0; i-- ) {
-            segments.push_back( Segment( o00_d10_chains[i-1], true, true ) );
+        {   // (1,0) -> (0,0)
+            segments.push_back( Segment( m_tessellation.addNormal( floor_sampler.normal(  1.f, 0.f, c10.z() ) ),
+                                         o10_zcorn_ix[ b_ix ], 3u ) );
+            Index o00_d10_0 = o00_d10_chain_offsets[ o00_d10_wall_line_ix[ b_ix ] ];
+            Index o00_d10_1 = o00_d10_chain_offsets[ o00_d10_wall_line_ix[ b_ix ] + 1 ];
+            for( Index i=o00_d10_1; i>o00_d10_0; i-- ) {
+                const Index ii = o00_d10_chains[i-1];
+                const Real4& p = m_tessellation.vertex( ii );
+
+                segments.push_back( Segment( m_tessellation.addNormal( floor_sampler.normal( p.w(), 0.f, p.z() ) ),
+                                             o00_d10_chains[i-1], 3u ) );
+            }
         }
 
         m_tessellation.addPolygon( Interface( it->m_cell_above, it->m_cell_below, ORIENTATION_K, it->m_fault),
@@ -923,92 +907,129 @@ CornerPointTessellator<Tessellation>::wallEdges( const vector<WallLine>&      bo
 
 template<typename Tessellation>
 void
-CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Orientation                 orientation,
+CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Orientation            orientation,
                                                                         const vector<WallLine>&      boundaries,
                                                                         const vector<Intersection>&  intersections,
-                                                                        const vector<Index>&  chains,
-                                                                        const Index* const         chain_offsets )
+                                                                        const vector<Index>&         chains,
+                                                                        const Index* const           chain_offsets,
+                                                                        const SrcReal* const         o0_coord,
+                                                                        const SrcReal* const         o1_coord )
 {
     Logger log = getLogger( package + ".stitchPillarsHandleIntersections" );
 
+
+    const Real c_x[4] = { o0_coord[0], o1_coord[0], o0_coord[3], o1_coord[3] };
+    const Real c_y[4] = { o0_coord[1], o1_coord[1], o0_coord[4], o1_coord[4] };
+    const Real c_z[4] = { o0_coord[2], o1_coord[2], o0_coord[5], o1_coord[5] };
+    const Real s[2] = { 1.f/(c_z[2]-c_z[0]), 1.f/(c_z[3]-c_z[1]) };
+    const Real dl_xy[4] = { s[0]*(c_x[2]-c_x[0]), s[1]*(c_x[3]-c_x[1]), s[0]*(c_y[2]-c_y[0]), s[1]*(c_y[3]-c_y[1]) };
+
     vector<Segment> segments;
+
+    PillarWallSampler<Tessellation> wall( o0_coord, o1_coord );
 
     // First, process as polygons that are attached at pillar 0. We start by
     // pairing adjacent edges and follow them out until a common intersection or
     // until they hit pillar 1.
     for( size_t b=0; (b+1u)<boundaries.size(); b++ ) {
-        const WallLine& u_0_1_l = boundaries[b+1];
-        const WallLine& l_0_1_l = boundaries[b];
+        const WallLine& line_u = boundaries[b+1];
+        const WallLine& line_l = boundaries[b];
 
-        if( u_0_1_l.m_side == 3 && l_0_1_l.m_side == 3 ) {      // Non-fault (fully matching) interface
+        if( line_u.m_side == 3 && line_l.m_side == 3 ) {      // Non-fault (fully matching) interface
             Index cells[2];
-            cells[0] = l_0_1_l.m_cell_over[0];
-            cells[1] = l_0_1_l.m_cell_over[1];
-            LOGGER_INVARIANT_EQUAL( log, cells[0], u_0_1_l.m_cell_under[0] );
-            LOGGER_INVARIANT_EQUAL( log, cells[1], u_0_1_l.m_cell_under[1] );
+            cells[0] = line_l.m_cell_over[0];
+            cells[1] = line_l.m_cell_over[1];
+            LOGGER_INVARIANT_EQUAL( log, cells[0], line_u.m_cell_under[0] );
+            LOGGER_INVARIANT_EQUAL( log, cells[1], line_u.m_cell_under[1] );
             if( cells[0] == IllegalIndex && cells[1] == IllegalIndex ) {
                 continue;
             }
             segments.clear();
-            for( Index v=u_0_1_l.m_ends[0]; v>l_0_1_l.m_ends[0]; v-- ) {
-                segments.push_back( Segment( v, true, true ) );
+            segments.push_back( Segment( line_u.m_normals[0],
+                                         line_u.m_ends[0],
+                                         3u ) );
+            if( line_u.m_ends[0] != line_l.m_ends[0] ) {
+                for( Index v=line_u.m_ends[0]-1; v>line_l.m_ends[0]; v-- ) {
+                    const Real4& p = m_tessellation.vertex( v );
+                    const Index ni = m_tessellation.addNormal( wall.normal( 0.f, p.z() ) );
+                    segments.push_back( Segment( ni, v, 3u ) );
+                }
+                segments.push_back( Segment( line_l.m_normals[0],
+                                             line_l.m_ends[0],
+                                             3u ) );
             }
-            segments.push_back( Segment( l_0_1_l.m_ends[0], true, true ) );
-            for( Index v=l_0_1_l.m_ends[1]; v<=u_0_1_l.m_ends[1]; v++ ) {
-                segments.push_back( Segment( v, true, true ) );
+            segments.push_back( Segment( line_l.m_normals[1],
+                                         line_l.m_ends[1],
+                                         3u ) );
+            if( line_u.m_ends[1] != line_l.m_ends[1] ) {
+                for( Index v=line_l.m_ends[1]+1; v<line_u.m_ends[1]; v++ ) {
+                    const Real4& p = m_tessellation.vertex( v );
+                    const Index ni = m_tessellation.addNormal( wall.normal( 1.f, p.z() ) );
+                    segments.push_back( Segment( ni, v, 3u ) );
+                }
+                segments.push_back( Segment( line_u.m_normals[1],
+                                             line_u.m_ends[1],
+                                             3u ) );
             }
             m_tessellation.addPolygon( Interface( cells[0], cells[1], orientation, false ),
                                        segments.data(), segments.size() );
         }
         else {                                                  // Fault (partially matching) interface
             Index cell[2];
-            cell[0] = l_0_1_l.m_cell_over[0];
-            cell[1] = l_0_1_l.m_cell_over[1];
-            LOGGER_INVARIANT_EQUAL( log, u_0_1_l.m_cell_under[0], cell[0] );
-            LOGGER_INVARIANT_EQUAL( log, u_0_1_l.m_cell_under[1], cell[1] );
-
+            cell[0] = line_l.m_cell_over[0];
+            cell[1] = line_l.m_cell_over[1];
+            LOGGER_INVARIANT_EQUAL( log, line_u.m_cell_under[0], cell[0] );
+            LOGGER_INVARIANT_EQUAL( log, line_u.m_cell_under[1], cell[1] );
             if( cell[0] == IllegalIndex && cell[1] == IllegalIndex ) {
                 continue;
             }
             segments.clear();
 
-            // follow upper arc backwards from towards pilalr1 to pillar 0
+            // follow upper arc backwards from towards pillar1 to pillar 0
             bool process_pillar_1 = false;
-            Index u_v_1;
-            if( chain_offsets[b+1] == chain_offsets[b+2] ) {
-                // First intersection is on pillar
-                u_v_1 = u_0_1_l.m_ends[1];
+
+            if( chain_offsets[b+1] == chain_offsets[b+2] ) {  // First intersection is on pillar
+                segments.push_back( Segment( line_u.m_normals[1],
+                                             line_u.m_ends[1],
+                                             line_u.m_side ) );
                 process_pillar_1 = true;
             }
             else {
                 // First intersection is on wall
-                const Intersection& u_1_isec = intersections[ chains[ chain_offsets[b+1] ] ];
-                if( u_1_isec.m_dnwrd_bndry_ix != (b+1) ) {
-                    // We haven't turned downwards yet
-                    const WallLine& u_1_2_l = boundaries[ u_1_isec.m_dnwrd_bndry_ix ];
-                    NextIntersection ni = u_1_isec.m_nxt_dnwrd_isec_ix;
-                    Index u_v_2;
-                    if( ni.isIntersection() ) {
-                        // Second intersection is on wall
-                        u_v_2 = intersections[ ni.intersection() ].m_vtx_ix;
+                const Intersection& isec_u1 = intersections[ chains[ chain_offsets[b+1] ] ];
+                if( isec_u1.m_dnwrd_bndry_ix != (b+1) ) { // We haven't turned downwards yet
+                    const WallLine& line_u12 = boundaries[ isec_u1.m_dnwrd_bndry_ix ];
+                    NextIntersection isec_u2_ix = isec_u1.m_nxt_dnwrd_isec_ix;
+                    if( isec_u2_ix.isIntersection() ) {    // Second intersection is on wall
+                        const Intersection& isec_u2 = intersections[ isec_u2_ix.intersection() ];
+                        segments.push_back( Segment( isec_u2.m_n,
+                                                     isec_u2.m_vtx_ix,
+                                                     line_u12.m_side ) );
                     }
-                    else {
-                        // Second intersection is on pillar
-                        u_v_2 = ni.vertex();
+                    else {                         // Second intersection is on pillar
+                        LOGGER_INVARIANT_EQUAL( log, line_u12.m_ends[1], isec_u2_ix.vertex() );
+                        segments.push_back( Segment( line_u12.m_normals[1],
+                                                     line_u12.m_ends[1],
+                                                     line_u12.m_side ) );
                         process_pillar_1 = true;
                     }
-
-                    segments.push_back( Segment( u_v_2, u_1_2_l.m_side ) );
                 }
-                u_v_1 = u_1_isec.m_vtx_ix;
+                segments.push_back( Segment( isec_u1.m_n, isec_u1.m_vtx_ix, line_u.m_side ) );
             }
-            segments.push_back( Segment( u_v_1, u_0_1_l.m_side ) );
-
-            // from (b+1).end[0] to (b).end[0]
-            for(Index v=boundaries[b+1].m_ends[0]; v>boundaries[b].m_ends[0]; v-- ) {
-                segments.push_back( Segment(v, true, true)  );
+            // Down along pillar 0
+            if( boundaries[b+1].m_ends[0] != boundaries[b].m_ends[0] ) {
+                segments.push_back( Segment( boundaries[b+1].m_normals[0],
+                                             boundaries[b+1].m_ends[0],
+                                             3u ) );
+                for( Index v = boundaries[b+1].m_ends[0]-1; v>boundaries[b].m_ends[0]; v-- ) {
+                    const Real4& p = m_tessellation.vertex( v );
+                    const Index ni = m_tessellation.addNormal( wall.normal( 0.f, p.z() ) );
+                    segments.push_back( Segment( ni, v, 3u ) );
+                }
             }
-            segments.push_back( Segment(boundaries[b].m_ends[0], boundaries[b].m_side )  );
+            segments.push_back( Segment( boundaries[b].m_normals[0],
+                                         boundaries[b].m_ends[0],
+                                         boundaries[b].m_side ) );
 
             // follow lower arc forwards from pillar 0 towards pillar 1
             if( chain_offsets[b] == chain_offsets[b+1] ) {
@@ -1019,7 +1040,9 @@ CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Or
                     process_pillar_1 = false;
                 }
                 else {
-                    segments.push_back( Segment( boundaries[b].m_ends[1], true, true ) );
+                    segments.push_back( Segment( boundaries[b].m_normals[1],
+                                                 boundaries[b].m_ends[1],
+                                                 3u ) );
                 }
             }
             else {
@@ -1030,17 +1053,18 @@ CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Or
                     LOGGER_INVARIANT_EQUAL( log, segments.front().vertex(), l_1_isec.m_vtx_ix );
                 }
                 else {
-                    const WallLine& l_1_2_l = boundaries[ l_1_isec.m_upwrd_bndry_ix ];
-                    segments.push_back( Segment( l_1_isec.m_vtx_ix, l_1_2_l.m_side ) );
-
-                    NextIntersection l_2_ix = l_1_isec.m_nxt_upwrd_isec_ix;
-                    if( l_2_ix.isIntersection() ) {
+                    const WallLine& line_l12 = boundaries[ l_1_isec.m_upwrd_bndry_ix ];
+                    segments.push_back( Segment( l_1_isec.m_n,
+                                                 l_1_isec.m_vtx_ix,
+                                                 line_l12.m_side ) );
+                    NextIntersection isec_l2_ix = l_1_isec.m_nxt_upwrd_isec_ix;
+                    if( isec_l2_ix.isIntersection() ) {
                         // Second intersection is on wall, and we should have closed the loop
-                        const Intersection& l_2_isec = intersections[ l_2_ix.intersection() ];
+                        const Intersection& isec_l2 = intersections[ isec_l2_ix.intersection() ];
                         LOGGER_INVARIANT_EQUAL( log, process_pillar_1, false );
-                        LOGGER_INVARIANT_EQUAL( log, segments.front().vertex(), l_2_isec.m_vtx_ix );
+                        LOGGER_INVARIANT_EQUAL( log, segments.front().vertex(), isec_l2.m_vtx_ix );
                     }
-                    else if( segments.front().vertex() == l_2_ix.vertex() ) {
+                    else if( segments.front().vertex() == isec_l2_ix.vertex() ) {
                         // Second intersection is on pillar, and matches upper loop
                         LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
                         process_pillar_1 = false;
@@ -1048,7 +1072,10 @@ CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Or
                     else {
                         // Second intersection is on pillar, no match, so we must close the loop
                         LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
-                        segments.push_back( Segment( l_2_ix.vertex(), true, true) );
+                        LOGGER_INVARIANT_EQUAL( log, line_l12.m_ends[1], isec_l2_ix.vertex() );
+                        segments.push_back( Segment( line_l12.m_normals[1],
+                                                     line_l12.m_ends[1],
+                                                     3u ) );
                     }
                 }
             }
@@ -1056,7 +1083,9 @@ CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Or
                 Index b = segments.front().vertex();
                 Index a = segments.back().vertex();
                 for(Index v=a+1; v<b; v++ ) {
-                    segments.push_back( Segment( v, true, true ) );
+                    const Real4& p = m_tessellation.vertex( v );
+                    const Index ni = m_tessellation.addNormal( wall.normal( 0.f, p.z() ) );
+                    segments.push_back( Segment( ni, v, 3u ) );
                 }
             }
             m_tessellation.addPolygon( Interface( boundaries[b].m_cell_over[0],
@@ -1073,79 +1102,92 @@ CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Or
     // and below the upward edge.
     for( size_t i=0; i<intersections.size(); i++ ) {
         const Intersection& is = intersections[i];
-        const WallLine& u_0_1_l = boundaries[ is.m_upwrd_bndry_ix ];
-        const WallLine& l_0_1_l = boundaries[ is.m_dnwrd_bndry_ix ];
+        const WallLine& line_u01 = boundaries[ is.m_upwrd_bndry_ix ];
+        const WallLine& line_l01 = boundaries[ is.m_dnwrd_bndry_ix ];
 
-        Index side1 = u_0_1_l.m_side - 1u;
-        Index side2 = l_0_1_l.m_side - 1u;
+        Index side1 = line_u01.m_side - 1u;
+        Index side2 = line_l01.m_side - 1u;
 
         Index cell[2];
-        cell[ side1 ] = u_0_1_l.m_cell_under[ side1 ];
-        cell[ side2 ] = l_0_1_l.m_cell_over[  side2 ];
+        cell[ side1 ] = line_u01.m_cell_under[ side1 ];
+        cell[ side2 ] = line_l01.m_cell_over[  side2 ];
         if( cell[0] == IllegalIndex && cell[1] == IllegalIndex ) {
             continue;   // Empty hole
         }
-
         segments.clear();
 
         // Follow upper arc backwards
-        NextIntersection u_1_ix = is.m_nxt_upwrd_isec_ix;
+
         bool process_pillar_1 = false;
-        Index v_1;
-        if( u_1_ix.isIntersection() ) {         // First intersection is on wall
-            const Intersection& u_1_isec = intersections[ u_1_ix.intersection() ];
-            const WallLine& u_1_2_l = boundaries[ u_1_isec.m_dnwrd_bndry_ix ];
-            NextIntersection u_2_ix = u_1_isec.m_nxt_dnwrd_isec_ix;
-            Index v_2;
-            if( u_2_ix.isIntersection() ) {     // Second intersection is on wall
-                const Intersection& isec_u_2 = intersections[ u_2_ix.intersection() ];
-                v_2 = isec_u_2.m_vtx_ix;
-                LOGGER_INVARIANT_EQUAL( log, cell[side2], u_1_2_l.m_cell_under[ side2 ] );
+        NextIntersection isec_u1_ix = is.m_nxt_upwrd_isec_ix;
+        if( isec_u1_ix.isIntersection() ) {         // First intersection is on wall
+            const Intersection& isec_u1 = intersections[ isec_u1_ix.intersection() ];
+            const WallLine& line_u12 = boundaries[ isec_u1.m_dnwrd_bndry_ix ];
+            NextIntersection isec_u2_ix = isec_u1.m_nxt_dnwrd_isec_ix;
+            if( isec_u2_ix.isIntersection() ) {     // Second intersection is on wall
+                const Intersection& isec_u_2 = intersections[ isec_u2_ix.intersection() ];
+                segments.push_back( Segment( isec_u_2.m_n,
+                                             isec_u_2.m_vtx_ix,
+                                             line_u12.m_side ) );
+                LOGGER_INVARIANT_EQUAL( log, cell[side2], line_u12.m_cell_under[ side2 ] );
             }
             else {                              // Second intersection is on pillar
-                v_2 = u_2_ix.vertex();
+                LOGGER_INVARIANT_EQUAL( log, line_u12.m_ends[1], isec_u2_ix.vertex() );
+                segments.push_back( Segment( line_u12.m_normals[1],
+                                             line_u12.m_ends[1],
+                                             line_u12.m_side ) );
                 process_pillar_1 = true;
             }
-            segments.push_back( Segment( v_2, u_1_2_l.m_side ) );
-            v_1 =  u_1_isec.m_vtx_ix;
+            segments.push_back( Segment( isec_u1.m_n,
+                                         isec_u1.m_vtx_ix,
+                                         line_u01.m_side ) );
         }
         else {                                  // First intersection is on pillar
-            v_1 = u_1_ix.vertex();
+            LOGGER_INVARIANT_EQUAL( log, line_u01.m_ends[1], isec_u1_ix.vertex() );
+            segments.push_back( Segment( line_u01.m_normals[1],
+                                         line_u01.m_ends[1],
+                                         line_u01.m_side ) );
             process_pillar_1 = true;
         }
-        segments.push_back( Segment(  v_1, u_0_1_l.m_side ) );
 
         // Follow lower arc forwards
-        NextIntersection l_1_ix = is.m_nxt_dnwrd_isec_ix;
-        segments.push_back( Segment( is.m_vtx_ix, l_0_1_l.m_side ) );
+        NextIntersection isec_l1_ix = is.m_nxt_dnwrd_isec_ix;
+        segments.push_back( Segment( is.m_n,
+                                     is.m_vtx_ix,
+                                     line_l01.m_side ) );
 
-        if( l_1_ix.isIntersection() ) {
+        if( isec_l1_ix.isIntersection() ) {
             // First intersection is on wall, cannot be u_1_ix.
-            const Intersection& l_1_isec = intersections[ l_1_ix.intersection() ];
-            const WallLine& l_1_2_l = boundaries[ l_1_isec.m_upwrd_bndry_ix ];
+            const Intersection& isec_l1 = intersections[ isec_l1_ix.intersection() ];
+            const WallLine& line_l12 = boundaries[ isec_l1.m_upwrd_bndry_ix ];
 
-            segments.push_back( Segment( l_1_isec.m_vtx_ix, l_1_2_l.m_side ) );
+            segments.push_back( Segment( isec_l1.m_n,
+                                         isec_l1.m_vtx_ix,
+                                         line_l12.m_side ) );
 
-            NextIntersection l_2_ix = intersections[l_1_ix.intersection()].m_nxt_upwrd_isec_ix;
-            if( l_2_ix.isIntersection() ) {
+            NextIntersection isec_l2_ix = intersections[isec_l1_ix.intersection()].m_nxt_upwrd_isec_ix;
+            if( isec_l2_ix.isIntersection() ) {
                 // Second intersection is on wall, must be identical to upper arc
-                const Intersection& l_2_isec = intersections[ l_2_ix.intersection() ];
+                const Intersection& isec_l2 = intersections[ isec_l2_ix.intersection() ];
                 LOGGER_INVARIANT_EQUAL( log, process_pillar_1, false );
-                LOGGER_INVARIANT_EQUAL( log, cell[side1], l_1_2_l.m_cell_over[ side1 ] );
-                LOGGER_INVARIANT_EQUAL( log, segments.front().vertex(),l_2_isec.m_vtx_ix );
+                LOGGER_INVARIANT_EQUAL( log, cell[side1], line_l12.m_cell_over[ side1 ] );
+                LOGGER_INVARIANT_EQUAL( log, segments.front().vertex(),isec_l2.m_vtx_ix );
             }
-            else if( segments.front().vertex() == l_2_ix.vertex() ) {
+            else if( segments.front().vertex() == isec_l2_ix.vertex() ) {
                 // Second intersection is on pillar and closes loop
                 LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
                 process_pillar_1 = false;
             }
             else {
                 // Second intersection is on pillar and doesn't close loop
+                LOGGER_INVARIANT_EQUAL( log, line_l12.m_ends[1], isec_l2_ix.vertex() );
                 LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
-                segments.push_back( Segment( l_2_ix.vertex(), true, true ) );
+                segments.push_back( Segment( line_l12.m_normals[1],
+                                             line_l12.m_ends[1],
+                                             3u ) );
             }
         }
-        else if( segments.front().vertex() == l_1_ix.vertex() ) {
+        else if( segments.front().vertex() == isec_l1_ix.vertex() ) {
             // First intersection is on pillar and closes loop
             LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
             process_pillar_1 = false;
@@ -1153,7 +1195,10 @@ CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Or
         else {
             // First intersection is on pillar and doesn't close loop
             LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
-            segments.push_back( Segment( l_1_ix.vertex(), true, true) );
+            LOGGER_INVARIANT_EQUAL( log, line_l01.m_ends[1], isec_l1_ix.vertex() );
+            segments.push_back( Segment( line_l01.m_normals[1],
+                                         line_l01.m_ends[1],
+                                         3u ) );
         }
 
         if( process_pillar_1 ) {
@@ -1161,10 +1206,11 @@ CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Or
             Index b = segments.front().vertex();
             Index a = segments.back().vertex();
             for(Index v=a+1; v<b; v++ ) {
-                segments.push_back( Segment( v, true, true ) );
+                const Real4& p = m_tessellation.vertex( v );
+                const Index ni = m_tessellation.addNormal( wall.normal( 1.f, p.z() ) );
+                segments.push_back( Segment( ni, v, 3u ) );
             }
         }
-
         m_tessellation.addPolygon( Interface( cell[0], cell[1],orientation, true),
                                    segments.data(), segments.size() );
     }
@@ -1173,15 +1219,20 @@ CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Or
 
 template<typename Tessellation>
 void
-CornerPointTessellator<Tessellation>::stitchPillarsNoIntersections( const Orientation             orientation,
-                                                                    const vector<WallLine>&  boundaries )
+CornerPointTessellator<Tessellation>::stitchPillarsNoIntersections( const Orientation        orientation,
+                                                                    const vector<WallLine>&  boundaries,
+                                                                    const SrcReal* const     o0_coord,
+                                                                    const SrcReal* const     o1_coord  )
 {
     Logger log = getLogger( package + ".stitchPillarsNoIntersections" );
+
 
     if( boundaries.empty() ) {
         return;
     }
     vector<Segment> segments;
+
+    PillarWallSampler<Tessellation> wall( o0_coord, o1_coord );
 
     bool edge_under[2] = {
         boundaries[0].m_cell_over[0] != IllegalIndex,
@@ -1190,6 +1241,10 @@ CornerPointTessellator<Tessellation>::stitchPillarsNoIntersections( const Orient
     Index l[2] = {
             boundaries[0].m_ends[0],
             boundaries[0].m_ends[1]
+    };
+    Index nl[2] = {
+        boundaries[0].m_normals[0],
+        boundaries[0].m_normals[1]
     };
     for(size_t b=1; b<boundaries.size(); b++) {
         Index cells[2] = {
@@ -1200,6 +1255,10 @@ CornerPointTessellator<Tessellation>::stitchPillarsNoIntersections( const Orient
             boundaries[b].m_ends[0],
             boundaries[b].m_ends[1]
         };
+        Index nu[2] = {
+            boundaries[b].m_normals[0],
+            boundaries[b].m_normals[1]
+        };
         bool edge_over[2] = {
             boundaries[b].m_cell_over[0] != cells[0],
             boundaries[b].m_cell_over[1] != cells[1]
@@ -1208,49 +1267,70 @@ CornerPointTessellator<Tessellation>::stitchPillarsNoIntersections( const Orient
             Interface interface( cells[0], cells[1],
                                  orientation,
                                  (boundaries[b-1].m_side != 3) || (boundaries[b].m_side!=3) );
-
             LOGGER_INVARIANT_LESS_EQUAL( log, l[1], u[1] );
             LOGGER_INVARIANT_LESS_EQUAL( log, l[0], u[0] );
             segments.clear();
-            for( Index v=l[1]; v<=u[1]; v++ ) {
-                segments.push_back( Segment( v, true, true ) );
+
+            // up along pillar 1
+            if( l[1] == u[1] ) {
+                segments.push_back( Segment( nl[1], l[1], (edge_over[0]?1u:0u)|(edge_over[1]?2u:0u) ) );
             }
-            segments.back().setEdges( edge_over[0], edge_over[1] );
-            //segments.back().m_flags = (edge_over[0]?2:0) | (edge_over[1]?1:0);
-            for( Index v=u[0]+1; v>l[0]; v-- ) {
-                segments.push_back( Segment(v-1, true, true ) );
+            else {
+                segments.push_back( Segment( nl[1], l[1], 3u ) );
+                for( Index v=l[1]+1; v<u[1]; v++ ) {
+                    segments.push_back( Segment( m_tessellation.addNormal( wall.normal( 1.f, m_tessellation.vertex(v).z() ) ),
+                                                 v, 3u ) );
+                }
+                segments.push_back( Segment( nu[1], u[1], (edge_over[0]?1u:0u)|(edge_over[1]?2u:0u) ) );
             }
-            segments.back().setEdges( edge_under[0], edge_under[1] );
-            //segments.back().m_flags = (edge_under[0]?2:0) | (edge_under[1]?1:0);
+
+            // down along pillar 0
+            if( l[0] == u[0] ) {
+                segments.push_back( Segment( nu[0], u[0], (edge_under[0]?1u:0u)|(edge_under[1]?2u:0u) ) );
+            }
+            else {
+                segments.push_back( Segment( nu[0], u[0], 3u ) );
+                for( Index v=u[0]-1u; v>l[0]; v-- ) {
+                    segments.push_back( Segment( m_tessellation.addNormal( wall.normal( 0.f, m_tessellation.vertex(v).z() ) ),
+                                                 v, 3u ) );
+                }
+                segments.push_back( Segment( nl[0], l[0], (edge_under[0]?1u:0u)|(edge_under[1]?2u:0u) ) );
+            }
             m_tessellation.addPolygon( interface,
                                        segments.data(),
                                        segments.size() );
         }
         l[0] = u[0];
         l[1] = u[1];
+        nl[0] = nu[0];
+        nl[1] = nu[1];
         edge_under[0] = edge_over[0];
         edge_under[1] = edge_over[1];
     }
 }
 
 
+
+
 template<typename Tessellation>
 void
-CornerPointTessellator<Tessellation>::extractWallLines( vector<WallLine>&   wall_lines,
-                                                        Index*              boundary_line_index_a,
-                                                        Index*              boundary_line_index_b,
-                                                        const Index* const  zcorn_ix_a_0,
-                                                        const Index* const  zcorn_ix_a_1,
-                                                        const Index* const  zcorn_ix_b_0,
-                                                        const Index* const  zcorn_ix_b_1,
-                                                        const Index* const  active_cell_list_a,
-                                                        const Index* const  active_cell_list_b,
-                                                        const Index         active_cell_count_a,
-                                                        const Index         active_cell_count_b,
-                                                        const Index* const  cell_map_a,
-                                                        const Index* const  cell_map_b,
-                                                        const Index         stride,
-                                                        const Index         adjacent_stride )
+CornerPointTessellator<Tessellation>::extractWallLines( vector<WallLine>&     wall_lines,
+                                                        Index*                boundary_line_index_a,
+                                                        Index*                boundary_line_index_b,
+                                                        const Index* const    zcorn_ix_a_0,
+                                                        const Index* const    zcorn_ix_a_1,
+                                                        const Index* const    zcorn_ix_b_0,
+                                                        const Index* const    zcorn_ix_b_1,
+                                                        const Index* const    active_cell_list_a,
+                                                        const Index* const    active_cell_list_b,
+                                                        const Index           active_cell_count_a,
+                                                        const Index           active_cell_count_b,
+                                                        const Index* const    cell_map_a,
+                                                        const Index* const    cell_map_b,
+                                                        const SrcReal* const  o0_coord,
+                                                        const SrcReal* const  o1_coord,
+                                                        const Index           stride,
+                                                        const Index           adjacent_stride )
 {
     // Helper struct for wall lines on one side of the wall
     struct SidedWallLine {
@@ -1368,6 +1448,7 @@ CornerPointTessellator<Tessellation>::extractWallLines( vector<WallLine>&   wall
         }
     }
 
+    PillarWallSampler<Tessellation> wall( o0_coord, o1_coord );
 
     // Step 2: Merge the lines from the two sides.
     wall_lines.clear();
@@ -1423,10 +1504,16 @@ CornerPointTessellator<Tessellation>::extractWallLines( vector<WallLine>&   wall
                 (wall_lines.back().m_ends[0] != smallest_p0) ||
                 (wall_lines.back().m_ends[1] != smallest_p1 ) )
         {
+            const Real z0 = m_tessellation.vertex( smallest_p0 ).z();
+            const Real z1 = m_tessellation.vertex( smallest_p1 ).z();
+
+
             wall_lines.resize( wall_lines.size() + 1 );
             WallLine& l = wall_lines.back();
             l.m_ends[0] = smallest_p0;
             l.m_ends[1] = smallest_p1;
+            l.m_normals[0] = m_tessellation.addNormal( wall.normal( 0.f, z0 ) );
+            l.m_normals[1] = m_tessellation.addNormal( wall.normal( 1.f, z1 ) );
             l.m_side = smallest_side + 1;
             l.m_cutoff = overall_smallest_p1;
             l.m_cell_over[0] = cells_above[0];
@@ -1503,6 +1590,8 @@ CornerPointTessellator<Tessellation>::intersectWallLines( vector<Intersection>& 
         return;
     }
 
+    PillarWallSampler<Tessellation> wall( pillar_a, pillar_b );
+
     // Step 1: Detect intersections, and insert the index of the intersection
     // at the chains of each of the two lines that intersect.
     //
@@ -1544,20 +1633,20 @@ CornerPointTessellator<Tessellation>::intersectWallLines( vector<Intersection>& 
 
                 LOGGER_INVARIANT( log, (wall_lines[ upper ].m_side ^ wall_lines[ lower ].m_side) == 3 );
                 const Index is_ix = wall_line_intersections.size();
-                const Index vtx_ix = segmentIntersection( lowest_at_p0.m_ends[0], lowest_at_p0.m_ends[1],
-                                                                 larger_at_p0.m_ends[0], larger_at_p0.m_ends[1],
-                                                                 pillar_a,
-                                                                 pillar_b );
-
-
                 chains_tmp[lower].push_back( is_ix );
                 chains_tmp[upper].push_front( is_ix );
-
                 wall_line_intersections.resize( wall_line_intersections.size()+1 );
+
+                Real4 ip = wall.intersect( m_tessellation.vertex( lowest_at_p0.m_ends[0] ).z(),
+                                           m_tessellation.vertex( lowest_at_p0.m_ends[1] ).z(),
+                                           m_tessellation.vertex( larger_at_p0.m_ends[0] ).z(),
+                                           m_tessellation.vertex( larger_at_p0.m_ends[1] ).z() );
+
                 Intersection& i = wall_line_intersections.back();
-                i.m_vtx_ix = vtx_ix;
+                i.m_vtx_ix = m_tessellation.addVertex( ip );
                 i.m_upwrd_bndry_ix = lower;
                 i.m_dnwrd_bndry_ix = upper;
+                i.m_n = m_tessellation.addNormal( wall.normal( ip.w(), ip.z() ) );
             }
         }
     }
@@ -1628,6 +1717,7 @@ CornerPointTessellator<Tessellation>::intersectWallLines( vector<Intersection>& 
     }
 #endif
 }
+
 
 
 template class CornerPointTessellator< PolygonTessellator<GridTessBridge> >;

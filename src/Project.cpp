@@ -21,6 +21,7 @@ using std::vector;
 using std::string;
 using std::list;
 
+static const std::string package = "Project";
 
 template<typename REAL>
 Project<REAL>::Project()
@@ -222,57 +223,11 @@ Project<REAL>::refresh( )
         if( it->m_filetype == ECLIPSE_UNIFIED_RESTART_FILE ) {
             try {
                 std::list<Eclipse::ReportStep> report_steps;
-                Eclipse::parseUnifiedRestartFile( report_steps, it->m_path );
+                Eclipse::parseUnifiedRestartFile( report_steps,
+                                                  m_cornerpoint_geometry.m_actnum,
+                                                  it->m_path );
                 for( auto jt=report_steps.begin(); jt!=report_steps.end(); ++jt ) {
-                    Eclipse::ReportStep& e_step = *jt;
-
-                    ReportStep& report_step = reportStepBySeqNum( e_step.m_sequence_number );
-                    report_step.m_wells.resize( e_step.m_wells.size() );
-                    for( unsigned int i=0; i<report_step.m_wells.size(); i++ ) {
-                        Eclipse::Well& ewell = e_step.m_wells[i];
-                        Well& well = report_step.m_wells[i];
-                        well.m_name = ewell.m_name;
-
-                        if( ewell.m_head_i > 0 && ewell.m_head_j > 0 && ewell.m_head_k > 0 ) {
-                            float v[3];
-                            cornerPointCellCentroid( v,
-                                                     ewell.m_head_i-1,
-                                                     ewell.m_head_j-1,
-                                                     ewell.m_head_k-1 );
-                            well.m_points.push_back( v[0] );
-                            well.m_points.push_back( v[1] );
-                            well.m_points.push_back( v[2] );
-                        }
-
-                        for(unsigned int j=0; j<ewell.m_completions.size(); j++ ) {
-                            Eclipse::Completion& ecompletion = ewell.m_completions[j];
-
-                            if( ecompletion.m_i > 0 && ecompletion.m_j > 0 && ecompletion.m_k > 0 ) {
-                                float v[3];
-                                cornerPointCellCentroid( v,
-                                                         ecompletion.m_i-1,
-                                                         ecompletion.m_j-1,
-                                                         ecompletion.m_k-1 );
-                                well.m_points.push_back( v[0] );
-                                well.m_points.push_back( v[1] );
-                                well.m_points.push_back( v[2] );
-                            }
-                        }
-                    }
-
-
-                    for( auto kt=e_step.m_solutions.begin(); kt!=e_step.m_solutions.end(); ++kt ) {
-                        Eclipse::Solution& e_solution = *kt;
-
-                        Solution solution;
-                        solution.m_reader = READER_UNFORMATTED_ECLIPSE;
-                        solution.m_path = it->m_path;
-                        solution.m_location.m_unformatted_eclipse = e_solution.m_location;
-                        addSolution( solution,
-                                     e_solution.m_name,
-                                     e_step.m_sequence_number );
-
-                    }
+                    import( *jt, it->m_path );
                 }
             }
             catch( const std::runtime_error& e ) {
@@ -283,58 +238,11 @@ Project<REAL>::refresh( )
         else if( it->m_filetype == ECLIPSE_RESTART_FILE ) {
             try {
                 std::list<Eclipse::ReportStep> report_steps;
-                Eclipse::parseRestartFile( report_steps, it->m_path );
+                Eclipse::parseRestartFile( report_steps,
+                                           m_cornerpoint_geometry.m_actnum,
+                                           it->m_path );
                 for( auto jt=report_steps.begin(); jt!=report_steps.end(); ++jt ) {
-                    Eclipse::ReportStep& e_step = *jt;
-
-
-                    ReportStep& report_step = reportStepBySeqNum( e_step.m_sequence_number );
-                    report_step.m_wells.resize( e_step.m_wells.size() );
-                    for( unsigned int i=0; i<report_step.m_wells.size(); i++ ) {
-                        Eclipse::Well& ewell = e_step.m_wells[i];
-                        Well& well = report_step.m_wells[i];
-                        well.m_name = ewell.m_name;
-
-                        if( ewell.m_head_i > 0 && ewell.m_head_j > 0 && ewell.m_head_k > 0 ) {
-                            float v[3];
-                            cornerPointCellCentroid( v,
-                                                     ewell.m_head_i-1,
-                                                     ewell.m_head_j-1,
-                                                     ewell.m_head_k-1 );
-                            well.m_points.push_back( v[0] );
-                            well.m_points.push_back( v[1] );
-                            well.m_points.push_back( v[2] );
-                        }
-
-                        for(unsigned int j=0; j<ewell.m_completions.size(); j++ ) {
-                            Eclipse::Completion& ecompletion = ewell.m_completions[j];
-
-                            if( ecompletion.m_i > 0 && ecompletion.m_j > 0 && ecompletion.m_k > 0 ) {
-                                float v[3];
-                                cornerPointCellCentroid( v,
-                                                         ecompletion.m_i-1,
-                                                         ecompletion.m_j-1,
-                                                         ecompletion.m_k-1 );
-                                well.m_points.push_back( v[0] );
-                                well.m_points.push_back( v[1] );
-                                well.m_points.push_back( v[2] );
-                            }
-                        }
-                    }
-
-
-                    for( auto kt=e_step.m_solutions.begin(); kt!=e_step.m_solutions.end(); ++kt ) {
-                        Eclipse::Solution& e_solution = *kt;
-                        Solution solution;
-                        solution.m_reader = READER_UNFORMATTED_ECLIPSE;
-                        solution.m_path = it->m_path;
-                        solution.m_location.m_unformatted_eclipse = e_solution.m_location;
-
-                        addSolution( solution,
-                                     e_solution.m_name,
-                                     e_step.m_sequence_number );
-
-                    }
+                    import( *jt, it->m_path );
                 }
             }
             catch( const std::runtime_error& e ) {
@@ -346,13 +254,191 @@ Project<REAL>::refresh( )
     m_unprocessed_files.clear();
 
     for( unsigned int i=0; i< m_report_steps.size(); i++ ) {
-        LOGGER_DEBUG( log, "report step seqnum " <<  m_report_steps[i].m_seqnum );
+        LOGGER_TRACE( log, "report step seqnum " <<  m_report_steps[i].m_seqnum );
         for( unsigned int j=0; j<m_solution_names.size(); j++ ) {
-            LOGGER_DEBUG( log, "  " << m_solution_names[j] << ": " <<
+            LOGGER_TRACE( log, "  " << m_solution_names[j] << ": " <<
                           (m_report_steps[i].m_solutions[j].m_reader != READER_NONE ? "available" : "unavailable" ) );
         }
     }
 }
+
+template<typename REAL>
+const bool
+Project<REAL>::wellDefined(  const unsigned int report_step_ix,
+                             const unsigned int well_ix  ) const
+{
+    Logger log = getLogger( package + ".wellDefined" );
+    if( m_report_steps.size() <= report_step_ix ) {
+        return false;
+    }
+    if( m_report_steps[ report_step_ix ].m_wells.size() <= well_ix ) {
+        return false;
+    }
+    return m_report_steps[ report_step_ix ].m_wells[ well_ix ].m_defined;
+}
+
+
+template<typename REAL>
+void
+Project<REAL>::addWell( const Eclipse::Well& ewell,
+                       const unsigned int sequence_number )
+{
+    Logger log = getLogger( "Project.addWell.Eclipse" );
+
+
+    ReportStep& report_step = reportStepBySeqNum( sequence_number );
+    bool dump_well = false && ewell.m_name == "F-1H";
+    if( !dump_well ) {
+        //continue;
+    }
+
+    if( dump_well ) {
+        LOGGER_DEBUG( log, "  Well '" << ewell.m_name <<
+                      "', head=[" << ewell.m_head_i <<
+                      ", " << ewell.m_head_j <<
+                      ", " << ewell.m_head_k <<
+                      "]  (" << report_step.m_date << ")" );
+    }
+
+    unsigned int well_index = 0u;
+    auto it = m_well_name_lut.find( ewell.m_name );
+    if( it == m_well_name_lut.end() ) {
+        well_index = m_well_names.size();
+        m_well_names.push_back( ewell.m_name );
+        m_well_name_lut[ ewell.m_name ] = well_index;
+    }
+    else {
+        well_index = it->second;
+    }
+
+    if( well_index <= report_step.m_wells.size() ) {
+        unsigned int a = report_step.m_wells.size();
+        report_step.m_wells.resize( well_index+1 );
+        for( unsigned int i=a; i<report_step.m_wells.size(); i++ ) {
+            report_step.m_wells[i].m_defined = false;
+        }
+    }
+
+
+    Well& well = report_step.m_wells[ well_index ];
+    well.m_defined = true;
+    well.m_name = ewell.m_name;
+
+    cornerPointCellCentroid( well.m_head,
+                             ewell.m_head_i,
+                             ewell.m_head_j,
+                             ewell.m_head_k );
+
+    well.m_branches.resize( ewell.m_branches.size() );
+    for( size_t j=0; j<ewell.m_branches.size(); j++ ) {
+        if( dump_well ) {
+            LOGGER_DEBUG( log, "    Branch " << j );
+        }
+        well.m_branches[j].resize( 3*ewell.m_branches[j].size() );
+        for( size_t k=0; k<ewell.m_branches[j].size(); k++ ) {
+            cornerPointCellCentroid( well.m_branches[j].data() + 3*k,
+                                     ewell.m_branches[j][k].m_i,
+                                     ewell.m_branches[j][k].m_j,
+                                     ewell.m_branches[j][k].m_k );
+            if( dump_well ) {
+                LOGGER_DEBUG( log, "        [" <<
+                              ewell.m_branches[j][k].m_i << ", " <<
+                              ewell.m_branches[j][k].m_j << ", " <<
+                              ewell.m_branches[j][k].m_k << "], segment=" <<
+                              ewell.m_branches[j][k].m_segment << ", pos="<<
+                              well.m_branches[j].at(3*k + 0) << ", " <<
+                              well.m_branches[j].at(3*k + 1) << ", " <<
+                              well.m_branches[j].at(3*k + 2) );
+            }
+
+        }
+    }
+}
+
+template<typename REAL>
+void
+Project<REAL>::import( const Eclipse::ReportStep& e_step,
+                       const std::string path )
+{
+    Logger log = getLogger( "Project.Eclipse.Reportstep.import" );
+
+    ReportStep& report_step = reportStepBySeqNum( e_step.m_sequence_number );
+
+    std::stringstream o;
+    o << e_step.m_date.m_year  << "-"
+      << (e_step.m_date.m_month < 10 ? "0" : "" ) << e_step.m_date.m_month << "-"
+      << (e_step.m_date.m_day < 10 ? "0" : "" ) << e_step.m_date.m_day;
+    report_step.m_date = o.str();
+
+
+    //report_step.m_wells.resize( e_step.m_wells.size() );
+    for( unsigned int i=0; i<e_step.m_wells.size(); i++ ) {
+        addWell( e_step.m_wells[i], e_step.m_sequence_number );
+        /*
+        const Eclipse::Well& ewell = e_step.m_wells[i];
+        bool dump_well =  ewell.m_name == "F-1H";
+        if( !dump_well ) {
+            //continue;
+        }
+
+        if( dump_well ) {
+            LOGGER_DEBUG( log, "  Well '" << ewell.m_name <<
+                          "', head=[" << ewell.m_head_i <<
+                          ", " << ewell.m_head_j <<
+                          ", " << ewell.m_head_k <<
+                          "]  (" << report_step.m_date << ")" );
+        }
+        Well& well = report_step.m_wells[i];
+        well.m_name = ewell.m_name;
+
+
+        cornerPointCellCentroid( well.m_head,
+                                 ewell.m_head_i,
+                                 ewell.m_head_j,
+                                 ewell.m_head_k );
+
+        LOGGER_DEBUG( log, "old: " << well.m_branches.size() );
+        well.m_branches.resize( ewell.m_branches.size() );
+        for( size_t j=0; j<ewell.m_branches.size(); j++ ) {
+            if( dump_well ) {
+                LOGGER_DEBUG( log, "    Branch " << j );
+            }
+            well.m_branches[j].resize( 3*ewell.m_branches[j].size() );
+            for( size_t k=0; k<ewell.m_branches[j].size(); k++ ) {
+                cornerPointCellCentroid( well.m_branches[j].data() + 3*k,
+                                         ewell.m_branches[j][k].m_i,
+                                         ewell.m_branches[j][k].m_j,
+                                         ewell.m_branches[j][k].m_k );
+                if( dump_well ) {
+                    LOGGER_DEBUG( log, "        [" <<
+                                  ewell.m_branches[j][k].m_i << ", " <<
+                                  ewell.m_branches[j][k].m_j << ", " <<
+                                  ewell.m_branches[j][k].m_k << "], segment=" <<
+                                  ewell.m_branches[j][k].m_segment << ", pos="<<
+                                  well.m_branches[j].at(3*k + 0) << ", " <<
+                                  well.m_branches[j].at(3*k + 1) << ", " <<
+                                  well.m_branches[j].at(3*k + 2) );
+                }
+
+            }
+        }
+        */
+    }
+
+    for( auto kt=e_step.m_solutions.begin(); kt!=e_step.m_solutions.end(); ++kt ) {
+        const Eclipse::Solution& e_solution = *kt;
+
+        Solution solution;
+        solution.m_reader = READER_UNFORMATTED_ECLIPSE;
+        solution.m_path = path;
+        solution.m_location.m_unformatted_eclipse = e_solution.m_location;
+        addSolution( solution,
+                     e_solution.m_name,
+                     e_step.m_sequence_number );
+
+    }
+}
+
 
 template<typename REAL>
 void
@@ -569,6 +655,20 @@ Project<REAL>::field( Bridge& bridge, const unsigned int solution, const unsigne
     }
     else {
         throw std::runtime_error( "No valid field for this solution and report step" );
+    }
+}
+
+
+template<typename REAL>
+const std::string&
+Project<REAL>::reportStepDate( unsigned int step ) const
+{
+    static const std::string illegal = "Illegal report step";
+    if( m_report_steps.size() <= step ) {
+        return illegal;
+    }
+    else {
+        return m_report_steps[ step ].m_date;
     }
 }
 

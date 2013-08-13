@@ -45,8 +45,9 @@ public:
     void
     add( const std::string& text,
          const Font         font,
-         const GLfloat*     anchor,
-         const Anchor       type = ANCHOR_C );
+         const GLfloat*     anchor_pos,
+         const GLfloat      anchor_spacing = 0.f,
+         const Anchor       anchor_type = ANCHOR_C );
 
 
 private:
@@ -78,5 +79,6 @@ private:
     std::vector<unsigned int>        m_widths;
     std::vector<GLfloat>    m_vertex;
     std::vector<GLfloat>    m_texcoords;
+    std::vector<GLfloat>    m_anchor_pos;
 
 };

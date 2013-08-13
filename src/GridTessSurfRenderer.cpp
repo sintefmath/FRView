@@ -9,16 +9,24 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <siut2/gl_utils/GLSLtools.hpp>
-#include <siut2/io_utils/snarf.hpp>
 #include "Logger.hpp"
 #include "GridTess.hpp"
 #include "GridTessSurf.hpp"
 #include "GridField.hpp"
 #include "GridTessSurfRenderer.hpp"
 
+namespace resources {
+    extern const std::string screen_common_vs;
+    extern const std::string screen_colorize_fs;
+    extern const std::string surface_common_vs;
+    extern const std::string surface_common_gs;
+    extern const std::string surface_twopass_fs;
+    extern const std::string surface_singlepass_fs;
+    extern const std::string surface_crappy_fs;
+}
+
 using siut2::gl_utils::compileShader;
 using siut2::gl_utils::linkProgram;
-using siut2::io_utils::snarfFile;
 
 GridTessSurfRenderer::GridTessSurfRenderer()
     : m_quality( ~0u ),
@@ -50,14 +58,14 @@ GridTessSurfRenderer::GridTessSurfRenderer()
     glBindVertexArray( 0 );
 
 
-    GLuint avg_alpha_vs = compileShader( snarfFile( "shaders/screen_common_vs.glsl" ), GL_VERTEX_SHADER, true );
-    GLuint avg_alpha_fs = compileShader( snarfFile( "shaders/screen_colorize_fs.glsl" ), GL_FRAGMENT_SHADER, true );
+    GLuint avg_alpha_vs = compileShader( resources::screen_common_vs, GL_VERTEX_SHADER, true );
+    GLuint avg_alpha_fs = compileShader( resources::screen_colorize_fs, GL_FRAGMENT_SHADER, true );
 
-    GLuint surface_common_vs = compileShader( snarfFile( "shaders/surface_common_vs.glsl" ), GL_VERTEX_SHADER, true );
-    GLuint surface_common_gs = compileShader( snarfFile( "shaders/surface_common_gs.glsl" ), GL_GEOMETRY_SHADER, true );
-    GLuint surface_twopass_fs = compileShader( snarfFile( "shaders/surface_twopass_fs.glsl" ), GL_FRAGMENT_SHADER, true );
-    GLuint surface_singlepass_fs = compileShader( snarfFile( "shaders/surface_singlepass_fs.glsl" ), GL_FRAGMENT_SHADER, true );
-    GLuint surface_crappy_fs = compileShader( snarfFile( "shaders/surface_crappy_fs.glsl" ), GL_FRAGMENT_SHADER, true );
+    GLuint surface_common_vs = compileShader( resources::surface_common_vs, GL_VERTEX_SHADER, true );
+    GLuint surface_common_gs = compileShader( resources::surface_common_gs, GL_GEOMETRY_SHADER, true );
+    GLuint surface_twopass_fs = compileShader( resources::surface_twopass_fs, GL_FRAGMENT_SHADER, true );
+    GLuint surface_singlepass_fs = compileShader( resources::surface_singlepass_fs, GL_FRAGMENT_SHADER, true );
+    GLuint surface_crappy_fs = compileShader( resources::surface_crappy_fs, GL_FRAGMENT_SHADER, true );
 
     m_deferred_prog = glCreateProgram();
     glAttachShader( m_deferred_prog, avg_alpha_vs );
@@ -219,6 +227,9 @@ GridTessSurfRenderer::renderCells( GLuint                          fbo,
                              nm4[8], nm4[9], nm4[10] };
 
 
+
+
+
     switch( m_quality ) {
     // crappy quality
     case 0:
@@ -310,45 +321,97 @@ GridTessSurfRenderer::renderCells( GLuint                          fbo,
     glBindVertexArray( 0 );
     glUseProgram( 0 );
     glBindFramebuffer( GL_FRAMEBUFFER, fbo );
+    glActiveTexture( GL_TEXTURE2 ); glBindTexture( GL_TEXTURE_2D, 0 );
     glActiveTexture( GL_TEXTURE1 ); glBindTexture( GL_TEXTURE_2D, 0 );
     glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_2D, 0 );
     glEnable( GL_DEPTH_TEST );
     glDisable( GL_BLEND );
     glDepthMask( GL_TRUE );
     CHECK_GL;
+
+#ifdef DEBUG_GRAPHICSz
+    glBindFramebuffer( GL_FRAMEBUFFER, fbo );
+    glMatrixMode( GL_PROJECTION );
+    glLoadMatrixf( projection );
+    glMatrixMode( GL_MODELVIEW );
+    glLoadMatrixf( modelview );
+
+    glUseProgram( 0 );
+    glColor3f( 1.f, 1.f, 0.f );
+    glBegin( GL_LINES );
+
+    const float l = 0.1f;
+    for(int i=0; i<tess->triangleCount(); i++ ) {
+
+        const float mx = (1.f/3.f)*(tess->vertexData()[ 4*tess->vertexIndexData()[3*i+0] + 0 ] +
+                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+1] + 0 ] +
+                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+2] + 0 ] );
+        const float my = (1.f/3.f)*(tess->vertexData()[ 4*tess->vertexIndexData()[3*i+0] + 1 ] +
+                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+1] + 1 ] +
+                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+2] + 1 ] );
+        const float mz = (1.f/3.f)*(tess->vertexData()[ 4*tess->vertexIndexData()[3*i+0] + 2 ] +
+                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+1] + 2 ] +
+                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+2] + 2 ] );
+
+        for( unsigned int k=0; k<3; k++ ) {
+            const float px = 0.1*mx + 0.9*tess->vertexData()[ 4*tess->vertexIndexData()[3*i+k] + 0 ];
+            const float py = 0.1*my + 0.9*tess->vertexData()[ 4*tess->vertexIndexData()[3*i+k] + 1 ];
+            const float pz = 0.1*mz + 0.9*tess->vertexData()[ 4*tess->vertexIndexData()[3*i+k] + 2 ];
+
+            const float nx = l*tess->normalData()[ 4*tess->normalIndexData()[3*i+k] + 0 ];
+            const float ny = l*tess->normalData()[ 4*tess->normalIndexData()[3*i+k] + 1 ];
+            const float nz = l*tess->normalData()[ 4*tess->normalIndexData()[3*i+k] + 2 ];
+            const float nw = tess->normalData()[ 4*tess->normalIndexData()[3*i+k] + 3 ];
+
+            if( nw > 2.9f ) {
+//            if( nx*nx + ny*ny + nz*nz > std::numeric_limits<float>::epsilon() ) {
+//            glVertex3f( px, py, pz );
+                glVertex3f( px-nx, py-ny, pz-nz );
+                glVertex3f( px+nx, py+ny, pz+nz );
+            }
+        }
+
+    }
+    glEnd();
+#endif
+
 }
 
 
 void
 GridTessSurfRenderer::drawTwoPass( const GLfloat*                  modelview,
-                            const GLfloat*                  projection,
-                            const GLfloat*                  modelview_projection,
-                            const GLfloat*                  normal_transform,
-                            const GLsizei                   width,
-                            const GLsizei                   height,
-                            const GridTess*                 tess,
-                            const GridField*                field,
-                            const std::vector<RenderItem>&  render_items,
-                            const bool                      solid_pass )
+                                   const GLfloat*                  projection,
+                                   const GLfloat*                  modelview_projection,
+                                   const GLfloat*                  normal_transform,
+                                   const GLsizei                   width,
+                                   const GLsizei                   height,
+                                   const GridTess*                 tess,
+                                   const GridField*                field,
+                                   const std::vector<RenderItem>&  render_items,
+                                   const bool                      solid_pass )
 {
     glBindVertexArray( tess->vertexVertexArrayObject() );
 
     glUseProgram( m_surface_twopass_prog );
     glUniformMatrix4fv( m_surface_twopass_loc_mvp, 1, GL_FALSE, modelview_projection );
     glUniformMatrix3fv( m_surface_twopass_loc_nm, 1, GL_FALSE, normal_transform );
+    glUniformMatrix4fv( glGetUniformLocation( m_surface_twopass_prog, "MV" ), 1, GL_FALSE, modelview );
     glUniform2f( m_surface_twopass_loc_screen_size, width, height );
 
-    glActiveTexture( GL_TEXTURE1 );
+    glActiveTexture( GL_TEXTURE2 );
     if( field != NULL ) {
         glBindTexture( GL_TEXTURE_BUFFER, field->texture() );
     }
     else {
         glBindTexture( GL_TEXTURE_BUFFER, 0 );
     }
+    glActiveTexture( GL_TEXTURE1 );
+    glBindTexture( GL_TEXTURE_BUFFER, tess->normalTexture() );
 
     glActiveTexture( GL_TEXTURE0 );
     for( size_t i = 0; i<render_items.size(); i++) {
         const RenderItem& item = render_items[i];
+        glUniform1i( glGetUniformLocation( m_surface_twopass_prog, "flat_normals"), GL_FALSE );
         glUniform1f( glGetUniformLocation( m_surface_twopass_prog, "solid_alpha" ), item.m_opacity );
         glUniform1f( glGetUniformLocation( m_surface_twopass_prog, "line_alpha" ), item.m_edge_opacity );
         glUniform1i( glGetUniformLocation( m_surface_twopass_prog, "use_field" ), item.m_field );
@@ -391,17 +454,20 @@ GridTessSurfRenderer::drawSinglePass( const GLfloat*                  modelview,
     glUniformMatrix3fv( m_surface_singlepass_loc_nm, 1, GL_FALSE, normal_transform );
     glUniform2f( m_surface_singlepass_loc_screen_size, width, height );
 
-    glActiveTexture( GL_TEXTURE1 );
+    glActiveTexture( GL_TEXTURE2 );
     if( field != NULL ) {
         glBindTexture( GL_TEXTURE_BUFFER, field->texture() );
     }
     else {
         glBindTexture( GL_TEXTURE_BUFFER, 0 );
     }
+    glActiveTexture( GL_TEXTURE1 );
+    glBindTexture( GL_TEXTURE_BUFFER, tess->normalTexture() );
 
     glActiveTexture( GL_TEXTURE0 );
     for( size_t i = 0; i<render_items.size(); i++) {
         const RenderItem& item = render_items[i];
+        glUniform1i( glGetUniformLocation( m_surface_singlepass_prog, "flat_normals"), GL_FALSE );
         glUniform1f( glGetUniformLocation( m_surface_singlepass_prog, "solid_alpha" ), item.m_opacity );
         glUniform1f( glGetUniformLocation( m_surface_singlepass_prog, "line_alpha" ), item.m_edge_opacity );
         glUniform1i( glGetUniformLocation( m_surface_singlepass_prog, "use_field" ), item.m_field );

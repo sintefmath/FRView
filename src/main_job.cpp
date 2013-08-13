@@ -9,7 +9,7 @@
 #include <GL/glew.h>
 #include <string>
 #include <list>
-#include <qtobserver/QTObserver.hpp>
+#include <tinia/qtobserver/QTObserver.hpp>
 
 #include "CPViewJob.hpp"
 #include "Logger.hpp"
@@ -23,7 +23,7 @@ main( int argc, char** argv )
         files.push_back( argv[i] );
     }
     CPViewJob *job = new CPViewJob( files );
-    qtobserver::QTObserver *qtObserver = new qtobserver::QTObserver();
+    tinia::qtobserver::QTObserver *qtObserver = new tinia::qtobserver::QTObserver();
     qtObserver->setJob(job);
     qtObserver->run(argc, argv);
 }

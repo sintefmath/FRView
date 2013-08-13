@@ -1,8 +1,18 @@
 PROJECT( cpview )
 CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )
-OPTION( EXTEND_CMAKE_MODULE_PATH
-  "Extend the CMAKE_MODULE_PATH variable with user directories?"
-  ON )
+
+OPTION( EXTEND_CMAKE_MODULE_PATH "Extend the CMAKE_MODULE_PATH variable with user directories?"  ON )
+OPTION( DESKTOP_JOB "Build desktop job" ON )
+OPTION( CLOUD_JOB "Build cloud job" ON )
+OPTION( GLUT_APP "Build glut app" OFF )
+OPTION( ECLIPSESCAN_APP "Build app to scan eclipse files" OFF )
+OPTION( PROFILE "Enable profiling" OFF )
+OPTION( USE_SSE2 "Use SSE2 intrinsics" ON )
+OPTION( USE_SSSE3 "Use SSSE3 intrinsics" ON )
+OPTION( USE_SSE4 "Use SSE4.1 and SSE4.2 intrinsics" ON )
+OPTION( CHECK_INVARIANTS "Check invariants throughout the code" OFF )
+OPTION( DEBUG_GRAPHICS "Enable debug graphics" OFF )
+
 IF( EXTEND_CMAKE_MODULE_PATH )
   SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     "./cmake/Modules"
@@ -13,12 +23,10 @@ IF( EXTEND_CMAKE_MODULE_PATH )
     "."
     )
 ENDIF( EXTEND_CMAKE_MODULE_PATH )
-OPTION( PROFILE "Enable profiling" OFF )
-OPTION( USE_SSE2 "Use SSE2 intrinsics" ON )
-OPTION( USE_SSSE3 "Use SSSE3 intrinsics" ON )
-OPTION( USE_SSE4 "Use SSE4.1 and SSE4.2 intrinsics" ON )
-OPTION( CHECK_INVARIANTS "Check invariants throughout the code" OFF )
-OPTION( DEBUG_GRAPHICS "Enable debug graphics" OFF )
+
+INCLUDE( txt2cpp )
+
+
 
 # Versioning
 SET( svn_revision $ENV{SVN_REVISION} )
@@ -33,6 +41,7 @@ ENDIF( NOT  DEFINED build_number )
 
 SET( version_number "0.${svn_revision}.${build_number}" )
 
+
 # Debian package
 SET( CPACK_GENERATOR "DEB" )
 SET( CPACK_DEBIAN_PACKAGE_NAME "qtobserver" )
@@ -46,37 +55,20 @@ include ( CPack )
 #set( CMAKE_INSTALL_PREFIX "/usr/local" )
 
 set( BUILDDIR "build" )
-set( CMAKE_CXX_FLAGS "-std=c++0x -Wall" )
+set( CMAKE_CXX_FLAGS "-std=c++0x -Wall ${CMAKE_CXX_FLAGS}" )
 
-
-FIND_LIBRARY( GLEW
-              NAMES GLEW glew32
-              PATHS ${LIB_PATHS} )
-FIND_PACKAGE(Freeglut)
-ADD_DEFINITIONS(-DHAVE_FREEGLUT)
-FIND_PACKAGE(Qt4 REQUIRED)
-FIND_PACKAGE(OpenGL REQUIRED)
-FIND_PACKAGE(PolicyLib REQUIRED)
-FIND_PACKAGE(JobObserver REQUIRED)
-#FIND_PACKAGE(Boost REQUIRED COMPONENTS thread unit_test_framework prg_exec_monitor test_exec_monitor)
+FIND_PACKAGE( Tinia REQUIRED COMPONENTS Server Desktop )
+FIND_PACKAGE( OpenGL REQUIRED)
+FIND_LIBRARY( GLEW  NAMES GLEW glew32 PATHS ${LIB_PATHS} )
 FIND_PACKAGE( GLM REQUIRED )
-FIND_PACKAGE(SIUT2 REQUIRED)
-FIND_LIBRARY(LOG4CXX_LOG4CXX_LIBRARY log4cxx
+FIND_LIBRARY( LOG4CXX_LOG4CXX_LIBRARY log4cxx
     /usr/lib
     /usr/local/lib
-)
-FIND_LIBRARY(QTOBSERVER QtObserver
-    /work/projects/qtobserver
 )
 
 FIND_PATH(LOG4CXX_INCLUDE_DIR log4cxx/logger.h)
 SET(LOG4CXX_LIBRARIES ${LOG4CXX_LOG4CXX_LIBRARY})
 
-ADD_DEFINITIONS( -DUSE_GLEW )
-
-#ADD_DEFINITIONS( -DHAVE_FREEGLUT )
-#FIND_PACKAGE( Freeglut REQUIRED )
-#FIND_PACKAGE( siut REQUIRED )
 
 IF( UNIX )
 #        SET( CMAKE_CXX_FLAGS "-Wall -fprofile-arcs -ftest-coverage -pg -g2 -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
@@ -106,29 +98,13 @@ IF( UNIX )
     ENDIF( USE_SSE4 )
 ENDIF( UNIX )
 
-
-#OPTION( USE_SSE2 "Use SSE2 intrinsics" ON )
-#OPTION( USE_SSSE3 "Use SSSE3 intrinsics" ON )
-
-
-INCLUDE(${QT_USE_FILE})
-SET(QT_USE_QTOPENGL TRUE)
-
 INCLUDE_DIRECTORIES(
     "./src"
-    "/work/projects/qtobserver/include"
-    "/work/projects/PolicyLib2/include"
-    "/work/projects/jobobserver/include"
-    "/work/tmp/glm-0.9.1.1"
-    ${SIUT2_INCLUDE_DIR}
-    ${QT_INCLUDE_DIR}
-    ${PolicyLib_INCLUDE_DIR}
-    ${QT_QTOPENGL_INCLUDE_DIR}
-    ${JobObserver_INCLUDE_DIR}
-    ${Freeglut_INCLUDE_DIR}
+    ${tinia_INCLUDE_DIRS}
+    ${GLM_INCLUDE_DIRS}
 )
 
-
+# --- Compile and link eclipse io library --------------------------------------
 ADD_LIBRARY( eclipseio
      "src/Eclipse.cpp"
      "src/EclipseParser.cpp"
@@ -138,63 +114,126 @@ ADD_LIBRARY( eclipseio
 )
 TARGET_LINK_LIBRARIES( eclipseio ${LOG4CXX_LIBRARIES} )
 
-ADD_LIBRARY( cpview
-     "src/Project.cpp"
-     "src/ClipPlane.cpp"
-     "src/CellSelector.cpp"
-     "src/GridTess.cpp"
-     "src/GridTessBridge.cpp"
-     "src/GridTessSubset.cpp"
-     "src/GridTessSurf.cpp"
-     "src/GridTessSurfBuilder.cpp"
-     "src/GridTessSurfRenderer.cpp"
-     "src/PolygonTessellator.cpp"
-     "src/GridField.cpp"
-     "src/CornerPointTessellatorSimple.cpp"
-     "src/CornerPointTessellator.cpp"
-     "src/FooBarParser.cpp"
-     "src/CellSanityChecker.cpp"
-     "src/TextRenderer.cpp"
-     "src/TextRendererFont.cpp"
-)
-TARGET_LINK_LIBRARIES( cpview )
+# --- shader files -------------------------------------------------------------
+FILE( GLOB cpview_core_SHADERS "shaders/*glsl" )
+FOREACH( file ${cpview_core_SHADERS} )
+    GET_FILENAME_COMPONENT( symbol ${file} NAME_WE)
+    ADD_TEXT_FILE( ${symbol} "resources::${symbol}" ${file} )
+    LIST( APPEND SHADER_LIBS ${symbol} )
+ENDFOREACH()
 
-ADD_EXECUTABLE( cpview_job "src/main_job.cpp" "src/CPViewJob.cpp" )
+# --- Compile and link code that is common for all eclipse viz apps ------------
+ADD_LIBRARY( cpview_core
+             "src/Project.cpp"
+             "src/ClipPlane.cpp"
+             "src/CellSelector.cpp"
+             "src/GridTess.cpp"
+             "src/GridTessBridge.cpp"
+             "src/GridTessSubset.cpp"
+             "src/GridTessSurf.cpp"
+             "src/GridTessSurfBuilder.cpp"
+             "src/GridTessSurfRenderer.cpp"
+             "src/GridTessSurfBBoxFinder.cpp"
+             "src/GridCubeRenderer.cpp"
+             "src/PolygonTessellator.cpp"
+             "src/GridField.cpp"
+             "src/CornerPointTessellatorSimple.cpp"
+             "src/CornerPointTessellator.cpp"
+             "src/PillarFloorSampler.cpp"
+             "src/PillarWallSampler.cpp"
+             "src/FooBarParser.cpp"
+             "src/CellSanityChecker.cpp"
+             "src/TextRenderer.cpp"
+             "src/TextRendererFont.cpp"
+             "src/WellRenderer.cpp"
+             "src/PrintExporter.cpp"
+             "src/TikZExporter.cpp"
+)
+
+TARGET_LINK_LIBRARIES( cpview_core ${SHADER_LIBS} )
+
+# --- Compile and link job (common to both desktop and cloud jobs) -------------
+ADD_LIBRARY( cpview_job "src/CPViewJob.cpp"
+                        "src/CPViewJob_Fetch.cpp"
+                        "src/CPViewJob_Compute.cpp"
+                        "src/CPViewJob_Render.cpp"
+                        "src/CPViewJob_RenderList.cpp"
+)
 TARGET_LINK_LIBRARIES( cpview_job
-                       cpview
-                       eclipseio
-                       ${QTOBSERVER}
-                       ${GLEW}
-                       ${OPENGL_LIBRARIES}
-                       ${QT_LIBRARIES}
-                       ${QT_QTOPENGL_LIBRARIES}
-                       ${PolicyLib_LIBRARIES}
-                       ${JobObserver_LIBRARIES}
-                       ${Boost_LIBRARIES}
-                       ${LOG4CXX_LIBRARIES}
+                       cpview_core
 )
 
-ADD_EXECUTABLE( cpview_glut "src/main_glut.cpp" )
-TARGET_LINK_LIBRARIES( cpview_glut
-                       cpview
-                       eclipseio
-                       ${SIUT2_LIBRARY}
-                       ${Freeglut_LIBRARY}
-                       ${GLEW}
-                       ${OPENGL_LIBRARIES}
-                       ${QT_LIBRARIES}
-                       ${QT_QTOPENGL_LIBRARIES}
-                       ${PolicyLib_LIBRARIES}
-                       ${JobObserver_LIBRARIES}
-                       ${Boost_LIBRARIES}
-                       ${LOG4CXX_LIBRARIES}
-)
 
-ADD_EXECUTABLE( sseplayground "src/SSEPlayGround.cpp" )
-TARGET_LINK_LIBRARIES( sseplayground rt )
+# --- Compile and link desktop job ---------------------------------------------
+IF( DESKTOP_JOB )
+    FIND_PACKAGE( Qt4 REQUIRED)
+    INCLUDE( ${QT_USE_FILE} )
+    SET( QT_USE_QTOPENGL TRUE )
+    INCLUDE_DIRECTORIES(
+        "/work/projects/qtobserver/include"
+        ${QT_INCLUDE_DIR}
+        ${QT_QTOPENGL_INCLUDE_DIR}
+    )
+    ADD_EXECUTABLE( cpview_desktop_job "src/main_job.cpp" )
+    TARGET_LINK_LIBRARIES( cpview_desktop_job
+                           cpview_job
+                           cpview_core
+                           eclipseio
+                           ${tinia_LIBRARIES}
+                           ${GLEW}
+                           ${OPENGL_LIBRARIES}
+                           ${QT_LIBRARIES}
+                           ${QT_QTOPENGL_LIBRARIES}
+                           ${Boost_LIBRARIES}
+                           ${LOG4CXX_LIBRARIES}
+    )
+ENDIF( DESKTOP_JOB )
 
-ADD_EXECUTABLE( eclipsescan "src/eclipsescan.cpp" )
-TARGET_LINK_LIBRARIES( eclipsescan
-                       eclipseio
-                       ${LOG4CXX_LIBRARIES}
-)
+# --- Compile and linke cloud job ----------------------------------------------
+IF( CLOUD_JOB )
+    FIND_PACKAGE(LibXml2 REQUIRED)
+    INCLUDE_DIRECTORIES( ${LIBXML2_INCLUDE_DIR} )
+    ADD_EXECUTABLE( cpview_cloud_job "src/main_cloud_job.cpp" )
+    TARGET_LINK_LIBRARIES( cpview_cloud_job
+                           cpview_job
+                           cpview_core
+                           eclipseio
+                           ${tinia_LIBRARIES}
+                           ${GLEW}
+                           ${OPENGL_LIBRARIES}
+                           ${Boost_LIBRARIES}
+                           ${LOG4CXX_LIBRARIES}
+                           ${LIBXML2_LIBRARIES} )
+ENDIF( CLOUD_JOB )
+
+
+# --- Compile and link simple glut app (doesn't use policylib at all) ----------
+IF( GLUT_APP )
+    ADD_EXECUTABLE( cpview_glut_app "src/main_glut.cpp" )
+    TARGET_LINK_LIBRARIES( cpview_glut_app
+                           cpview_core
+                           eclipseio
+                           ${SIUT2_LIBRARY}
+                           ${Freeglut_LIBRARY}
+                           ${GLEW}
+                           ${OPENGL_LIBRARIES}
+                           ${QT_LIBRARIES}
+                           ${QT_QTOPENGL_LIBRARIES}
+                           ${PolicyLib_LIBRARIES}
+                           ${JobObserver_LIBRARIES}
+                           ${Boost_LIBRARIES}
+                           ${LOG4CXX_LIBRARIES}
+    )
+ENDIF( GLUT_APP )
+
+# --- Compile and link simple app that scans through eclipse files -------------
+IF( ECLIPSESCAN_APP )
+    ADD_EXECUTABLE( eclipsescan "src/eclipsescan.cpp" )
+    TARGET_LINK_LIBRARIES( eclipsescan
+                           eclipseio
+                           ${LOG4CXX_LIBRARIES}
+    )
+ENDIF( ECLIPSESCAN_APP )
+
+#ADD_EXECUTABLE( sseplayground "src/SSEPlayGround.cpp" )
+#TARGET_LINK_LIBRARIES( sseplayground rt )

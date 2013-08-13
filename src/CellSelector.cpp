@@ -7,13 +7,19 @@
  *
  ******************************************************************************/
 #include <siut2/gl_utils/GLSLtools.hpp>
-#include <siut2/io_utils/snarf.hpp>
 #include "Logger.hpp"
 #include "GridTess.hpp"
 #include "GridField.hpp"
 #include "GridTessSubset.hpp"
 #include "CellSelector.hpp"
 
+namespace resources {
+    extern const std::string all_select_vs;
+    extern const std::string field_select_vs;
+    extern const std::string index_select_vs;
+    extern const std::string halfplane_select_vs;
+    extern const std::string plane_select_vs;
+}
 
 CellSelector::CellSelector( const std::string& vs )
 {
@@ -33,7 +39,7 @@ CellSelector::CellSelector( const std::string& vs )
 // -----------------------------------------------------------------------------
 
 AllSelector::AllSelector()
-    : CellSelector( siut2::io_utils::snarfFile( "shaders/all_select_vs.glsl" ) )
+    : CellSelector( resources::all_select_vs )
 {
 }
 
@@ -50,7 +56,7 @@ AllSelector::apply(GridTessSubset *tess_subset,
 
 // -----------------------------------------------------------------------------
 FieldSelector::FieldSelector()
-    : CellSelector( siut2::io_utils::snarfFile( "shaders/field_select_vs.glsl" ) )
+    : CellSelector( resources::field_select_vs )
 {
     m_loc_min_max = glGetUniformLocation( m_prog, "min_max" );
 }
@@ -74,7 +80,7 @@ FieldSelector::apply(GridTessSubset *tess_subset,
 // -----------------------------------------------------------------------------
 
 IndexSelector::IndexSelector()
-        : CellSelector( siut2::io_utils::snarfFile( "shaders/index_select_vs.glsl" ) )
+        : CellSelector( resources::index_select_vs )
 {
     glUseProgram( m_prog );
     m_loc_grid_dim = glGetUniformLocation( m_prog, "grid_dim" );
@@ -114,7 +120,7 @@ IndexSelector::apply( GridTessSubset *tess_subset,
 
 // -----------------------------------------------------------------------------
 HalfPlaneSelector::HalfPlaneSelector()
-    : CellSelector( siut2::io_utils::snarfFile( "shaders/halfplane_select_vs.glsl" ) )
+    : CellSelector( resources::halfplane_select_vs )
 {
     glUseProgram( m_prog );
     m_loc_halfplane_eq = glGetUniformLocation( m_prog, "plane_equation" );
@@ -146,7 +152,7 @@ HalfPlaneSelector::apply( GridTessSubset *tess_subset,
 
 // -----------------------------------------------------------------------------
 PlaneSelector::PlaneSelector()
-    : CellSelector( siut2::io_utils::snarfFile( "shaders/plane_select_vs.glsl" ) )
+    : CellSelector( resources::plane_select_vs )
 {
     glUseProgram( m_prog );
     m_loc_plane_eq = glGetUniformLocation( m_prog, "plane_equation" );

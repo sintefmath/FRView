@@ -74,6 +74,7 @@ private:
     struct WallLine
     {
         Index               m_ends[2];          ///< Vertex index of end points at pillar 0 and pillar 1.
+        Index               m_normals[2];       ///< Normal vector at edge end points.
         Index               m_cell_over[2];     ///< The index of the cell over (increasing k) this boundary, for side a and b.
         Index               m_cell_under[2];    ///< The index of the cell under (decreasing k) this boundary, for side a and b.
         Index               m_cutoff;           ///< Minimum p1 index of all lines above, used for early exit in intersection search.
@@ -89,6 +90,9 @@ private:
         Index             m_dnwrd_bndry_ix;     ///< Boundary with max index at pillar 1 (and min index at pillar 0).
         NextIntersection  m_nxt_dnwrd_isec_ix;  ///< Next intersection along downwards boundary.
         NextIntersection  m_nxt_upwrd_isec_ix;  ///< Next intersection along upwards boundary.
+        Index             m_n;                  ///< Index of normal vector.
+        //        Real              m_u;
+//        Real              m_z;
     };
 
     /** Enumeration of logical cell corners in IJ-plane. */
@@ -160,10 +164,12 @@ private:
                       const Index* const   active_cell_list_b,
                       const Index          active_cell_count_a,
                       const Index          active_cell_count_b,
-                      const Index* const            cell_map_a,
-                      const Index* const            cell_map_b,
-                      const Index          stride,
-                      const Index          adjacent_stride );
+                      const Index* const    cell_map_a,
+                      const Index* const    cell_map_b,
+                      const SrcReal* const  o0_coord,
+                      const SrcReal* const  o1_coord,
+                      const Index           stride,
+                      const Index           adjacent_stride );
 
     /** Find intersections on a pillar wall, defining line segments for affected edges. */
     void
@@ -185,7 +191,9 @@ private:
     /** Stitch the wall between two pillars, simple case where there are no intersections. */
     void
     stitchPillarsNoIntersections( const Orientation             orientation,
-                                  const std::vector<WallLine>&  boundaries );
+                                  const std::vector<WallLine>&  boundaries,
+                                  const SrcReal* const          o0_coord,
+                                  const SrcReal* const          o1_coord );
 
 
     /** Stitch the wall between two pillars, do handle intersections. */
@@ -193,8 +201,10 @@ private:
     stitchPillarsHandleIntersections( const Orientation                 orientation,
                                       const std::vector<WallLine>&      boundaries,
                                       const std::vector<Intersection>&  intersections,
-                                      const std::vector<Index>&  chains,
-                                      const Index* const         chain_offsets );
+                                      const std::vector<Index>&         chains,
+                                      const Index* const                chain_offsets,
+                                      const SrcReal* const              o0_coord,
+                                      const SrcReal* const              o1_coord );
 
     /** Stitch the quadrilaterals between cells in a stack of cells. */
     void
@@ -208,6 +218,10 @@ private:
                      const Index* const   ci0j0_i1j0_zcorn_ix,
                      const Index* const   ci0j0_i0j1_zcorn_ix,
                      const Index* const   ci0j0_i1j1_zcorn_ix,
+                     const SrcReal* const  o00_coord,
+                     const SrcReal* const  o10_coord,
+                     const SrcReal* const  o01_coord,
+                     const SrcReal* const  o11_coord,
                      const Index* const   pi1j0_along_i_chains,
                      const Index* const   pi1j0_along_i_chain_offsets,
                      const Index* const   pi1j1_along_i_chains,
@@ -220,11 +234,5 @@ private:
                      const Index          stride );
 
 
-    /** Create the intersection point between two lines on the wall between two pillars. */
-    Index
-    segmentIntersection( const Index a0, const Index a1,
-                         const Index b0, const Index b1,
-                         const SrcReal* pillar_a,
-                         const SrcReal* pillar_b );
 
 };

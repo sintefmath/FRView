@@ -72,12 +72,76 @@ ClipPlane::setOffset( const float offset )
     m_tainted = true;
 }
 
+void
+ClipPlane::getLineLoop( std::vector<float>& vertices ) const
+{
+    bool inside[8];
+    for(int i=0; i<8; i++) {
+        inside[i] = glm::dot( m_aabbox_corners[i], m_plane_n ) + m_plane_d >= 0.f;
+    }
+    static int edges[12][2] = {
+        {0,1},
+        {1,3},
+        {3,2},
+        {2,0},
+        {6,4},
+        {4,5},
+        {5,7},
+        {7,6},
+        {4,0},
+        {6,2},
+        {7,3},
+        {5,1}
+    };
+
+    // find intersections
+    std::vector<glm::vec3> isec;
+    for(unsigned int i=0u; i<12u; i++ ) {
+        const int a = edges[i][0];
+        const int b = edges[i][1];
+
+        if( inside[a] != inside[b] ) {
+            glm::vec3 l = m_aabbox_corners[ b ] - m_aabbox_corners[ a ];
+            float t = -( glm::dot( m_aabbox_corners[a], m_plane_n ) + m_plane_d)/glm::dot(l, m_plane_n );
+
+            glm::vec3 i = m_aabbox_corners[ a ] + l*t;
+            isec.push_back( glm::vec3( i.x, i.y, i.z ) );
+        }
+    }
+
+    if( isec.size() > 2u ) {
+        // basically bubble-sort
+        for( unsigned int k=0; k<isec.size()-2u; k++ ) {
+            bool swap = false;
+            for(unsigned int i=0; i<isec.size()-2; i++ ) {
+                glm::vec3 a = isec[i+1] - isec[0];
+                glm::vec3 b = isec[i+2] - isec[0];
+                glm::vec3 t = glm::cross( a, b );
+                if( glm::dot( t, m_plane_n ) < 0.f ) {
+                    std::swap( isec[i+1], isec[i+2] );
+                    swap = true;
+                }
+            }
+            if(!swap) {
+                break;
+            }
+        };
+    }
+
+    vertices.resize( 3*isec.size() );
+    for(size_t i=0; i<isec.size(); i++ ) {
+        vertices[ 3*i + 0 ] = isec[i].x;
+        vertices[ 3*i + 1 ] = isec[i].y;
+        vertices[ 3*i + 2 ] = isec[i].z;
+    }
+}
+
 
 void
 ClipPlane::render( const float* projection,
                    const float* modelview )
 {
-    CHECK_GL;
+/*    CHECK_GL;
     bool inside[8];
 
     for(int i=0; i<8; i++) {
@@ -137,11 +201,6 @@ ClipPlane::render( const float* projection,
     CHECK_GL;
 
 
-    glMatrixMode( GL_PROJECTION );
-    glLoadMatrixf( projection );
-    glMatrixMode( GL_MODELVIEW );
-    glLoadMatrixf( modelview );
-    CHECK_GL;
 
     glColor3f( 1.f, 1.f, 0.5f );
     CHECK_GL;
@@ -151,6 +210,24 @@ ClipPlane::render( const float* projection,
     }
     glEnd();
     CHECK_GL;
+*/
+
+    std::vector<float> vertices;
+    getLineLoop( vertices );
+
+    CHECK_GL;
+    glMatrixMode( GL_PROJECTION );
+    glLoadMatrixf( projection );
+    glMatrixMode( GL_MODELVIEW );
+    glLoadMatrixf( modelview );
+
+    glColor3f( 1.f, 1.f, 0.5f );
+    CHECK_GL;
+    glBegin( GL_LINE_LOOP );
+    for(size_t i=0; i<vertices.size(); i+=3 ) {
+        glVertex3fv( vertices.data() + i );
+    }
+    glEnd();
 
 }
 

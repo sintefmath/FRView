@@ -195,7 +195,9 @@ PolygonTessellator<Triangulation>::triangulate()
                 }
                 Index ear_i1 = (ear_i0+1)%N;
                 Index ear_i2 = (ear_i0+2)%N;
-                Segment d = Segment( segments[ear_i2].vertex() );
+                Segment d = Segment( segments[ear_i2].normal(),
+                                     segments[ear_i2].vertex(),
+                                     0u );
                 m_triangulation.addTriangle( p.m_interface,
                                              segments[ear_i0],
                                              segments[ear_i1],
@@ -222,8 +224,12 @@ PolygonTessellator<Triangulation>::triangulate()
             if( glm::dot(n0,n2) > glm::dot(n1,n3) ) {
                 shift = 1;
             }
-            Segment da =  Segment( segments[ shift + 2 ].vertex() );
-            Segment db =  Segment( segments[ shift + 0 ].vertex() );
+            Segment da =  Segment( segments[ shift + 2 ].normal(),
+                                   segments[ shift + 2 ].vertex(),
+                                   0u );
+            Segment db =  Segment( segments[ shift + 0 ].normal(),
+                                   segments[ shift + 0 ].vertex(),
+                                   0u );
             m_triangulation.addTriangle( p.m_interface,
                                          segments[ shift + 0 ],
                                          segments[ shift + 1 ], da );

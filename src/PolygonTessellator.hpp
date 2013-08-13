@@ -54,6 +54,7 @@ public:
     inline void reserveCells( Index N ) { m_triangulation.reserveCells(N); }
     inline Index vertices() const { return m_triangulation.vertices(); }
     Index addVertex( const Real4 pos ) { return m_triangulation.addVertex( pos ); }
+    Index addNormal( const Real4 dir ) { return m_triangulation.addNormal( dir ); }
     void addEdge( const Index ix0, const Index ix1, const Index cell_a, const Index cell_b, const Index cell_c, const Index cell_d ) { m_triangulation.addEdge( ix0, ix1, cell_a, cell_b, cell_c, cell_d ); }
     Index cellCount() const { return m_triangulation.cellCount(); }
     inline void setCellCount( const Index N ) { m_triangulation.setCellCount( N ); }

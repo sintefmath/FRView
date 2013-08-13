@@ -30,6 +30,7 @@ GridTessBridge::GridTessBridge(GridTess &owner)
     : m_owner( owner ),
       m_tri_N( 0u ),
       m_tri_chunk_N( 0u ),
+      m_tri_nrm_ix( NULL ),
       m_tri_info( NULL ),
       m_tri_vtx( NULL )
 {
@@ -39,6 +40,9 @@ GridTessBridge::GridTessBridge(GridTess &owner)
 void
 GridTessBridge::allocTriangleChunks()
 {
+    m_tri_nrm_ix = new Index[ 3*(m_chunk_size+1) ];
+    m_tri_nrm_ix_chunks.push_back( m_tri_nrm_ix );
+
     m_tri_info = new Index[ 2*(m_chunk_size+1) ];
     m_tri_info_chunks.push_back( m_tri_info );
 
@@ -92,6 +96,19 @@ GridTessBridge::addVertex( const Real4 pos  )
     m_vertices.push_back( pos );
     return r;
 }
+
+GridTessBridge::Index
+GridTessBridge::addNormal( const Real4 dir )
+{
+    Logger log = getLogger( package + ".addNormal" );
+
+    Index i = m_normals.size();
+//    LOGGER_DEBUG( log,  i << " = " << dir.x() << ", " << dir.y() << ", " << dir.z() << ", " << dir.w() );
+
+    m_normals.push_back( dir );
+    return i;
+}
+
 
 unsigned int
 GridTessBridge::vertices() const
@@ -276,20 +293,20 @@ void
 GridTessBridge::addTriangle( const Interface interface,
                              const Segment s0, const Segment s1, const Segment s2 )
 {
+    Logger log = getLogger( package + ".foo" );
     if( m_tri_chunk_N == m_chunk_size ) {
         allocTriangleChunks();
     }
     unsigned int flags_a =
-            (s1.edgeA() ? 1u<<30u : 0u ) |
-            (s0.edgeA() ? 1u<<29u : 0u ) |
+            (s0.edgeA() ? 1u<<30u : 0u ) |
+            (s1.edgeA() ? 1u<<29u : 0u ) |
             (s2.edgeA() ? 1u<<28u : 0u );
     unsigned int flags_b =
             (s0.edgeB() ? 1u<<30u : 0u ) |
             (s1.edgeB() ? 1u<<29u : 0u ) |
             (s2.edgeB() ? 1u<<28u : 0u );
 
-#if 1
-    Logger log = getLogger( package + ".foo" );
+#if 0
     Segment segments[4] = { s0, s1, s2 };
     __m128i segs = _mm_loadu_si128( (__m128i*)segments );
     static const unsigned char shf_mem[16] __attribute__((aligned(16))) = {
@@ -334,6 +351,12 @@ GridTessBridge::addTriangle( const Interface interface,
 #endif
 //    flags_a = flags_a | (is_fault   ? 1u<<31u : 0u );
 
+    m_tri_nrm_ix[ 3*m_tri_chunk_N + 0 ] = s0.normal();
+    m_tri_nrm_ix[ 3*m_tri_chunk_N + 1 ] = s1.normal();
+    m_tri_nrm_ix[ 3*m_tri_chunk_N + 2 ] = s2.normal();
+
+    //    LOGGER_DEBUG( log, s0.normal() << ", " << s1.normal() << ", " <<  s2.normal() );
+
     m_tri_info[ 2*m_tri_chunk_N + 0 ] = flags_a | interface.m_value[0];// cell_a;
     m_tri_info[ 2*m_tri_chunk_N + 1 ] = flags_b | interface.m_value[1];// cell_b;
 
@@ -343,8 +366,6 @@ GridTessBridge::addTriangle( const Interface interface,
 
     m_tri_chunk_N++;
     m_tri_N++;
-
-
 }
 
 
@@ -386,7 +407,7 @@ GridTessBridge::boundingBox( Real4& minimum, Real4& maximum ) const
 #endif
     }
     PerfTimer stop;
-    LOGGER_DEBUG( log, "Calculating bounding box... done (" << PerfTimer::delta( start, stop) << " secs)" );
+    LOGGER_DEBUG( log, "Calculating bounding box... done (" << ((1000.0)*PerfTimer::delta( start, stop)) << "ms)" );
 }
 
 
