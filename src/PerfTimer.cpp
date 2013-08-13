@@ -2,6 +2,12 @@
 
 PerfTimer::PerfTimer()
 {
+    reset();
+}
+
+void
+PerfTimer::reset()
+{
     clock_gettime( CLOCK_MONOTONIC, &m_time );
 }
 

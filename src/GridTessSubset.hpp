@@ -12,6 +12,17 @@
 
 class GridTess;
 
+/** GPU representation of a subset of the cells in a \ref GridTess.
+ *
+ * An object of this class is tied to a \ref GridTess, and contains the
+ * representation of a cell subset. In particular, it contains a GPU buffer
+ * with one bit per cell, where each bit denotes if the cell is part of the
+ * subset (true) or not (false).
+ *
+ * The object is populated by a CellSelector derivative. The surface enclosing
+ * the subset is built by \ref GridSurfBuilder.
+ *
+ */
 class GridTessSubset : public boost::noncopyable
 {
 public:
@@ -19,23 +30,27 @@ public:
 
     ~GridTessSubset();
 
+    /** GL buffer containing the bitmask. */
     GLuint
-    buffer() const { return m_subset_buffer; }
+    subsetAsBuffer() const { return m_subset_buffer; }
 
+    /** GL texture containing the bitmask. */
     GLuint
-    texture() const { return m_subset_texture; }
+    subsetAsTexture() const { return m_subset_texture; }
 
-    GLsizei
-    selected() const { return m_cells_selected; }
-
+    /** Populate the bitmask using the currently bound shader.
+     *
+     * The function draws (cells_total+31)/32 points and captures data from
+     * transform_feedback_index (assumed to be uint's).
+     *
+     * To be invoked by \ref CellSelector derivatives.
+     */
     void
     populateBuffer( const GridTess* tess, GLuint transform_feedback_index = 0u );
 
-
 private:
-    GLsizei             m_cells_total;
-    GLsizei             m_cells_selected;
-    GLuint              m_primitive_count_query;
+    GLsizei             m_cells_total;              ///< Number of cells in GridTess.
+    GLuint              m_primitive_count_query;    ///<
     GLuint              m_subset_buffer;
     GLuint              m_subset_texture;
 };

@@ -7,13 +7,15 @@
  *
  ******************************************************************************/
 #pragma once
-#include <glm/glm.hpp>
+#include <memory>
 #include <list>
-#include <tinia/jobobserver/Observer.hpp>
-#include <tinia/jobobserver/OpenGLJob.hpp>
-#include <tinia/policy/StateListener.hpp>
+#include <glm/glm.hpp>
+#include <tinia/jobcontroller/Controller.hpp>
+#include <tinia/jobcontroller/OpenGLJob.hpp>
+#include <tinia/model/StateListener.hpp>
 #include <tinia/renderlist/DataBase.hpp>
-
+#include "TimerQuery.hpp"
+#include "PerfTimer.hpp"
 
 template<typename REAL> class Project;
 
@@ -25,7 +27,6 @@ class GridTessSurfBuilder;
 class GridField;
 class GridCubeRenderer;
 class GridTessSurfRenderer;
-class GridTessSurfBBoxFinder;
 class AllSelector;
 class FieldSelector;
 class IndexSelector;
@@ -33,17 +34,21 @@ class PlaneSelector;
 class HalfPlaneSelector;
 class TextRenderer;
 class WellRenderer;
+class CoordSysRenderer;
+class GridVoxelization;
+class VoxelSurface;
+class ASyncReader;
 
 class CPViewJob
-        : public tinia::jobobserver::OpenGLJob,
-          public tinia::policy::StateListener
+        : public tinia::jobcontroller::OpenGLJob,
+          public tinia::model::StateListener
 {
 public:
     CPViewJob( const std::list<std::string>& files );
 
     ~CPViewJob();
 
-    void stateElementModified( tinia::policy::StateElement *stateElement );
+    void stateElementModified( tinia::model::StateElement *stateElement );
 
     bool init();
 
@@ -67,7 +72,8 @@ public:
 
 
 private:
-    Project<float>*         m_project;
+    std::shared_ptr<ASyncReader>        m_async_reader;
+    std::shared_ptr<Project<float> >    m_project;
     bool                    m_cares_about_renderlists;
     bool                    m_policies_changed;
     bool                    m_renderlist_rethink;
@@ -85,7 +91,6 @@ private:
     GridTessSurfBuilder*    m_grid_tess_surf_builder;
     GridField*              m_grid_field;
     GridTessSurfRenderer*   m_tess_renderer;
-    GridTessSurfBBoxFinder* m_bbox_finder;
     AllSelector*            m_all_selector;
     FieldSelector*          m_field_selector;
     IndexSelector*          m_index_selector;
@@ -93,14 +98,25 @@ private:
     HalfPlaneSelector*      m_half_plane_selector;
     GridCubeRenderer*       m_grid_cube_renderer;
     WellRenderer*           m_well_renderer;
+    CoordSysRenderer*       m_coordsys_renderer;
+    GridVoxelization*       m_grid_voxelizer;
+    VoxelSurface*           m_voxel_surface;
+
+    PerfTimer               m_profile_update_timer;
+    TimerQuery              m_profile_proxy_gen;
+    TimerQuery              m_profile_surface_gen;
+    TimerQuery              m_profile_surface_render;
+
     bool                    m_load_geometry;
     bool                    m_load_color_field;
     bool                    m_has_color_field;
     bool                    m_do_update_subset;
+    bool                    m_do_update_renderlist;
     bool                    m_care_about_updates;
     bool                    m_render_clip_plane;
     unsigned int            m_solution_index;
     unsigned int            m_report_step_index;
+
 
 
     float                   m_proxy_box_min[3];
@@ -142,7 +158,7 @@ private:
 #endif
 
     bool
-    handleButtonClick( tinia::policy::StateElement *stateElement );
+    handleButtonClick( tinia::model::StateElement *stateElement );
 
     void
     triggerRedraw( const std::string& viewer_key );

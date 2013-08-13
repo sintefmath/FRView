@@ -5,6 +5,7 @@ OPTION( EXTEND_CMAKE_MODULE_PATH "Extend the CMAKE_MODULE_PATH variable with use
 OPTION( DESKTOP_JOB "Build desktop job" ON )
 OPTION( CLOUD_JOB "Build cloud job" ON )
 OPTION( GLUT_APP "Build glut app" OFF )
+OPTION( CHECK_TOPOLOGY "Check topology of tessellated cells (slow!)" OFF )
 OPTION( ECLIPSESCAN_APP "Build app to scan eclipse files" OFF )
 OPTION( PROFILE "Enable profiling" OFF )
 OPTION( USE_SSE2 "Use SSE2 intrinsics" ON )
@@ -12,9 +13,12 @@ OPTION( USE_SSSE3 "Use SSSE3 intrinsics" ON )
 OPTION( USE_SSE4 "Use SSE4.1 and SSE4.2 intrinsics" ON )
 OPTION( CHECK_INVARIANTS "Check invariants throughout the code" OFF )
 OPTION( DEBUG_GRAPHICS "Enable debug graphics" OFF )
+OPTION( OMIT_GEOMETRIC_EDGES "Omit extraction of geometric edges" OFF )
+OPTION( GPU_TRIANGULATOR "Use GPU triangulator" OFF )
 
 IF( EXTEND_CMAKE_MODULE_PATH )
   SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
+    "../tinia/cmake/Modules"
     "./cmake/Modules"
     "~/cmake/Modules"
     "$ENV{HOMEPATH}/cmake/Modules"
@@ -61,10 +65,15 @@ FIND_PACKAGE( Tinia REQUIRED COMPONENTS Server Desktop )
 FIND_PACKAGE( OpenGL REQUIRED)
 FIND_LIBRARY( GLEW  NAMES GLEW glew32 PATHS ${LIB_PATHS} )
 FIND_PACKAGE( GLM REQUIRED )
+FIND_PACKAGE( SIUT2 REQUIRED )
 FIND_LIBRARY( LOG4CXX_LOG4CXX_LIBRARY log4cxx
     /usr/lib
     /usr/local/lib
 )
+
+# Wrap this in a find module
+FIND_PATH( HPMC_INCLUDE_DIR hpmc.h PATHS ../hpmc/hpmc/include ../hpmc_trunk/hpmc/include )
+FIND_LIBRARY( HPMC_LIBRARY hpmc ../hpmc ../hpmc_trunk )
 
 FIND_PATH(LOG4CXX_INCLUDE_DIR log4cxx/logger.h)
 SET(LOG4CXX_LIBRARIES ${LOG4CXX_LOG4CXX_LIBRARY})
@@ -74,15 +83,24 @@ IF( UNIX )
 #        SET( CMAKE_CXX_FLAGS "-Wall -fprofile-arcs -ftest-coverage -pg -g2 -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
 #        SET( CMAKE_CXX_FLAGS "-Wall -O3 -msse2 -mfpmath=sse -g2 -DCHECK_INVARIANTS -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
     SET( CMAKE_CXX_FLAGS "-Wall -O3 -g2 -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
+    IF( CHECK_TOPOLOGY )
+        SET( CMAKE_CXX_FLAGS "-DCHECK_TOPOLOGY ${CMAKE_CXX_FLAGS}" )
+    ENDIF( CHECK_TOPOLOGY )
     IF( PROFILE )
         SET( CMAKE_CXX_FLAGS " -fprofile-arcs -ftest-coverage -pg -g2 ${CMAKE_CXX_FLAGS}" )
     ENDIF( PROFILE )
     IF( CHECK_INVARIANTS )
         SET( CMAKE_CXX_FLAGS "-DCHECK_INVARIANTS ${CMAKE_CXX_FLAGS}" )
     ENDIF( CHECK_INVARIANTS )
+    IF( OMIT_GEOMETRIC_EDGES )
+        SET( CMAKE_CXX_FLAGS "-DOMIT_GEOMETRIC_EDGES ${CMAKE_CXX_FLAGS}" )
+    ENDIF( OMIT_GEOMETRIC_EDGES )
     IF( DEBUG_GRAPHICS )
         SET( CMAKE_CXX_FLAGS "-DDEBUG_GRAPHICS ${CMAKE_CXX_FLAGS}" )
     ENDIF( DEBUG_GRAPHICS )
+    IF( GPU_TRIANGULATOR )
+        SET( CMAKE_CXX_FLAGS "-DGPU_TRIANGULATOR ${CMAKE_CXX_FLAGS}" )
+    ENDIF( GPU_TRIANGULATOR )
     IF( USE_SSE4 )
         SET( CMAKE_CXX_FLAGS "-msse4 ${CMAKE_CXX_FLAGS}" )
     ELSE( USE_SSE4 )
@@ -100,8 +118,10 @@ ENDIF( UNIX )
 
 INCLUDE_DIRECTORIES(
     "./src"
-    ${tinia_INCLUDE_DIRS}
-    ${GLM_INCLUDE_DIRS}
+    ${TINIA_INCLUDE_DIR}
+    ${GLM_INCLUDE_DIR}
+    ${SIUT2_INCLUDE_DIR}
+    ${HPMC_INCLUDE_DIR}
 )
 
 # --- Compile and link eclipse io library --------------------------------------
@@ -133,7 +153,7 @@ ADD_LIBRARY( cpview_core
              "src/GridTessSurf.cpp"
              "src/GridTessSurfBuilder.cpp"
              "src/GridTessSurfRenderer.cpp"
-             "src/GridTessSurfBBoxFinder.cpp"
+             "src/GridFieldBridge.cpp"
              "src/GridCubeRenderer.cpp"
              "src/PolygonTessellator.cpp"
              "src/GridField.cpp"
@@ -147,13 +167,18 @@ ADD_LIBRARY( cpview_core
              "src/TextRendererFont.cpp"
              "src/WellRenderer.cpp"
              "src/PrintExporter.cpp"
+             "src/CoordSysRenderer.cpp"
              "src/TikZExporter.cpp"
+             "src/GridVoxelization.cpp"
+             "src/VoxelSurface.cpp"
+             "src/TimerQuery.cpp"
 )
 
 TARGET_LINK_LIBRARIES( cpview_core ${SHADER_LIBS} )
 
 # --- Compile and link job (common to both desktop and cloud jobs) -------------
 ADD_LIBRARY( cpview_job "src/CPViewJob.cpp"
+                        "src/ASyncReader.cpp"
                         "src/CPViewJob_Fetch.cpp"
                         "src/CPViewJob_Compute.cpp"
                         "src/CPViewJob_Render.cpp"
@@ -176,10 +201,16 @@ IF( DESKTOP_JOB )
     )
     ADD_EXECUTABLE( cpview_desktop_job "src/main_job.cpp" )
     TARGET_LINK_LIBRARIES( cpview_desktop_job
+      ${TINIA_LIBRARIES}
                            cpview_job
                            cpview_core
                            eclipseio
-                           ${tinia_LIBRARIES}
+                           ${tinia_RenderListGL_LIBRARY}
+                           ${tinia_RenderList_LIBRARY}
+                           ${tinia_jobcontroller_LIBRARY}
+                           ${tinia_model_LIBRARY}
+                           ${tinia_qtcontroller_LIBRARY}
+                           ${HPMC_LIBRARY}
                            ${GLEW}
                            ${OPENGL_LIBRARIES}
                            ${QT_LIBRARIES}
@@ -195,10 +226,17 @@ IF( CLOUD_JOB )
     INCLUDE_DIRECTORIES( ${LIBXML2_INCLUDE_DIR} )
     ADD_EXECUTABLE( cpview_cloud_job "src/main_cloud_job.cpp" )
     TARGET_LINK_LIBRARIES( cpview_cloud_job
+      ${TINIA_LIBRARIES}
                            cpview_job
                            cpview_core
                            eclipseio
-                           ${tinia_LIBRARIES}
+                           ${tinia_RenderListGL_LIBRARY}
+                           ${tinia_RenderList_LIBRARY}
+                           ${tinia_jobcontroller_LIBRARY}
+                           ${tinia_model_LIBRARY}
+                           ${tinia_modelxml_LIBRARY}
+                           ${tinia_trell_LIBRARY}
+                           ${HPMC_LIBRARY}
                            ${GLEW}
                            ${OPENGL_LIBRARIES}
                            ${Boost_LIBRARIES}
@@ -206,6 +244,14 @@ IF( CLOUD_JOB )
                            ${LIBXML2_LIBRARIES} )
 ENDIF( CLOUD_JOB )
 
+
+# ${tinia_RenderListGL_LIBRARY}
+# ${tinia_RenderList_LIBRARY}
+# ${tinia_jobcontroller_LIBRARY}
+# ${tinia_model_LIBRARY}
+# ${tinia_modelxml_LIBRARY}
+# ${tinia_qtcontroller_LIBRARY}
+# ${tinia_trell_LIBRARY}
 
 # --- Compile and link simple glut app (doesn't use policylib at all) ----------
 IF( GLUT_APP )

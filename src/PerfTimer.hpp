@@ -7,6 +7,9 @@ class PerfTimer : public boost::noncopyable
 public:
     PerfTimer();
 
+    void
+    reset();
+
     static
     double
     delta( const PerfTimer& start, const PerfTimer& stop );

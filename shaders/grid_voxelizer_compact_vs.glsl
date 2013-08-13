@@ -1,15 +1,14 @@
-#version 330
+#version 420
 /******************************************************************************
  *
  *  Author(s): Christopher Dyken <christopher.dyken@sintef.no>
  *
  *
- *  Copyright (C) 2009 by SINTEF.  All rights reserved.
+ *  Copyright (C) 2012 by SINTEF.  All rights reserved.
  *
  ******************************************************************************/
-layout(location=0) in vec4 position;
 
-void main(void)
+void main()
 {
-    gl_Position = position;
+    // all work is done in geometry shader
 }

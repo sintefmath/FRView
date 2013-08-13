@@ -13,7 +13,7 @@ predicate( out uint cell, out bool flip, in uint cell_a, in uint cell_b )
 {
     if( (cell_a != ~0u ) && (cell_b != ~0u ) && ((cell_a & 0x80000000u) != 0u ) ) {
         flip = false;
-        cell = cell_a | cell_b;
+        cell = ~0u;
         return true;
     }
     else {

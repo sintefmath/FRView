@@ -8,7 +8,9 @@
  ******************************************************************************/
 #pragma once
 
+#include <memory>
 #include <vector>
+#include <tinia/model/ExposedModel.hpp>
 #include "GridTess.hpp"
 #include "EclipseReader.hpp"
 
@@ -37,13 +39,16 @@ public:
     CornerPointTessellator( Tessellation& tessellation );
 
     void
-    triangulate( const Index                  nx,
-                 const Index                  ny,
-                 const Index                  nz,
-                 const Index                  nr,
-                 const std::vector<SrcReal>&  coord,
-                 const std::vector<SrcReal>&  zcorn,
-                 const std::vector<int>&      actnum );
+    tessellate( std::shared_ptr<tinia::model::ExposedModel> model,
+                const std::string& what_key,
+                const std::string& progress_key,
+                const Index                  nx,
+                const Index                  ny,
+                const Index                  nz,
+                const Index                  nr,
+                const std::vector<SrcReal>&  coord,
+                const std::vector<SrcReal>&  zcorn,
+                const std::vector<int>&      actnum );
 
 private:
 
@@ -80,6 +85,7 @@ private:
         Index               m_cutoff;           ///< Minimum p1 index of all lines above, used for early exit in intersection search.
         unsigned short int  m_side;             ///< Which side this boundary belongs to (1=side a, 2=side b, 3=both).
         bool                m_match_over;       ///< True if cells above are logical neighbours.
+        bool                m_fault;            ///< True if edge is part of a fault.
     };
 
     /** An intersection between two boundary lines. */

@@ -8,7 +8,9 @@
  ******************************************************************************/
 #pragma once
 
+#include <memory>
 #include <vector>
+#include <tinia/model/ExposedModel.hpp>
 
 template<typename Triangulation>
 class PolygonTessellator
@@ -42,10 +44,14 @@ public:
       */
 
     void
-    triangulate();
+    triangulate( std::shared_ptr<tinia::model::ExposedModel> model,
+                 const std::string& what_key,
+                 const std::string& progress_key );
 
     void
-    process();
+    process( std::shared_ptr<tinia::model::ExposedModel> model,
+             const std::string& what_key,
+             const std::string& progress_key );
 
 
     inline void reserveVertices( Index N ) { m_triangulation.reserveVertices(N); }

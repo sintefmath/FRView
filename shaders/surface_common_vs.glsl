@@ -14,6 +14,8 @@ out GI {
     vec2    scr_pos;
 } in_g;
 
+invariant gl_Position;
+
 uniform mat4            MVP;
 uniform mat4            MV;
 uniform mat3            NM;

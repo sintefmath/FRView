@@ -9,23 +9,30 @@
  *
  ******************************************************************************/
 
-layout(location=0)  out vec4            frag_color;
-layout(binding=0)   uniform sampler2D   transparent_color;
-layout(binding=1)   uniform sampler2D   transparent_complexity;
+layout(location=0)  out vec3            frag_color;
+layout(binding=0)   uniform sampler2D   tex_solid_color;
+layout(binding=1)   uniform sampler2D   tex_transparent_color;
+layout(binding=2)   uniform sampler2D   tex_transparent_complexity;
+
 
 void main(void)
 {
     ivec2 coord = ivec2( gl_FragCoord.xy );
-    float complexity = texelFetch( transparent_complexity, coord, 0 ).r;
-    if( complexity < 1.f ) {
-        discard;
-    }
 
-    vec4 transparent = texelFetch( transparent_color, coord, 0 );
-    float acc = transparent.w;
-    if( acc > 0.001f ) {
-        acc = 1.f/acc;
+    vec3 color = texelFetch( tex_solid_color, coord, 0 ).rgb;
+    float complexity = texelFetch( tex_transparent_complexity, coord, 0 ).r;
+    if( complexity > 0.f ) {
+        vec4 transparent_color = texelFetch( tex_transparent_color, coord, 0 );
+
+        float rcp = transparent_color.w;
+        if( rcp > 0.001f ) {
+            rcp = 1.f/rcp;
+        }
+        vec3 avg_color = rcp*transparent_color.rgb;
+        float avg_alpha = transparent_color.w/complexity;
+        float w0 = pow( 1.f-avg_alpha, complexity );
+        float w1 = 1.f-w0;
+        color = w1*avg_color + w0*color;
     }
-    float avg_alpha = transparent.w/complexity;
-    frag_color = vec4( acc*transparent.rgb, avg_alpha );
+    frag_color = color;
 }

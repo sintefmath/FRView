@@ -18,15 +18,19 @@ template<typename REAL>
 class Project : public boost::noncopyable
 {
 public:
+    enum GeometryType {
+        GEOMETRY_NONE,
+        GEOMETRY_CORNERPOINT_GRID
+    };
 
     Project();
 
     template<class Container>
     Project( const Container& files );
 
-    template<typename Bridge>
-    void
-    geometry( Bridge& bridge );
+    GeometryType
+    geometryType() const
+    { return m_geometry_type; }
 
     template<typename Bridge>
     void
@@ -90,6 +94,17 @@ public:
     unsigned int
     nz() const;
 
+    unsigned int
+    nr() const { return m_cornerpoint_geometry.m_nr; }
+
+    const std::vector<REAL>
+    cornerPointCoord() const { return m_cornerpoint_geometry.m_coord; }
+
+    const std::vector<REAL>
+    cornerPointZCorn() const { return m_cornerpoint_geometry.m_zcorn; }
+
+    const std::vector<int>
+    cornerPointActNum() const { return m_cornerpoint_geometry.m_actnum; }
 
     struct Well
     {
@@ -104,6 +119,38 @@ public:
     wells( const unsigned int step );
 
     // HACK. Public for debug gfx purposes.
+
+    enum SolutionReader {
+        READER_NONE,
+        READER_UNFORMATTED_ECLIPSE
+    };
+    struct Solution {
+        SolutionReader                              m_reader;
+        std::string                                 m_path;
+        union {
+            Eclipse::Block                          m_unformatted_eclipse;
+        }                                           m_location;
+    };
+
+    bool
+    solution( Solution& solution,
+              const uint solution_ix,
+              const uint report_step );
+
+private:
+    enum FileType {
+        ECLIPSE_EGRID_FILE,
+        FOOBAR_GRID_FILE,
+        FOOBAR_TXT_GRID_FILE,
+        ECLIPSE_RESTART_FILE,
+        ECLIPSE_UNIFIED_RESTART_FILE
+    };
+
+    struct File {
+        FileType                                    m_filetype;
+        int                                         m_timestep;
+        std::string                                 m_path;
+    };
     struct {
         unsigned int                                    m_nx;
         unsigned int                                    m_ny;
@@ -114,36 +161,6 @@ public:
         std::vector<int>                                m_actnum;
     }                                               m_cornerpoint_geometry;
 
-
-private:
-    enum FileType {
-        ECLIPSE_EGRID_FILE,
-        FOOBAR_GRID_FILE,
-        FOOBAR_TXT_GRID_FILE,
-        ECLIPSE_RESTART_FILE,
-        ECLIPSE_UNIFIED_RESTART_FILE
-    };
-    enum SolutionReader {
-        READER_NONE,
-        READER_UNFORMATTED_ECLIPSE
-    };
-    enum GeometryType {
-        GEOMETRY_NONE,
-        GEOMETRY_CORNERPOINT_GRID
-    };
-
-    struct File {
-        FileType                                    m_filetype;
-        int                                         m_timestep;
-        std::string                                 m_path;
-    };
-    struct Solution {
-        SolutionReader                              m_reader;
-        std::string                                 m_path;
-        union {
-            Eclipse::Block                          m_unformatted_eclipse;
-        }                                           m_location;
-    };
 
 
     struct ReportStep {

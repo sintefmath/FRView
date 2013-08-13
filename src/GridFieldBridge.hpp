@@ -19,7 +19,9 @@ class GridFieldBridge : public boost::noncopyable
 public:
     typedef float REAL;
 
-    GridFieldBridge( GridField& owner, GridTess& specifier );
+    GridFieldBridge( size_t count );
+
+//    GridFieldBridge( GridField& owner, GridTess& specifier );
 
     ~GridFieldBridge();
 
@@ -29,6 +31,9 @@ public:
     //std::vector<REAL>&
     //values() { return m_values; }
 
+    size_t
+    count() const { return m_count; }
+
     REAL&
     minimum() { return m_min_value; }
 
@@ -36,11 +41,12 @@ public:
     maximum() { return m_max_value; }
 
 protected:
-    GridField&          m_owner;
-    GridTess&           m_specifier;
-    std::vector<REAL>   m_values;
-    REAL*               m_memory;
-    REAL                m_min_value;
-    REAL                m_max_value;
+//    GridField&          m_owner;
+//    GridTess&           m_specifier;
+    size_t                      m_count;
+    std::vector<unsigned char>  m_values;
+    REAL*                       m_memory;
+    REAL                        m_min_value;
+    REAL                        m_max_value;
 };
 

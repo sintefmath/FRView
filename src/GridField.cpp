@@ -15,47 +15,12 @@
 #include "GridFieldBridge.hpp"
 
 
-GridField::GridField( )
-    : m_has_data( false )
+GridField::GridField( GridTess* grid )
+    : m_grid( grid ),
+      m_has_data( false )
 {
     glGenBuffers( 1, &m_buffer );
     glGenTextures( 1, &m_texture );
-}
-
-
-GridFieldBridge::GridFieldBridge(GridField &owner, GridTess &specifier)
-    : m_owner( owner ),
-      m_specifier( specifier )
-{
-    m_values.resize( m_specifier.activeCells() );
-
-    glBindBuffer( GL_TEXTURE_BUFFER, m_owner.m_buffer );
-    glBufferData( GL_TEXTURE_BUFFER,
-                  sizeof(GridFieldBridge::REAL)*m_specifier.activeCells(),
-                  NULL,
-                  GL_STATIC_DRAW );
-    CHECK_GL;
-    m_memory =
-            reinterpret_cast<GridFieldBridge::REAL*>(
-                glMapBuffer( GL_TEXTURE_BUFFER, GL_WRITE_ONLY  )
-                );
-    if( m_memory == NULL ) {
-        throw std::runtime_error( "Failed to map buffer" );
-    }
-
-    glBindBuffer( GL_TEXTURE_BUFFER, 0 );
-    CHECK_GL;
-}
-
-GridFieldBridge::~GridFieldBridge()
-{
-    glBindBuffer( GL_TEXTURE_BUFFER, m_owner.m_buffer );
-    if( glUnmapBuffer( GL_TEXTURE_BUFFER ) == GL_FALSE) {
-        Logger log = getLogger( "GridFieldBridge.~GridFieldBridge" );
-        LOGGER_WARN( log, "Failed to unmap buffer." );
-    }
-    glBindBuffer( GL_TEXTURE_BUFFER, 0 );
-    m_owner.import( *this );
 }
 
 
@@ -63,20 +28,53 @@ GridFieldBridge::~GridFieldBridge()
 void
 GridField::import( GridFieldBridge& bridge )
 {
-/*
-    glBindBuffer( GL_TEXTURE_BUFFER, m_buffer );
-    glBufferData( GL_TEXTURE_BUFFER,
-                  sizeof(float)*bridge.m_values.size(),
-                  bridge.m_values.data(),
-                  GL_STATIC_DRAW );
-    glBindBuffer( GL_TEXTURE_BUFFER, 0 );
-*/
-    m_min_value = bridge.minimum();
-    m_max_value = bridge.maximum();
+    Logger log = getLogger( "GridField.import" );
+
+    LOGGER_DEBUG( log, "bridge.count=" << bridge.count() << ", cellCount=" << m_grid->cellCount() );
+
+    if( true || bridge.count() == m_grid->cellCount() ) {
+        // compacted data
+        glBindBuffer( GL_TEXTURE_BUFFER, m_buffer );
+        glBufferData( GL_TEXTURE_BUFFER,
+                      sizeof(float)*bridge.count(),
+                      bridge.values(),
+                      GL_STATIC_DRAW );
+        glBindBuffer( GL_TEXTURE_BUFFER, 0 );
+
+        m_min_value = bridge.minimum();
+        m_max_value = bridge.maximum();
+    }
+    else {
+        // assume that we are dealing with a uncompacted field
+        LOGGER_DEBUG( log, "Encountered uncompacted data" );
+
+        std::vector<GLfloat> values( m_grid->cellCount() );
+        const std::vector<GLuint>& indices = m_grid->cellGlobalIndicesInHostMemory();
+
+        float* data = bridge.values();
+
+        m_min_value =  std::numeric_limits<float>::max();
+        m_max_value = -std::numeric_limits<float>::max();
+        for(size_t i=0; i<values.size(); i++ ) {
+            values[i] = data[ indices[ i ] ];
+            m_min_value = std::min( values[i], m_min_value );
+            m_max_value = std::max( values[i], m_max_value );
+        }
+
+        glBindBuffer( GL_TEXTURE_BUFFER, m_buffer );
+        glBufferData( GL_TEXTURE_BUFFER,
+                      sizeof(float)*values.size(),
+                      values.data(),
+                      GL_STATIC_DRAW );
+        glBindBuffer( GL_TEXTURE_BUFFER, 0 );
+    }
 
     glBindTexture( GL_TEXTURE_BUFFER, m_texture );
     glTexBuffer( GL_TEXTURE_BUFFER, GL_R32F, m_buffer );
     glBindTexture( GL_TEXTURE_BUFFER, 0 );
 
     m_has_data = true;
+
+
+
 }

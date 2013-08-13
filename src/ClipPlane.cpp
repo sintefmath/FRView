@@ -221,7 +221,7 @@ ClipPlane::render( const float* projection,
     glMatrixMode( GL_MODELVIEW );
     glLoadMatrixf( modelview );
 
-    glColor3f( 1.f, 1.f, 0.5f );
+//    glColor3f( 1.f, 1.f, 0.5f );
     CHECK_GL;
     glBegin( GL_LINE_LOOP );
     for(size_t i=0; i<vertices.size(); i+=3 ) {

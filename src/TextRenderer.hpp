@@ -11,6 +11,13 @@
 #include <boost/utility.hpp>
 #include <vector>
 
+/** Render a set of text strings specified by 3D position.
+ *
+ * For 2D renderering, use 2D coordinates and a orthogonal projection.
+ *
+ * \todo This class should be split into two classes, one with the model (text
+ * layout etc.) and a view (renderer class with shaders and font textures).
+ */
 class TextRenderer : public boost::noncopyable
 {
 public:
@@ -34,14 +41,17 @@ public:
 
     ~TextRenderer();
 
+    /** Render the current set of text strings. */
     void
     render( GLsizei           width,
             GLsizei           height,
             const GLfloat*    modelview_projection );
 
+    /** Remove all text strings. */
     void
     clear();
 
+    /** Add a text string to the current set of text strings. */
     void
     add( const std::string& text,
          const Font         font,
@@ -51,6 +61,7 @@ public:
 
 
 private:
+
     struct Image {
         unsigned int    m_width;
         unsigned int    m_height;

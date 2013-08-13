@@ -1,6 +1,6 @@
 #include <list>
 #include <string>
-#include <tinia/trell/IPCGLJobObserver.hpp>
+#include <tinia/trell/IPCGLJobController.hpp>
 #include "Logger.hpp"
 #include "CPViewJob.hpp"
 
@@ -17,7 +17,7 @@ main( int argc, char** argv )
 
     initializeLoggingFramework( &argc, argv );
     CPViewJob* job = new CPViewJob( files );
-    tinia::Trell::IPCGLJobObserver* observer = new tinia::Trell::IPCGLJobObserver( is_master );
+    tinia::trell::IPCGLJobController* observer = new tinia::trell::IPCGLJobController( is_master );
     observer->setJob( job );
     observer->run( argc, argv );
     exit( EXIT_SUCCESS );

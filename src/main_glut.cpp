@@ -143,7 +143,7 @@ protected:
     info()
     {
         std::stringstream o;
-        o << m_grid_tess->activeCells() << " active cells, ";
+        o << m_grid_tess->cellCount() << " active cells, ";
         if( m_solution < m_project->solutions() ) {
             o << m_project->solutionName( m_solution );
         }
@@ -293,11 +293,11 @@ protected:
         }
 
         if( m_rethink ) {
-            if( m_magic ) {
-                m_grid_tess_surf_builder->buildFaultSurface( m_selected_surface, m_grid_tess, false );
-                m_grid_tess_surf_builder->buildBoundarySurface( m_boundary_surface, m_grid_tess, false );
-            }
-            else {
+//            if( m_magic ) {
+//                m_grid_tess_surf_builder->buildFaultSurface( m_selected_surface, m_grid_tess, false );
+//                m_grid_tess_surf_builder->buildBoundarySurface( m_boundary_surface, m_grid_tess, false );
+//            }
+//            else {
                 m_half_plane_selector->apply( m_grid_tess_subset,
                                               m_grid_tess,
                                               glm::value_ptr(m_clip_plane->plane()) );
@@ -310,7 +310,7 @@ protected:
                                                                       m_grid_tess_subset,
                                                                       m_grid_tess,
                                                                       false );
-            }
+//            }
             m_rethink = false;
         }
 

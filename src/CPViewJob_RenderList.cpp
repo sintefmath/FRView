@@ -18,7 +18,15 @@
 #include "CPViewJob.hpp"
 #include "GridTess.hpp"
 #include "ClipPlane.hpp"
-#include "GridTessSurfBBoxFinder.hpp"
+#include "GridVoxelization.hpp"
+#include "VoxelSurface.hpp"
+
+namespace resources {
+    extern const std::string gles_solid_vs;
+    extern const std::string gles_solid_fs;
+    extern const std::string gles_shaded_triangles_vs;
+    extern const std::string gles_shaded_triangles_fs;
+}
 
 const tinia::renderlist::DataBase*
 CPViewJob::getRenderList( const std::string& session, const std::string& key )
@@ -30,14 +38,23 @@ CPViewJob::getRenderList( const std::string& session, const std::string& key )
     fetchData();
     updateModelMatrices();
     doCompute();
-    if( m_renderlist_rethink ) {
-        m_bbox_finder->find( m_proxy_transform,
-                             m_proxy_box_min,
-                             m_proxy_box_max,
-                             m_grid_tess,
-                             m_subset_surface );
 
-        updateProxyMatrices();
+    bool profile;
+    m_model->getElementValue( "profile" , profile );
+
+    if( m_renderlist_rethink ) {
+        m_renderlist_rethink = false;
+        if( profile ) {
+            m_profile_proxy_gen.beginQuery();
+        }
+
+        m_grid_voxelizer->build( m_grid_tess,
+                                    m_grid_tess_subset,
+                                    glm::value_ptr( m_local_to_world ) );
+        m_voxel_surface->build( m_grid_voxelizer, m_grid_field );
+        if( profile ) {
+            m_profile_proxy_gen.endQuery();
+        }
         updateRenderList();
     }
     return &m_renderlist_db;
@@ -46,6 +63,8 @@ CPViewJob::getRenderList( const std::string& session, const std::string& key )
 void
 CPViewJob::initRenderList()
 {
+    namespace rl = tinia::renderlist;
+
 
     float wire_cube_pos[12*2*3] = {
         0.f, 0.f, 0.f,  1.f, 0.f, 0.f,
@@ -62,114 +81,111 @@ CPViewJob::initRenderList()
         1.f, 0.f, 1.f,  1.f, 1.f, 1.f,
     };
 
-    std::string solid_vs =
-            "uniform mat4 MVP;\n"
-            "attribute vec3 position;\n"
-            "void\n"
-            "main()\n"
-            "{\n"
-            "    gl_Position = MVP * vec4( position, 1.0 );\n"
-            "}\n";
-
-    std::string solid_fs =
-            "#ifdef GL_ES\n"
-            "precision highp float;\n"
-            "#endif\n"
-            "uniform vec3 color;\n"
-            "void\n"
-            "main()\n"
-            "{\n"
-            "    gl_FragColor = vec4( color, 1.0 );\n"
-            "}\n";
-
-    m_renderlist_db.createBuffer( "wire_cube_pos" )->set( wire_cube_pos, 12*2*3 );
-    m_renderlist_db.createAction<tinia::renderlist::Draw>( "wire_cube_draw" )
-            ->setNonIndexed( tinia::renderlist::PRIMITIVE_LINES, 0, 12*2 );
+    // simple solid color shader
     m_renderlist_db.createShader( "solid" )
-            ->setVertexStage( solid_vs )
-            ->setFragmentStage( solid_fs );
-    m_renderlist_db.createAction<tinia::renderlist::SetShader>( "solid_use" )
+            ->setVertexStage( resources::gles_solid_vs )
+            ->setFragmentStage( resources::gles_solid_fs );
+    m_renderlist_db.createAction<rl::SetShader>( "solid_use" )
             ->setShader( "solid" );
-    m_renderlist_db.createAction<tinia::renderlist::SetInputs>( "solid_wire_cube_input" )
+    m_renderlist_db.createAction<rl::SetUniforms>( "solid_orient" )
             ->setShader( "solid" )
-            ->setInput( "position", "wire_cube_pos", 3 );
-    m_renderlist_db.createAction<tinia::renderlist::SetLocalCoordSys>( "bbox_pos" );
-    m_renderlist_db.createAction<tinia::renderlist::SetLocalCoordSys>( "proxy_pos" );
-    m_renderlist_db.createAction<tinia::renderlist::SetLocalCoordSys>( "identity_pos" );
-
-    m_renderlist_db.createAction<tinia::renderlist::SetUniforms>( "solid_orient" )
-            ->setShader( "solid" )
-            ->setSemantic( "MVP", tinia::renderlist::SEMANTIC_MODELVIEW_PROJECTION_MATRIX );
-    m_renderlist_db.createAction<tinia::renderlist::SetUniforms>( "solid_white" )
+            ->setSemantic( "MVP", rl::SEMANTIC_MODELVIEW_PROJECTION_MATRIX );
+    m_renderlist_db.createAction<rl::SetUniforms>( "solid_white" )
             ->setShader( "solid" )
             ->setFloat3( "color", 1.f, 1.f, 1.f );
-    m_renderlist_db.createAction<tinia::renderlist::SetUniforms>( "solid_green" )
+    m_renderlist_db.createAction<rl::SetUniforms>( "solid_green" )
             ->setShader( "solid" )
             ->setFloat3( "color", 0.f, 1.f, 0.f );
-    m_renderlist_db.createAction<tinia::renderlist::SetUniforms>( "solid_yellow" )
+    m_renderlist_db.createAction<rl::SetUniforms>( "solid_yellow" )
             ->setShader( "solid" )
             ->setFloat3( "color", 1.f, 1.f, 0.f );
+
+    // fakey triangle with outline shader
+    m_renderlist_db.createShader( "surface" )
+            ->setVertexStage( resources::gles_shaded_triangles_vs )
+            ->setFragmentStage( resources::gles_shaded_triangles_fs );
+    m_renderlist_db.createAction<rl::SetShader>( "surface_use" )
+            ->setShader( "surface" );
+    m_renderlist_db.createAction<rl::SetUniforms>( "surface_orient" )
+            ->setShader( "surface" )
+            ->setSemantic( "MVP", rl::SEMANTIC_MODELVIEW_PROJECTION_MATRIX )
+            ->setSemantic( "NM", rl::SEMANTIC_NORMAL_MATRIX );
+
+    // set various local coordinate systems
+    m_renderlist_db.createAction<rl::SetLocalCoordSys>( "bbox_pos" );
+    m_renderlist_db.createAction<rl::SetLocalCoordSys>( "identity_pos" );
+
+    // clip geometry and draw
+    m_renderlist_db.createBuffer( "clip_plane_pos" );
+    m_renderlist_db.createAction<rl::SetInputs>( "clip_plane_inputs" )
+            ->setShader( "solid" )
+            ->setInput( "position", "clip_plane_pos", 3 );
+    m_renderlist_db.createAction<rl::Draw>( "clip_plane_draw" );
+
+    // wire cube geometry and draw
+    m_renderlist_db.createBuffer( "wire_cube_pos" )
+            ->set( wire_cube_pos, 12*2*3 );
+    m_renderlist_db.createAction<rl::SetInputs>( "solid_wire_cube_input" )
+            ->setShader( "solid" )
+            ->setInput( "position", "wire_cube_pos", 3 );
+    m_renderlist_db.createAction<rl::Draw>( "wire_cube_draw" )
+            ->setNonIndexed( rl::PRIMITIVE_LINES, 0, 12*2 );
+
+    // voxelized surface geometry and draw
+    m_renderlist_db.createBuffer( "surface_pos" );
+    m_renderlist_db.createAction<rl::SetInputs>( "surface_input" )
+            ->setShader( "surface" )
+            ->setInput( "position", "surface_pos", 4 );
+    m_renderlist_db.createAction<rl::Draw>( "surface_draw" );
+
 
 }
 
 void
 CPViewJob::updateRenderList( )
 {
+    namespace rl = tinia::renderlist;
 
-    m_renderlist_db.castedItemByName<tinia::renderlist::SetLocalCoordSys*>( "bbox_pos" )
+    m_renderlist_db.castedItemByName<rl::SetLocalCoordSys*>( "bbox_pos" )
             ->setOrientation( glm::value_ptr( m_bbox_from_world ),
                               glm::value_ptr( m_bbox_to_world ) );
-    m_renderlist_db.castedItemByName<tinia::renderlist::SetLocalCoordSys*>( "proxy_pos" )
-            ->setOrientation( glm::value_ptr( m_proxy_from_world ),
-                              glm::value_ptr( m_proxy_to_world ) );
+
+    rl::Buffer* surf_buf = m_renderlist_db.castedItemByName<rl::Buffer*>( "surface_pos" );
+    surf_buf->set( m_voxel_surface->surfaceInHostMem().data(), m_voxel_surface->surfaceInHostMem().size() );
+
+    rl::Draw* surf_draw = m_renderlist_db.castedItemByName<rl::Draw*>( "surface_draw" );
+    surf_draw->setNonIndexed( rl::PRIMITIVE_TRIANGLES, 0, m_voxel_surface->surfaceInHostMem().size()/4 );
 
     m_renderlist_db.drawOrderClear()
-        ->drawOrderAdd( "solid_use");
+            ->drawOrderAdd( "identity_pos" )
+            ->drawOrderAdd( "surface_use" )
+            ->drawOrderAdd( "surface_orient" )
+            ->drawOrderAdd( "surface_input" )
+            ->drawOrderAdd( "surface_draw" )
+            ->drawOrderAdd( "solid_use")
 
-    if( true || m_renderlist_rethink ) {
-        m_renderlist_rethink = false;
-        if( m_render_clip_plane ) {
-            std::vector<float> vertices;
-            m_clip_plane->getLineLoop( vertices );
+            ->drawOrderAdd( "solid_wire_cube_input" )
+            ->drawOrderAdd( "bbox_pos" )
+            ->drawOrderAdd( "solid_orient" )
+            ->drawOrderAdd( "solid_white" )
+            ->drawOrderAdd( "wire_cube_draw" );
 
-            tinia::renderlist::Buffer* buf = m_renderlist_db.castedItemByName<tinia::renderlist::Buffer*>( "clip_plane_pos" );
-            if( buf == NULL ) {
-                buf = m_renderlist_db.createBuffer( "clip_plane_pos" );
-            }
-            buf->set( vertices.data(), vertices.size() );
+    if( m_render_clip_plane ) {
+        // vertex positions of line loop
+        std::vector<float> vertices;
+        m_clip_plane->getLineLoop( vertices );
+        m_renderlist_db.castedItemByName<rl::Buffer*>( "clip_plane_pos" )
+                ->set( vertices.data(), vertices.size() );
+        // update draw command
+        m_renderlist_db.castedItemByName<rl::Draw*>( "clip_plane_draw" )
+                ->setNonIndexed( rl::PRIMITIVE_LINE_LOOP, 0, vertices.size()/3 );
 
-            tinia::renderlist::Draw* draw = m_renderlist_db.castedItemByName<tinia::renderlist::Draw*>( "clip_plane_draw" );
-            if( draw == NULL ) {
-                draw = m_renderlist_db.createAction<tinia::renderlist::Draw>( "clip_plane_draw" );
-            }
-            draw->setNonIndexed( tinia::renderlist::PRIMITIVE_LINE_LOOP, 0, vertices.size()/3 );
-
-            tinia::renderlist::SetInputs* inputs = m_renderlist_db.castedItemByName<tinia::renderlist::SetInputs*>( "clip_plane_inputs" );
-            if( inputs == NULL ) {
-                inputs = m_renderlist_db.createAction<tinia::renderlist::SetInputs>( "clip_plane_inputs" );
-            }
-            inputs->setShader( "solid" )->setInput( "position", "clip_plane_pos", 3 );
-
-
-            m_renderlist_db.drawOrderAdd( "solid_yellow" )
-                    ->drawOrderAdd( "identity_pos" )
-                    ->drawOrderAdd( "solid_orient" )
-                    ->drawOrderAdd( inputs->id() )
-                    ->drawOrderAdd( draw->id() );
-        }
-
-        m_renderlist_db.drawOrderAdd( "solid_wire_cube_input" )
-                ->drawOrderAdd( "bbox_pos" )
+        m_renderlist_db.drawOrderAdd( "solid_yellow" )
+                ->drawOrderAdd( "identity_pos" )
                 ->drawOrderAdd( "solid_orient" )
-                ->drawOrderAdd( "solid_white" )
-                ->drawOrderAdd( "wire_cube_draw" )
-
-                ->drawOrderAdd( "proxy_pos" )
-                ->drawOrderAdd( "solid_orient" )
-                ->drawOrderAdd( "solid_green" )
-                ->drawOrderAdd( "wire_cube_draw" );
-
+                ->drawOrderAdd( "clip_plane_inputs" )
+                ->drawOrderAdd( "clip_plane_draw" );
     }
     m_renderlist_db.process();
-    //m_policyLib->updateElement<int>( "renderlist", m_renderlist_db.latest() );
+    //m_modelLib->updateElement<int>( "renderlist", m_renderlist_db.latest() );
 }

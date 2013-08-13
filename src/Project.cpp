@@ -612,27 +612,6 @@ Project<REAL>::wells( const unsigned int step )
 }
 
 
-template<typename REAL>
-template<typename Bridge>
-void
-Project<REAL>::geometry( Bridge& bridge )
-{
-    if( m_geometry_type == GEOMETRY_NONE ) {
-        throw std::runtime_error( "no geometry set" );
-    }
-    else if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
-        PolygonTessellator<Bridge> polytess( bridge );
-        CornerPointTessellator< PolygonTessellator<Bridge> > tess( polytess );
-
-        tess.triangulate(m_cornerpoint_geometry.m_nx,
-                         m_cornerpoint_geometry.m_ny,
-                         m_cornerpoint_geometry.m_nz,
-                         m_cornerpoint_geometry.m_nr,
-                         m_cornerpoint_geometry.m_coord,
-                         m_cornerpoint_geometry.m_zcorn,
-                         m_cornerpoint_geometry.m_actnum );
-    }
-}
 
 template<typename REAL>
 template<typename Bridge>
@@ -658,6 +637,24 @@ Project<REAL>::field( Bridge& bridge, const unsigned int solution, const unsigne
     }
 }
 
+template<typename REAL>
+bool
+Project<REAL>::solution( Solution& solution,
+                         const uint solution_ix,
+                         const uint report_step )
+{
+    Logger log = getLogger( package + ".solution" );
+    if( solution_ix >= m_solution_names.size() ) {
+        LOGGER_ERROR( log, "Illegal solution index " << solution_ix );
+        return false;
+    }
+    if( report_step >= m_report_steps.size() ) {
+        LOGGER_ERROR( log, "Illegal report step " << report_step );
+        return false;
+    }
+    solution = m_report_steps[ report_step ].m_solutions[ solution_ix ];
+    return true;
+}
 
 template<typename REAL>
 const std::string&
@@ -674,5 +671,5 @@ Project<REAL>::reportStepDate( unsigned int step ) const
 
 
 template class Project<float>;
-template void Project<float>::geometry<GridTessBridge>( GridTessBridge& );
+//template void Project<float>::geometry<GridTessBridge>( GridTessBridge& );
 template void Project<float>::field<GridFieldBridge>( GridFieldBridge&, const unsigned int, const unsigned int );

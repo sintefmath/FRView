@@ -26,6 +26,9 @@ PolygonTessellator<Triangulation>::addPolygon( const Interface  interface,
                                                const Segment*   segments,
                                                const Index      N )
 {
+#ifdef GPU_TRIANGULATOR
+    m_triangulation.addPolygon( interface, segments, N );
+#endif
     Polygon p;
     p.m_interface = interface,
     p.m_offset_0 = m_polygon_vertices.size();
@@ -40,7 +43,9 @@ PolygonTessellator<Triangulation>::addPolygon( const Interface  interface,
 
 template<typename Triangulation>
 void
-PolygonTessellator<Triangulation>::triangulate()
+PolygonTessellator<Triangulation>::triangulate(std::shared_ptr<tinia::model::ExposedModel> model,
+                                               const std::string& what_key,
+                                               const std::string& progress_key)
 {
     Logger log = getLogger( package + ".triangulate" );
 
@@ -66,8 +71,13 @@ PolygonTessellator<Triangulation>::triangulate()
 
     for( Index l=0; l<N; l++ ) {
 
-        if( (l != 0u) && ((l%163840) == 0u) ) {
-            LOGGER_DEBUG( log, "Triangulating polygons... " << ((l*100)/N) << "%" );
+        int pn = ((l-1)*100)/N;
+        int cn = (l*100)/N;
+        if( pn != cn ) {
+            std::stringstream o;
+            o << "Triangulating polygons... (" << cn << "%)";
+            model->updateElement<std::string>( what_key, o.str() );
+            model->updateElement<int>( progress_key, std::min( 100, cn ) );
         }
 
         const Polygon& p = m_polygon_info[l];
@@ -247,11 +257,13 @@ PolygonTessellator<Triangulation>::triangulate()
 
 template<typename Triangulation>
 void
-PolygonTessellator<Triangulation>::process()
+PolygonTessellator<Triangulation>::process(std::shared_ptr<tinia::model::ExposedModel> model,
+                                           const std::string& what_key,
+                                           const std::string& progress_key)
 {
     Logger log = getLogger( package + ".process" );
 
-    triangulate();
+    triangulate( model, what_key, progress_key );
 
 #ifdef zCHECK_INVARIANTS
     std::vector<unsigned int> indices;
@@ -285,7 +297,6 @@ PolygonTessellator<Triangulation>::process()
     }
     LOGGER_DEBUG( log, "Checking topology of each cell... done.");
 #endif
-    m_triangulation.process();
 }
 
 

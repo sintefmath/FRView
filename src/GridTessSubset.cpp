@@ -13,7 +13,6 @@
 
 GridTessSubset::GridTessSubset()
     : m_cells_total( 0 ),
-      m_cells_selected( 0 ),
       m_primitive_count_query( 0 ),
       m_subset_buffer( 0 ),
       m_subset_texture( 0 )
@@ -56,14 +55,12 @@ void
 GridTessSubset::populateBuffer( const GridTess* tess, GLuint transform_feedback_index )
 {
     CHECK_GL;
-    if( tess->activeCells() == 0 ) {
+    if( tess->cellCount() == 0 ) {
         return;
     }
-    if( m_cells_total != (GLsizei)tess->activeCells() ) {
-        m_cells_total = tess->activeCells();
-        std::cerr << "a " << m_subset_buffer << " " << m_cells_total <<  "\n";
+    if( m_cells_total != (GLsizei)tess->cellCount() ) {
+        m_cells_total = tess->cellCount();
         glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_subset_buffer );
-        std::cerr << "b\n";
         glBufferData( GL_TRANSFORM_FEEDBACK_BUFFER,
                       sizeof(GLuint)*((m_cells_total+31)/32),
                       NULL,
@@ -71,27 +68,16 @@ GridTessSubset::populateBuffer( const GridTess* tess, GLuint transform_feedback_
         glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, 0 );
     }
 
-
     glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER,
                       transform_feedback_index,
                       m_subset_buffer );
-
     glEnable( GL_RASTERIZER_DISCARD );
-    glBeginQuery( GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, m_primitive_count_query );
     glBeginTransformFeedback( GL_POINTS );
-
     glDrawArrays( GL_POINTS, 0, (m_cells_total+31)/32 );
-
     glEndTransformFeedback( );
-    glEndQuery( GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN );
     glDisable( GL_RASTERIZER_DISCARD );
     glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, 0 );
 
-    GLuint result;
-    glGetQueryObjectuiv( m_primitive_count_query,
-                         GL_QUERY_RESULT,
-                         &result );
-    m_cells_selected = result;
 
     CHECK_GL;
 }

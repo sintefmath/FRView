@@ -23,16 +23,21 @@ namespace resources {
 
 CellSelector::CellSelector( const std::string& vs )
 {
-    m_prog = glCreateProgram();
-    m_vs = siut2::gl_utils::compileShader( vs, GL_VERTEX_SHADER, true );
-    glAttachShader( m_prog, m_vs );
+    m_program = glCreateProgram();
+    GLuint v = siut2::gl_utils::compileShader( vs, GL_VERTEX_SHADER, true );
+    glAttachShader( m_program, v );
     const char* varyings[1] = {
         "selected"
     };
-    glTransformFeedbackVaryings( m_prog, 1, varyings, GL_INTERLEAVED_ATTRIBS );
-    siut2::gl_utils::linkProgram( m_prog );
-    glGenQueries( 1, &m_query );
+    glTransformFeedbackVaryings( m_program, 1, varyings, GL_INTERLEAVED_ATTRIBS );
+    siut2::gl_utils::linkProgram( m_program );
+    glDeleteShader( v );
     CHECK_GL;
+}
+
+CellSelector::~CellSelector()
+{
+    glDeleteProgram( m_program );
 }
 
 
@@ -47,7 +52,7 @@ void
 AllSelector::apply(GridTessSubset *tess_subset,
                    const GridTess *tess)
 {
-    glUseProgram( m_prog );
+    glUseProgram( m_program );
     tess_subset->populateBuffer( tess );
     glUseProgram( 0 );
     CHECK_GL;
@@ -58,7 +63,7 @@ AllSelector::apply(GridTessSubset *tess_subset,
 FieldSelector::FieldSelector()
     : CellSelector( resources::field_select_vs )
 {
-    m_loc_min_max = glGetUniformLocation( m_prog, "min_max" );
+    m_loc_min_max = glGetUniformLocation( m_program, "min_max" );
 }
 
 void
@@ -68,7 +73,7 @@ FieldSelector::apply(GridTessSubset *tess_subset,
                      const float minval,
                      const float maxval)
 {
-    glUseProgram( m_prog );
+    glUseProgram( m_program );
     glUniform2f( m_loc_min_max, minval, maxval );
     glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_BUFFER, field->texture() );
     tess_subset->populateBuffer( tess );
@@ -82,11 +87,11 @@ FieldSelector::apply(GridTessSubset *tess_subset,
 IndexSelector::IndexSelector()
         : CellSelector( resources::index_select_vs )
 {
-    glUseProgram( m_prog );
-    m_loc_grid_dim = glGetUniformLocation( m_prog, "grid_dim" );
-    m_loc_index_min = glGetUniformLocation( m_prog, "index_min" );
-    m_loc_index_max = glGetUniformLocation( m_prog, "index_max" );
-    glUniform1i( glGetUniformLocation( m_prog, "cell_global_index"), 0 );
+    glUseProgram( m_program );
+    m_loc_grid_dim = glGetUniformLocation( m_program, "grid_dim" );
+    m_loc_index_min = glGetUniformLocation( m_program, "index_min" );
+    m_loc_index_max = glGetUniformLocation( m_program, "index_max" );
+    glUniform1i( glGetUniformLocation( m_program, "cell_global_index"), 0 );
     glUseProgram( 0 );
 }
 
@@ -104,7 +109,7 @@ IndexSelector::apply( GridTessSubset *tess_subset,
                       unsigned int max_j,
                       unsigned int max_k )
 {
-    glUseProgram( m_prog );
+    glUseProgram( m_program );
     glActiveTexture( GL_TEXTURE0 );
     glBindTexture( GL_TEXTURE_BUFFER, tess->cellGlobalIndexTexture() );
     glUniform3ui( m_loc_grid_dim, n_i, n_j, n_k );
@@ -122,10 +127,10 @@ IndexSelector::apply( GridTessSubset *tess_subset,
 HalfPlaneSelector::HalfPlaneSelector()
     : CellSelector( resources::halfplane_select_vs )
 {
-    glUseProgram( m_prog );
-    m_loc_halfplane_eq = glGetUniformLocation( m_prog, "plane_equation" );
-    glUniform1i( glGetUniformLocation( m_prog, "vertices" ), 0 );
-    glUniform1i( glGetUniformLocation( m_prog, "cell_corner" ), 1 );
+    glUseProgram( m_program );
+    m_loc_halfplane_eq = glGetUniformLocation( m_program, "plane_equation" );
+    glUniform1i( glGetUniformLocation( m_program, "vertices" ), 0 );
+    glUniform1i( glGetUniformLocation( m_program, "cell_corner" ), 1 );
     glUseProgram( 0 );
     CHECK_GL;
 }
@@ -135,10 +140,10 @@ HalfPlaneSelector::apply( GridTessSubset *tess_subset,
                           const GridTess *tess,
                           const float *equation )
 {
-    glUseProgram( m_prog );
+    glUseProgram( m_program );
     glUniform4fv( m_loc_halfplane_eq, 1, equation );
     glActiveTexture( GL_TEXTURE0 );
-    glBindTexture( GL_TEXTURE_BUFFER, tess->vertexTexture() );
+    glBindTexture( GL_TEXTURE_BUFFER, tess->vertexPositionsAsBufferTexture() );
     glActiveTexture( GL_TEXTURE1 );
     glBindTexture( GL_TEXTURE_BUFFER, tess->cellCornerTexture() );
     tess_subset->populateBuffer( tess );
@@ -154,10 +159,10 @@ HalfPlaneSelector::apply( GridTessSubset *tess_subset,
 PlaneSelector::PlaneSelector()
     : CellSelector( resources::plane_select_vs )
 {
-    glUseProgram( m_prog );
-    m_loc_plane_eq = glGetUniformLocation( m_prog, "plane_equation" );
-    glUniform1i( glGetUniformLocation( m_prog, "vertices" ), 0 );
-    glUniform1i( glGetUniformLocation( m_prog, "cell_corner" ), 1 );
+    glUseProgram( m_program );
+    m_loc_plane_eq = glGetUniformLocation( m_program, "plane_equation" );
+    glUniform1i( glGetUniformLocation( m_program, "vertices" ), 0 );
+    glUniform1i( glGetUniformLocation( m_program, "cell_corner" ), 1 );
     glUseProgram( 0 );
     CHECK_GL;
 }
@@ -167,10 +172,10 @@ PlaneSelector::apply( GridTessSubset *tess_subset,
                       const GridTess *tess,
                       const float *equation )
 {
-    glUseProgram( m_prog );
+    glUseProgram( m_program );
     glUniform4fv( m_loc_plane_eq, 1, equation );
     glActiveTexture( GL_TEXTURE0 );
-    glBindTexture( GL_TEXTURE_BUFFER, tess->vertexTexture() );
+    glBindTexture( GL_TEXTURE_BUFFER, tess->vertexPositionsAsBufferTexture() );
     glActiveTexture( GL_TEXTURE1 );
     glBindTexture( GL_TEXTURE_BUFFER, tess->cellCornerTexture() );
     tess_subset->populateBuffer( tess );

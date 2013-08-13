@@ -26,15 +26,15 @@
 
 static const std::string package = "GridTessBridge";
 
-GridTessBridge::GridTessBridge(GridTess &owner)
-    : m_owner( owner ),
-      m_tri_N( 0u ),
+GridTessBridge::GridTessBridge()
+    : m_tri_N( 0u ),
       m_tri_chunk_N( 0u ),
       m_tri_nrm_ix( NULL ),
       m_tri_info( NULL ),
       m_tri_vtx( NULL )
 {
     allocTriangleChunks();
+    m_polygon_offset.push_back( 0u );
 }
 
 void
@@ -54,7 +54,6 @@ GridTessBridge::allocTriangleChunks()
 
 GridTessBridge::~GridTessBridge()
 {
-    m_owner.import( *this );
     for(auto it=m_tri_info_chunks.begin(); it!=m_tri_info_chunks.end(); ++it ) {
         delete *it;
     }
@@ -290,6 +289,27 @@ foo(  )
 }
 
 void
+GridTessBridge::addPolygon( const Interface interface,
+                            const Segment* segments,
+                            const Index N )
+{
+#ifdef GPU_TRIANGULATOR
+    m_polygon_info.push_back( interface.m_value[0] );
+    m_polygon_info.push_back( interface.m_value[1] );
+    for( Index i=0; i<N; i++ ) {
+        uint mask = (segments[i].edgeA() ? 0x80000000 : 0u)
+                  | (segments[i].edgeB() ? 0x40000000 : 0u);
+
+
+        m_polygon_vtx_ix.push_back( segments[i].vertex() );
+        m_polygon_nrm_ix.push_back( segments[i].normal() | mask );
+    }
+    m_polygon_offset.push_back( m_polygon_vtx_ix.size() );
+#endif
+}
+
+
+void
 GridTessBridge::addTriangle( const Interface interface,
                              const Segment s0, const Segment s1, const Segment s2 )
 {
@@ -409,6 +429,42 @@ GridTessBridge::boundingBox( Real4& minimum, Real4& maximum ) const
     PerfTimer stop;
     LOGGER_DEBUG( log, "Calculating bounding box... done (" << ((1000.0)*PerfTimer::delta( start, stop)) << "ms)" );
 }
+
+void
+GridTessBridge::addEdge( const Index ix0, const Index ix1,
+         const Index cell_a, const Index cell_b,
+         const Index cell_c, const Index cell_d )
+{
+#ifndef OMIT_GEOMETRIC_EDGES
+    Logger log = getLogger( package + ".addEdge" );
+
+    // Make sure that edge is not degenerate
+    LOGGER_INVARIANT_NOT_EQUAL( log, ix0, ix1 );
+    // Make sure that we don't have the same cell on both sides of a pillar face
+    if( (cell_a!= ~0u) && (cell_c != ~0u) ) {
+        LOGGER_INVARIANT_NOT_EQUAL( log, cell_a, cell_c );
+    }
+    if( (cell_a!= ~0u) && (cell_d != ~0u) ) {
+        LOGGER_INVARIANT_NOT_EQUAL( log, cell_a, cell_d );
+    }
+    if( (cell_a!= ~0u) && (cell_c != ~0u) ) {
+        LOGGER_INVARIANT_NOT_EQUAL( log, cell_b, cell_c );
+    }
+    if( (cell_b!= ~0u) && (cell_d != ~0u) ) {
+        LOGGER_INVARIANT_NOT_EQUAL( log, cell_b, cell_d );
+    }
+
+    m_edges.resize( m_edges.size() + 1 );
+    Edge& e = m_edges.back();
+    e.m_cp[0] = ix0;
+    e.m_cp[1] = ix1;
+    e.m_cells[0] = cell_a;
+    e.m_cells[1] = cell_b;
+    e.m_cells[2] = cell_c;
+    e.m_cells[3] = cell_d;
+#endif
+}
+
 
 
 void

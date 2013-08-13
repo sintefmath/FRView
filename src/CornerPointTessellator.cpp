@@ -106,13 +106,16 @@ CornerPointTessellator<Tessellation>::CornerPointTessellator( Tessellation& tess
 
 template<typename Tessellation>
 void
-CornerPointTessellator<Tessellation>::triangulate( const Index             nx,
-                                                   const Index             ny,
-                                                   const Index             nz,
-                                                   const Index             nr,
-                                                   const vector<SrcReal>&  coord,
-                                                   const vector<SrcReal>&  zcorn,
-                                                   const vector<int>&      actnum )
+CornerPointTessellator<Tessellation>::tessellate( std::shared_ptr<tinia::model::ExposedModel> model,
+                                                  const std::string& what_key,
+                                                  const std::string& progress_key,
+                                                  const Index             nx,
+                                                  const Index             ny,
+                                                  const Index             nz,
+                                                  const Index             nr,
+                                                  const vector<SrcReal>&  coord,
+                                                  const vector<SrcReal>&  zcorn,
+                                                  const vector<int>&      actnum )
 {
     Logger log = getLogger( package + ".triangulate" );
 
@@ -153,10 +156,16 @@ CornerPointTessellator<Tessellation>::triangulate( const Index             nx,
     vector<Index> jm0_wall_line_ix( nx*4*2*nz );
 
     LOGGER_DEBUG( log, "Tessellating grid..." );
+
     PerfTimer start;
     for( Index j=0; j<ny+1; j++ ) {
-        if( (j!=0) && (j%16==0) ) {
-            LOGGER_DEBUG( log, "Tessellating grid... " << ((j*100)/ny) << "%" );
+        int pn = (j-1*100)/ny;
+        int cn = (j*100)/ny;
+        if( pn != cn ) {
+            std::stringstream o;
+            o << "Tessellating grid... (" << cn << "%)";
+            model->updateElement<std::string>( what_key, o.str() );
+            model->updateElement<int>( progress_key, std::min( 100u, ((j*100)/ny) ) );
         }
 
         pi0jm1_d01_chains.clear();
@@ -440,7 +449,6 @@ CornerPointTessellator<Tessellation>::triangulate( const Index             nx,
     double t = PerfTimer::delta(start, stop);
     LOGGER_DEBUG( log, "Tessellating grid... done (" << t << " secs)" );
 
-    m_tessellation.process();
 }
 
 
@@ -473,19 +481,37 @@ CornerPointTessellator<Tessellation>::pillarEdges( const Index           offset,
                                                    const Index           stride )
 {
     for( size_t i=1; i<adjacent_cells.size()/4; i++) {
-        const Index* adj = adjacent_cells.data() + 4*i;
-        if( (adj[0] != IllegalIndex ) ||
-            (adj[1] != IllegalIndex ) ||
-            (adj[2] != IllegalIndex ) ||
-            (adj[3] != IllegalIndex ) )
+        const Index* adj_p = adjacent_cells.data() + 4*(i-1);
+        const Index* adj_c = adjacent_cells.data() + 4*i;
+        if( (adj_c[0] != IllegalIndex ) ||
+            (adj_c[1] != IllegalIndex ) ||
+            (adj_c[2] != IllegalIndex ) ||
+            (adj_c[3] != IllegalIndex ) )
         {
-            const Index cells[4] = { adj[0] != IllegalIndex ? cell_map_00[ stride*adj[0] ] : IllegalIndex,
-                                            adj[1] != IllegalIndex ? cell_map_01[ stride*adj[1] ] : IllegalIndex,
-                                            adj[2] != IllegalIndex ? cell_map_10[ stride*adj[2] ] : IllegalIndex,
-                                            adj[3] != IllegalIndex ? cell_map_11[ stride*adj[3] ] : IllegalIndex
-                                          };
+            // Check if k matches across pillar walls
+
+            bool regular_p =
+                    (adj_p[0] == adj_p[1]) &&
+                    (adj_p[1] == adj_p[2]) &&
+                    (adj_p[2] == adj_p[3]);
+            bool regular_c =
+                    (adj_c[0] == adj_c[1]) &&
+                    (adj_c[1] == adj_c[2]) &&
+                    (adj_c[2] == adj_c[3]);
+            const Index fault = (!regular_p || !regular_c) ? (1u<<31u) : 0u;
+
+
+
+            const Index cells[4] = { adj_c[0] != IllegalIndex ? cell_map_00[ stride*adj_c[0] ] : IllegalIndex,
+                                     adj_c[1] != IllegalIndex ? cell_map_01[ stride*adj_c[1] ] : IllegalIndex,
+                                     adj_c[2] != IllegalIndex ? cell_map_10[ stride*adj_c[2] ] : IllegalIndex,
+                                     adj_c[3] != IllegalIndex ? cell_map_11[ stride*adj_c[3] ] : IllegalIndex
+                                   };
             m_tessellation.addEdge( offset + i - 1 , offset + i,
-                                    cells[0], cells[1], cells[2], cells[3] );
+                                    cells[0] | fault,
+                                    cells[1] | fault,
+                                    cells[2] | fault,
+                                    cells[3] | fault );
         }
     }
 }
@@ -565,9 +591,8 @@ CornerPointTessellator<Tessellation>::uniquePillarVertices( vector<Index>&      
     }
 
 
-    //Index cells_below[4] = { IllegalIndex, IllegalIndex, IllegalIndex, IllegalIndex };
-
-
+    // We keep track of which cell is below the cornerpoint in all quadrants.
+    Index cells_below[4] = { IllegalIndex, IllegalIndex, IllegalIndex, IllegalIndex };
 
     if( ascending ) {
         bool         first   = true;
@@ -579,14 +604,20 @@ CornerPointTessellator<Tessellation>::uniquePillarVertices( vector<Index>&      
             Real smallest_z = maxf;
             Index smallest_l = IllegalIndex;
             Index smallest_k = IllegalIndex;
+
+            // search through the four quadrants for the unprocessed corner-point
+            // with the smallest z-value.
             for( Index l=0; l<4; l++ ) {
+                // look at the next active cell in quadrant
                 if( i[l] < 2*active_cell_count[l] ) {
-                    const Index ii = i[l]>>1;
-                    const Index ij = i[l]&1;
+                    const Index ii = i[l]>>1;   // cell no
+                    const Index ij = i[l]&1;    // 0 -> enter, 1->exit
 
                     const Index k = active_cell_list[l][ ii ];
                     Real z = zcorn[l][ 4*stride*(2*k + ij) ];
 
+                    // optionally force logically top-down neighbours to share
+                    // cornerpoints
                     if( snap_logical_neighbours && (ij==0) && (last_k[l]+1 == k) ) {
                         z = zcorn[l][ 4*stride*(2*last_k[l] + 1) ];
                     }
@@ -612,15 +643,15 @@ CornerPointTessellator<Tessellation>::uniquePillarVertices( vector<Index>&      
                 curr_ix = m_tessellation.addVertex( Real4( b*x1 + a*x2,
                                                            b*y1 + a*y2,
                                                            smallest_z ) );
-                //adjacent_cells.push_back( cells_below[0] );
-                //adjacent_cells.push_back( cells_below[1] );
-                //adjacent_cells.push_back( cells_below[2] );
-                //adjacent_cells.push_back( cells_below[3] );
+                adjacent_cells.push_back( cells_below[0] );
+                adjacent_cells.push_back( cells_below[1] );
+                adjacent_cells.push_back( cells_below[2] );
+                adjacent_cells.push_back( cells_below[3] );
                 first = false;
             }
             const Index ii = i[smallest_l]>>1;
             const Index ij = i[smallest_l]&1;
-            //cells_below[ smallest_l ] = ij == 0 ? smallest_k : IllegalIndex;
+            cells_below[ smallest_l ] = ij == 0 ? smallest_k : IllegalIndex;
             zcorn_ix[ smallest_l ][ 2*ii + ij ] = curr_ix;
             i[smallest_l]++;
             last_k[ smallest_l ] = smallest_k;
@@ -780,7 +811,7 @@ CornerPointTessellator<Tessellation>::stitchTopBottom( const Index* const   ci0j
         else {
             // cells are attached
             helper.back().m_cell_above = cell;
-            helper.back().m_fault = last_k + 1 != k;
+            helper.back().m_fault = false; //last_k + 1 != k;
         }
 
         // Top
@@ -879,7 +910,9 @@ CornerPointTessellator<Tessellation>::wallEdges( const vector<WallLine>&      bo
                                                  const vector<Index>&  chains,
                                                  const Index* const         chain_offsets )
 {
+    // Run through all cell boundaries
     for( size_t b=0; b<boundaries.size(); b++ ) {
+        // cell over and under is correct for both sides at pillar 0.
         const WallLine& wl = boundaries[b];
         Index cell_over[2];
         Index cell_under[2];
@@ -889,18 +922,28 @@ CornerPointTessellator<Tessellation>::wallEdges( const vector<WallLine>&      bo
         cell_under[1] = wl.m_cell_under[1];
         Index other_side = wl.m_side==1 ? 0 : 1;
         Index end0 = wl.m_ends[0];
+        Index fault = wl.m_fault ? (1u<<31u) : 0u;
         for( size_t c=chain_offsets[b]; c!=chain_offsets[b+1]; c++ ) {
+            // Run through intersections, adjust cell over and under
             const Intersection& i = intersections[ chains[c] ];
             const WallLine& ol = boundaries[ i.m_upwrd_bndry_ix == b ? i.m_upwrd_bndry_ix : i.m_dnwrd_bndry_ix ];
             cell_over[ other_side ]  = ol.m_cell_over[ other_side ];
             cell_under[ other_side ] = ol.m_cell_under[ other_side ];
 
             Index end1 = i.m_vtx_ix;
-            m_tessellation.addEdge( end0, end1, cell_over[0], cell_under[0], cell_over[1], cell_under[1] );
+            m_tessellation.addEdge( end0, end1,
+                                    cell_over[0]  | fault,
+                                    cell_under[0] | fault,
+                                    cell_over[1]  | fault,
+                                    cell_under[1] | fault );
             end0 = end1;
         }
         Index end1 = wl.m_ends[1];
-        m_tessellation.addEdge( end0, end1, cell_over[0], cell_under[0], cell_over[1], cell_under[1] );
+        m_tessellation.addEdge( end0, end1,
+                                cell_over[0]  | fault,
+                                cell_under[0] | fault,
+                                cell_over[1]  | fault,
+                                cell_under[1] | fault );
     }
 }
 
@@ -971,7 +1014,8 @@ CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Or
                                              line_u.m_ends[1],
                                              3u ) );
             }
-            m_tessellation.addPolygon( Interface( cells[0], cells[1], orientation, false ),
+            m_tessellation.addPolygon( Interface( cells[0], cells[1], orientation,
+                                                  line_u.m_fault && line_l.m_fault ),
                                        segments.data(), segments.size() );
         }
         else {                                                  // Fault (partially matching) interface
@@ -1536,6 +1580,11 @@ CornerPointTessellator<Tessellation>::extractWallLines( vector<WallLine>&     wa
         i[ smallest_side ]++;
         cells_below[0] = cells_above[0];
         cells_below[1] = cells_above[1];
+    }
+
+    for( size_t i=0; i<wall_lines.size(); i++ ) {
+        wall_lines[i].m_fault = !wall_lines[ i>0 ? i-1 : i ].m_match_over ||
+                                !wall_lines[ i ].m_match_over;
     }
 
 #ifdef CHECK_INVARIANTS

@@ -50,6 +50,23 @@ public:
         unsigned int    m_value;
     };
 
+    /** Explicit edge.
+     *
+     * \invariant m_cp[0] and m_cp[1] is not equal and are valid corner-point
+     *            indices.
+     *
+     * \invariant For valid cell ids, cell[0] and cell[1] may be identical (if
+     *            edge is a splitting edge), or cell[2] and cell[3]. However,
+     *            cell[0] may never be identical to cell[2] or cell[3] etc.
+     *            Neither can both pairs of cells be identical at the same (edge
+     *            is only split-edge at one side of a pillar wall. This only
+     *            applies to edges on pillar walls, edges along pillars always
+     *            have different valid cell ids.
+     **/
+    struct Edge {
+        Index   m_cp[2];    ///< Corner-point indices for edge end-points.
+        Index   m_cells[4]; ///< Cell indices for the four cells surrounding the edge.
+    };
 
     /** Type for describing points in R^3. */
     struct Real4 {
@@ -88,7 +105,7 @@ public:
     };
 
 
-    GridTessBridge( GridTess& owner );
+    GridTessBridge();
 
     ~GridTessBridge();
 
@@ -113,11 +130,21 @@ public:
     Index
     addNormal( const Real4 dir );
 
+
+    /** Add geometric edge (in addition to tagging triangle edges).
+     *
+     * \param ix0 Edge first end-point cornerpoint index.
+     * \param ix1 Edge second end-point cornerpoint index.
+     * \param cell_a First cell that uses the edge.
+     * \param cell_b Second cell that uses the edge.
+     * \param cell_c Third cell that uses the edge.
+     * \param cell_d Fourth cell that uses the edge.
+     *
+     */
     void
     addEdge( const Index ix0, const Index ix1,
              const Index cell_a, const Index cell_b,
-             const Index cell_c, const Index cell_d )
-    { }
+             const Index cell_c, const Index cell_d );
 
 
     Index
@@ -143,6 +170,11 @@ public:
     addTriangle( const Interface interface,
                  const Segment s0, const Segment s1, const Segment s2 );
 
+    void
+    addPolygon( const Interface interface,
+                const Segment* segments,
+                const Index N );
+
 
     const Real4&
     vertex( const Index ix ) const
@@ -156,11 +188,18 @@ public:
     process();
 
 protected:
-    GridTess&                   m_owner;
+//    GridTess&                   m_owner;
     std::vector<Real4>          m_vertices;
     std::vector<Real4>          m_normals;
     std::vector<unsigned int>   m_cell_index;
     std::vector<unsigned int>   m_cell_corner;
+
+    std::vector<Edge>           m_edges;
+
+    std::vector<Index>          m_polygon_info;
+    std::vector<Index>          m_polygon_offset;
+    std::vector<Index>          m_polygon_vtx_ix;
+    std::vector<Index>          m_polygon_nrm_ix;
 
     static const Index          m_chunk_size = 10*1024;
     Index                       m_tri_N;

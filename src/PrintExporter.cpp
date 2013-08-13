@@ -22,7 +22,7 @@ PrintExporter::run( const std::string& filename,
     m_vertices.clear();
 
     m_vertices.resize( m_tess->vertexCount() );
-    const auto v = m_tess->vertexData();
+    const auto v = m_tess->vertexPositionsInHostMemory();
     for(size_t i=0; i<m_tess->vertexCount(); i++ ) {
         glm::vec4 h = transform_position * glm::make_vec4( v.data() + 4*i );
         m_vertices[i] = glm::vec3( h.x/h.w, h.y/h.w, h.z/h.w );
@@ -30,10 +30,10 @@ PrintExporter::run( const std::string& filename,
 
 
     m_shapes.clear();
-    const auto tv = m_tess->vertexIndexData();
-    const auto tn = m_tess->normalIndexData();
-    const auto nd = m_tess->normalData();
-    const auto ti = m_tess->triangleInfoData();
+    const auto tv = m_tess->triangleVertexIndexInHostMemory();
+    const auto tn = m_tess->triangleNormalIndexInHostMemory();
+    const auto nd = m_tess->normalVectorsInHostMemory();
+    const auto ti = m_tess->triangleCellIndexInHostMemory();
     std::map< std::tuple<uint,uint>, bool > edges;
 
     for(size_t i=0; i<m_tess->triangleCount(); i++ ) {
