@@ -673,6 +673,14 @@ bool CPViewJob::renderFrame( const string&  session,
             GridTessBridge bridge( *m_grid_tess );
             m_project->geometry( bridge );
             m_do_update_subset = true;
+#ifdef DEBUG_GRAPHICS
+            m_debug_points.clear();
+            for( size_t i=0; i<bridge.vertices(); i++ ) {
+                m_debug_points.push_back( bridge.vertex( i ).x() );
+                m_debug_points.push_back( bridge.vertex( i ).y() );
+                m_debug_points.push_back( bridge.vertex( i ).z() );
+            }
+#endif
         }
         catch( std::runtime_error& e ) {
             LOGGER_ERROR( log, "While getting geometry: " << e.what() );
@@ -727,19 +735,15 @@ bool CPViewJob::renderFrame( const string&  session,
                 m_policyLib->updateElement<double>( "field_range_min", m_grid_field->minValue() );
                 m_policyLib->updateElement<double>( "field_range_max", m_grid_field->maxValue() );
             }
-
-
         }
 
         if( m_has_color_field ) {
             stringstream o;
             o << "[ " << m_grid_field->minValue() << ", " << m_grid_field->maxValue() << " ]";
             m_policyLib->updateElement( "field_info_range", o.str() );
-
             o.str("");
             o << "<not implemented>";
             m_policyLib->updateElement( "field_info_calendar", o.str() );
-
             m_policyLib->updateElement( "has_field", true );
         }
         else {
@@ -903,6 +907,52 @@ bool CPViewJob::renderFrame( const string&  session,
                                   glm::value_ptr( mv ) );
         }
 
+#ifdef zDEBUG_GRAPHICS
+        std::vector<unsigned int> debug_poly =
+        { 28, 34, 32, 25, 26, 27 };
+
+        std::vector<unsigned int> debug_poly2 =
+        { 28, 25, 26, 27 };
+
+        glMatrixMode( GL_PROJECTION );
+        glLoadMatrixf( viewer.projectionMatrix.data() );
+        glMatrixMode( GL_MODELVIEW );
+        glLoadMatrixf( glm::value_ptr( mv*O ) );
+
+        glUseProgram( 0 );
+        glLineWidth( 5.f );
+        glBegin( GL_LINE_LOOP );
+        glColor3f( 0.f, 0.f, 1.f );
+        for(unsigned int i=0; i<debug_poly.size(); i++ ) {
+            glVertex3fv( m_debug_points.data() + 3*debug_poly[i] );
+        }
+        glEnd();
+        glColor3f( 1.f, 0.f, 1.f );
+        glLineWidth( 10.f );
+        glBegin( GL_LINE_LOOP );
+        for(unsigned int i=0; i<debug_poly2.size(); i++ ) {
+            glVertex3fv( m_debug_points.data() + 3*debug_poly2[i] );
+        }
+        glEnd();
+
+        if( debug_poly.size() > 2 ) {
+            glPointSize( 20.f );
+            glBegin( GL_POINTS );
+            glColor3f( 1.f, 1.f, 0.f );
+            glVertex3fv( m_debug_points.data() + 3*debug_poly[0] );
+            glColor3f( 1.f, 0.5f, 0.f );
+            glVertex3fv( m_debug_points.data() + 3*debug_poly[1] );
+            glColor3f( 0.f, 1.0f, 0.f );
+            for(unsigned int i=2; i<debug_poly.size(); i++ ) {
+                glVertex3fv( m_debug_points.data() + 3*debug_poly[i] );
+            }
+            glEnd();
+        }
+
+        /*
+*/
+#endif
+
         std::vector<GridTessSurfRenderer::RenderItem> items;
 
         if( faults_needed ) {
@@ -951,6 +1001,7 @@ bool CPViewJob::renderFrame( const string&  session,
                                       m_grid_field,
                                       items,
                                       quality );
+
 
 
 

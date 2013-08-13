@@ -60,7 +60,8 @@ main()
     }
     else {
 //        color.rgb = solid_color;
-        uint cid = uint(gl_PrimitiveIDIn);//cell & 0x0fffffffu;
+        uint cid = cell & 0x0fffffffu;
+//        uint cid = uint(gl_PrimitiveIDIn);//cell & 0x0fffffffu;
         color.rgb =
                 vec3(  0.2*float( int( cid & 8u  ) == 0 ) + 0.2*float( int( cid & 1u ) == 0  ) + 0.2,
                        0.2*float( int( cid & 16u ) == 0 ) + 0.2*float( int( cid & 2u ) == 0  ) + 0.2,

@@ -17,10 +17,11 @@ CornerPointTessellatorSimple<Bridge>::triangulate( Bridge&                      
                                                    const unsigned int                         ny,
                                                    const unsigned int                         nz,
                                                    const unsigned int                         nr,
-                                                   const std::vector<typename Bridge::REAL>&  coord,
-                                                   const std::vector<typename Bridge::REAL>&  zcorn,
+                                                   const std::vector<typename Bridge::Real>&  coord,
+                                                   const std::vector<typename Bridge::Real>&  zcorn,
                                                    const std::vector<int>&                    actnum )
 {
+#if 0
     for( unsigned int jz=0; jz<nz; jz++ ) {
         for( unsigned int jy=0; jy<ny; jy++) {
             for( unsigned int jx=0; jx<nx; jx++ ) {
@@ -63,7 +64,7 @@ CornerPointTessellatorSimple<Bridge>::triangulate( Bridge&                      
                                 float a = (z-z1)/(z2-z1);
                                 float b = 1.f-a;
 
-                                bridge.addVertex( b*x1 + a*x2, b*y1 + a*y2, z );
+                                addVertex( b*x1 + a*x2, b*y1 + a*y2, z );
                             }
                         }
                     }
@@ -91,6 +92,7 @@ CornerPointTessellatorSimple<Bridge>::triangulate( Bridge&                      
             }
         }
     }
+#endif
 }
 
 template class CornerPointTessellatorSimple<GridTessBridge>;

@@ -36,15 +36,6 @@ GridTess::GridTess()
     glGenVertexArrays( 1, &m_triangle_vao );
 }
 
-GridTessBridge::GridTessBridge(GridTess &owner)
-    : m_owner( owner )
-{
-}
-
-GridTessBridge::~GridTessBridge()
-{
-    m_owner.import( *this );
-}
 
 void
 GridTess::import( GridTessBridge& bridge )
@@ -56,14 +47,16 @@ GridTess::import( GridTessBridge& bridge )
     }
 
 
-    for(unsigned int i=0; i<3; i++) {
-        m_bb_min[i] = m_bb_max[i] = bridge.m_vertices[i];
-    }
-    for(unsigned int j=0; j<bridge.m_vertices.size()/4; j++) {
-        for(unsigned int i=0; i<3; i++) {
-            m_bb_min[i] = std::min( m_bb_min[i], bridge.m_vertices[4*j+i] );
-            m_bb_max[i] = std::max( m_bb_max[i], bridge.m_vertices[4*j+i] );
-        }
+    m_bb_min[0] = m_bb_max[0] = bridge.m_vertices[0].x();
+    m_bb_min[1] = m_bb_max[1] = bridge.m_vertices[1].y();
+    m_bb_min[2] = m_bb_max[2] = bridge.m_vertices[2].z();
+    for(unsigned int j=0; j<bridge.m_vertices.size(); j++) {
+        m_bb_min[0] = std::min( m_bb_min[0], bridge.m_vertices[j].x() );
+        m_bb_max[0] = std::max( m_bb_max[0], bridge.m_vertices[j].x() );
+        m_bb_min[1] = std::min( m_bb_min[1], bridge.m_vertices[j].y() );
+        m_bb_max[1] = std::max( m_bb_max[1], bridge.m_vertices[j].y() );
+        m_bb_min[2] = std::min( m_bb_min[2], bridge.m_vertices[j].z() );
+        m_bb_max[2] = std::max( m_bb_max[2], bridge.m_vertices[j].z() );
     }
 
     LOGGER_DEBUG( log, "bbox = ["
@@ -90,12 +83,12 @@ GridTess::import( GridTessBridge& bridge )
     }
 */
 
-    m_vertices.m_N = bridge.m_vertices.size()/4;
+    m_vertices.m_N = bridge.m_vertices.size();
     if( m_vertices.m_N > 0 ) {
         glBindVertexArray( m_vertices.m_vao );
         glBindBuffer( GL_ARRAY_BUFFER, m_vertices.m_vbo );
         glBufferData( GL_ARRAY_BUFFER,
-                      sizeof(float)*bridge.m_vertices.size(),
+                      4*sizeof(float)*m_vertices.m_N,
                       bridge.m_vertices.data(),
                       GL_STATIC_DRAW );
         glVertexPointer( 4, GL_FLOAT, 0, NULL );
@@ -109,24 +102,50 @@ GridTess::import( GridTessBridge& bridge )
     }
 
 
-    m_triangles.m_index_count = bridge.m_triangles.size();
+    m_triangles.m_index_count = 3*bridge.m_tri_N;
     if( m_triangles.m_index_count > 0 ) {
         glBindBuffer( GL_TEXTURE_BUFFER, m_tri_info.m_buffer );
+
+        //glBufferData( GL_TEXTURE_BUFFER,
+        //              sizeof(unsigned int)*bridge.m_triangle_info.size(),
+        //              bridge.m_triangle_info.data(),
+        //              GL_STATIC_DRAW );
         glBufferData( GL_TEXTURE_BUFFER,
-                      sizeof(unsigned int)*bridge.m_triangle_info.size(),
-                      bridge.m_triangle_info.data(),
+                      2*sizeof(unsigned int)*bridge.m_tri_N,
+                      NULL,
                       GL_STATIC_DRAW );
+        GLsizei o = 0;
+        for(auto it=bridge.m_tri_info_chunks.begin(); it!=bridge.m_tri_info_chunks.end(); ++it ) {
+            glBufferSubData( GL_TEXTURE_BUFFER,
+                             2*sizeof(GLuint)*o,
+                             2*sizeof(GLuint)*std::min( bridge.m_chunk_size, bridge.m_tri_N-o ),
+                             *it );
+            o += bridge.m_chunk_size;
+        }
         glBindBuffer( GL_TEXTURE_BUFFER, m_tri_info.m_buffer );
         glBindTexture( GL_TEXTURE_BUFFER, m_tri_info.m_texture );
         glTexBuffer( GL_TEXTURE_BUFFER, GL_RG32UI, m_tri_info.m_buffer );
 
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_triangles.m_ibo );
+        //glBufferData( GL_ELEMENT_ARRAY_BUFFER,
+        //              sizeof(int)*bridge.m_triangles.size(),
+        //              bridge.m_triangles.data(),
+        //              GL_STATIC_DRAW );
         glBufferData( GL_ELEMENT_ARRAY_BUFFER,
-                      sizeof(int)*bridge.m_triangles.size(),
-                      bridge.m_triangles.data(),
+                      3*sizeof(GLuint)*bridge.m_tri_N,
+                      NULL,
                       GL_STATIC_DRAW );
+        o = 0;
+        for(auto it=bridge.m_tri_vtx_chunks.begin(); it!=bridge.m_tri_vtx_chunks.end(); ++it ) {
+            glBufferSubData( GL_ELEMENT_ARRAY_BUFFER,
+                             3*sizeof(GLuint)*o,
+                             3*sizeof(GLuint)*std::min( bridge.m_chunk_size, bridge.m_tri_N-o ),
+                             *it );
+            o += bridge.m_chunk_size;
+        }
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
 
+        LOGGER_DEBUG( log, "Uploaded " << bridge.m_tri_vtx_chunks.size() << " chunks." );
 
         glBindVertexArray( m_triangle_vao );
         glBindBuffer( GL_ARRAY_BUFFER, m_tri_info.m_buffer );

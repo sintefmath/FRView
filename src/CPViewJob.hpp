@@ -83,6 +83,10 @@ private:
     unsigned int            m_solution_index;
     unsigned int            m_report_step_index;
 
+#ifdef DEBUG_GRAPHICS
+    std::vector<float>      m_debug_points;
+#endif
+
     bool
     handleButtonClick( policylib::StateElement *stateElement );
 

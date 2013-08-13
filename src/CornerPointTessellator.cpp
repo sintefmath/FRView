@@ -15,18 +15,21 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include "Logger.hpp"
+#include "PerfTimer.hpp"
 #include "GridTessBridge.hpp"
+#include "PolygonTessellator.hpp"
 #include "CornerPointTessellator.hpp"
 #ifdef CHECK_INVARIANTS
 #include "CellSanityChecker.hpp"
 #endif
 
-template<typename Bridge> const float        CornerPointTessellator<Bridge>::epsilon  = std::numeric_limits<REAL>::epsilon();
-template<typename Bridge> const unsigned int CornerPointTessellator<Bridge>::end_flag = (1u<<31u);
-template<typename Bridge> const unsigned int CornerPointTessellator<Bridge>::end_mask = ~end_flag;
+using std::vector;
+static const std::string package = "CornerPointTessellator";
 
-#define FOO
-
+template<typename Tessellation>
+CornerPointTessellator<Tessellation>::CornerPointTessellator( Tessellation& tessellation )
+    : m_tessellation( tessellation )
+{}
 
 // pillar layout
 //   p(i-1,j-1) ----- p(i  ,j-1) ----- p(i+1,j-1) --> i (inner loop)
@@ -98,71 +101,75 @@ template<typename Bridge> const unsigned int CornerPointTessellator<Bridge>::end
 //   p(i-1,j+1) ----- p(i  ,j+1) ----- p(i+1,j+1)
 
 
-template<typename Bridge>
-void
-CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
-                                             const unsigned int nx,
-                                             const unsigned int ny,
-                                             const unsigned int nz,
-                                             const unsigned int nr,
-                                             const std::vector<typename Bridge::REAL>&  coord,
-                                             const std::vector<typename Bridge::REAL>&  zcorn,
-                                             const std::vector<int>&  actnum )
-{
-    Logger log = getLogger( "CPTessFactory.triangulate" );
 
-    static const unsigned int chain_offset_stride = 4*nz+1;
+template<typename Tessellation>
+void
+CornerPointTessellator<Tessellation>::triangulate( const Index             nx,
+                                                   const Index             ny,
+                                                   const Index             nz,
+                                                   const Index             nr,
+                                                   const vector<SrcReal>&  coord,
+                                                   const vector<SrcReal>&  zcorn,
+                                                   const vector<int>&      actnum )
+{
+    Logger log = getLogger( package + ".triangulate" );
+
+    static const Index chain_offset_stride = 4*nz+1;
 
     // enumeration of active cells is different from how we traverse the grid.
-    std::vector<int> cell_map( nx*ny*nz, -1 );
-    unsigned int active_cells = 0;
+    vector<Index> cell_map( nx*ny*nz, IllegalIndex );
+    Index active_cells = 0;
     for( size_t i=0; i<actnum.size(); i++ ) {
         if( actnum[i] != 0 ) {
             cell_map[i] = active_cells++;
         }
     }
-    bridge.setCellCount( active_cells );
-    bridge.reserveVertices( 8*active_cells );
-    bridge.reserveEdges( 12*active_cells );
-    bridge.reserveTriangles( 2*6*active_cells );
+    m_tessellation.setCellCount( active_cells );
+    m_tessellation.reserveVertices( 8*active_cells );
+    m_tessellation.reserveEdges( 12*active_cells );
+    m_tessellation.reserveTriangles( 2*6*active_cells );
 
     LOGGER_DEBUG( log, "active cells = " << active_cells <<
                        " ("  << ((100.f*active_cells)/actnum.size()) << "%)." );
 
 
-    std::vector<unsigned int> pi0jm1_d01_chains;
-    std::vector<unsigned int> pi0jm1_d01_chain_offsets( (nx+1)*chain_offset_stride, ~0u );
-    std::vector<unsigned int> pi0jm1_d10_chains;
-    std::vector<unsigned int> pi0jm1_d10_chain_offsets( nx*chain_offset_stride, ~0u );
-    std::vector<unsigned int> pi0j0_d10_chains;
-    std::vector<unsigned int> pi0j0_d10_chain_offsets( nx*chain_offset_stride, ~0u );
-    std::vector<unsigned int> jm1_active_cell_list( (nx+2)*(nz) );
-    std::vector<unsigned int> jm1_active_cell_count( (nx+2), 0u );
-    std::vector<unsigned int> jm0_active_cell_list( (nx+2)*(nz) );
-    std::vector<unsigned int> jm0_active_cell_count( (nx+2), 0u );
-    std::vector<unsigned int> jm1_zcorn_ix( nx*4*2*nz );
-    std::vector<unsigned int> jm0_zcorn_ix( nx*4*2*nz );
-    std::vector<unsigned int> jm1_wall_line_ix( nx*4*2*nz );
-    std::vector<unsigned int> jm0_wall_line_ix( nx*4*2*nz );
-    for( unsigned int j=0; j<ny+1; j++ ) {
+    vector<Index> pi0jm1_d01_chains;
+    vector<Index> pi0jm1_d01_chain_offsets( (nx+1)*chain_offset_stride, IllegalIndex );
+    vector<Index> pi0jm1_d10_chains;
+    vector<Index> pi0jm1_d10_chain_offsets( nx*chain_offset_stride, IllegalIndex );
+    vector<Index> pi0j0_d10_chains;
+    vector<Index> pi0j0_d10_chain_offsets( nx*chain_offset_stride, IllegalIndex );
+    vector<Index> jm1_active_cell_list( (nx+2)*(nz) );
+    vector<Index> jm1_active_cell_count( (nx+2), 0u );
+    vector<Index> jm0_active_cell_list( (nx+2)*(nz) );
+    vector<Index> jm0_active_cell_count( (nx+2), 0u );
+    vector<Index> jm1_zcorn_ix( nx*4*2*nz );
+    vector<Index> jm0_zcorn_ix( nx*4*2*nz );
+    vector<Index> jm1_wall_line_ix( nx*4*2*nz );
+    vector<Index> jm0_wall_line_ix( nx*4*2*nz );
 
-
+    LOGGER_DEBUG( log, "Tessellating grid..." );
+    PerfTimer start;
+    for( Index j=0; j<ny+1; j++ ) {
+        if( (j!=0) && (j%16==0) ) {
+            LOGGER_DEBUG( log, "Tessellating grid... " << ((j*100)/ny) << "%" );
+        }
 
         pi0jm1_d01_chains.clear();
         pi0j0_d10_chains.clear();
 
 #if CHECK_INVARIANTS
-        std::fill( jm0_active_cell_list.begin(), jm0_active_cell_list.end(), ~0u );
-        std::fill( jm0_active_cell_count.begin(), jm0_active_cell_count.end(), ~0u );
-        std::fill( pi0jm1_d01_chain_offsets.begin(), pi0jm1_d01_chain_offsets.end(), ~0u );
-        std::fill( pi0j0_d10_chain_offsets.begin(), pi0j0_d10_chain_offsets.end(), ~0u );
+        std::fill( jm0_active_cell_list.begin(), jm0_active_cell_list.end(), IllegalIndex );
+        std::fill( jm0_active_cell_count.begin(), jm0_active_cell_count.end(), IllegalIndex );
+        std::fill( pi0jm1_d01_chain_offsets.begin(), pi0jm1_d01_chain_offsets.end(), IllegalIndex );
+        std::fill( pi0j0_d10_chain_offsets.begin(), pi0j0_d10_chain_offsets.end(), IllegalIndex );
         std::fill( jm0_wall_line_ix.begin(), jm0_wall_line_ix.end(), ~1u );
 #endif
 
 
         // Iterate over all i's.
         jm0_active_cell_count[0] = 0u;
-        for( unsigned int i=0; i<nx+1; i++ ) {
+        for( Index i=0; i<nx+1; i++ ) {
 
             try {
                 // Determine the active cells in the column
@@ -177,13 +184,11 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
                     jm0_active_cell_count[ i+1 ] = 0u;
                 }
 
-                const unsigned int vertex_pillar_start = bridge.vertexCount();
-                std::vector<unsigned int> adjacent_cells;
+                Index vertex_pillar_start = m_tessellation.vertices();
+                vector<Index> adjacent_cells;
 
                 // Determine the unique set of vertices on a pillar
-                uniquePillarVertices( bridge,
-                                      adjacent_cells,
-
+                uniquePillarVertices( adjacent_cells,
                                       jm1_zcorn_ix.data() + 2*nz*( 4*(i-1) + CELL_CORNER_O11 ),   // c(i-1,j-1) @ (1,1)
                                       jm1_zcorn_ix.data() + 2*nz*( 4*(i+0) + CELL_CORNER_O01 ),   // c(i,  j-1) @ (0,1)
                                       jm0_zcorn_ix.data() + 2*nz*( 4*(i-1) + CELL_CORNER_O10 ),   // c(i-1,j  ) @ (1,0)
@@ -205,8 +210,7 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
 
 
                 // Edges along pillar
-                pillarEdges( bridge,
-                             vertex_pillar_start,
+                pillarEdges( vertex_pillar_start,
                              adjacent_cells,
                              cell_map.data() + (i-1) + nx*(j-1),
                              cell_map.data() + (i  ) + nx*(j-1),
@@ -216,8 +220,8 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
 
                 // Process pillar [p(i,j-1) and p(i,j)] along j (with c(i-1,j-1) and c(i,j-1) abutting)
                 if( 0 < j ) {
-                    std::vector<WallLine> wall_lines;
-                    std::vector<Intersection> wall_line_intersections;
+                    vector<WallLine> wall_lines;
+                    vector<Intersection> wall_line_intersections;
 
                     extractWallLines( wall_lines,
                                       jm1_wall_line_ix.data() + 2*nz*( 4*(i-1) + CELL_WALL_O10_D01),
@@ -235,8 +239,7 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
                                       nx*ny,
                                       1u );
 
-                    intersectWallLines( bridge,
-                                        wall_line_intersections,
+                    intersectWallLines( wall_line_intersections,
                                         pi0jm1_d01_chains,
                                         pi0jm1_d01_chain_offsets.data() + chain_offset_stride*i,
                                         wall_lines,
@@ -244,20 +247,17 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
                                         coord.data() + 6*( i + (nx+1)*j )
                                         );
 
-                    wallEdges( bridge,
-                               wall_lines,
+                    wallEdges( wall_lines,
                                wall_line_intersections,
                                pi0jm1_d01_chains,
                                pi0jm1_d01_chain_offsets.data() + chain_offset_stride*i );
 #if 1
                     if( wall_line_intersections.empty() ) {
-                        stitchPillarsNoIntersections( bridge,
-                                                      Bridge::ORIENTATION_I,
+                        stitchPillarsNoIntersections( ORIENTATION_I,
                                                       wall_lines );
                     }
                     else {
-                        stitchPillarsHandleIntersections( bridge,
-                                                          Bridge::ORIENTATION_I,
+                        stitchPillarsHandleIntersections( ORIENTATION_I,
                                                           wall_lines,
                                                           wall_line_intersections,
                                                           pi0jm1_d01_chains,
@@ -267,11 +267,11 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
 
 #ifdef CHECK_INVARIANTS
                     // Sanity check
-                    for( unsigned int l=0; l<wall_lines.size(); l++ ) {
-                        const unsigned int a = pi0jm1_d01_chain_offsets[chain_offset_stride*i + l + 0 ];
-                        const unsigned int b = pi0jm1_d01_chain_offsets[chain_offset_stride*i + l + 1 ];
-                        for( unsigned int c = a; c<b; c++ ) {
-                            const unsigned int i = pi0jm1_d01_chains[ c ];
+                    for( Index l=0; l<wall_lines.size(); l++ ) {
+                        const Index a = pi0jm1_d01_chain_offsets[chain_offset_stride*i + l + 0 ];
+                        const Index b = pi0jm1_d01_chain_offsets[chain_offset_stride*i + l + 1 ];
+                        for( Index c = a; c<b; c++ ) {
+                            const Index i = pi0jm1_d01_chains[ c ];
                             Intersection& isec = wall_line_intersections[ i ];
                             LOGGER_INVARIANT_EITHER_EQUAL( log, l, isec.m_upwrd_bndry_ix, l, isec.m_dnwrd_bndry_ix );
                         }
@@ -279,9 +279,9 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
 #endif
 
                     // replace intersection indices with vertex indices.
-                    const unsigned int c0 = pi0jm1_d01_chain_offsets[chain_offset_stride*i ];
-                    const unsigned int c1 = pi0jm1_d01_chain_offsets[chain_offset_stride*i+wall_lines.size() ];
-                    for( unsigned int k=c0; k<c1; k++ ) {
+                    const Index c0 = pi0jm1_d01_chain_offsets[chain_offset_stride*i ];
+                    const Index c1 = pi0jm1_d01_chain_offsets[chain_offset_stride*i+wall_lines.size() ];
+                    for( Index k=c0; k<c1; k++ ) {
                         pi0jm1_d01_chains[k] = wall_line_intersections[ pi0jm1_d01_chains[k] ].m_vtx_ix;
                     }
 
@@ -297,8 +297,8 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
                     //      |                  |
                     //      |    c(i-1,j  )    |
                     //    j V                  |
-                    std::vector<WallLine> wall_lines;
-                    std::vector<Intersection> wall_line_intersections;
+                    vector<WallLine> wall_lines;
+                    vector<Intersection> wall_line_intersections;
 
                     extractWallLines( wall_lines,
                                       jm0_wall_line_ix.data() + 2*nz*( 4*(i-1) + CELL_WALL_O00_D10),
@@ -315,8 +315,7 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
                                       cell_map.data() + (i-1) + nx*(j-1),
                                       nx*ny,
                                       nx );
-                    intersectWallLines( bridge,
-                                        wall_line_intersections,
+                    intersectWallLines( wall_line_intersections,
                                         pi0j0_d10_chains,
                                         pi0j0_d10_chain_offsets.data() + chain_offset_stride*(i-1),
                                         wall_lines,
@@ -324,43 +323,40 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
                                         coord.data() + 6*( i + (nx+1)*j )
                                         );
 
-                    wallEdges( bridge,
-                               wall_lines,
+                    wallEdges( wall_lines,
                                wall_line_intersections,
                                pi0j0_d10_chains,
                                pi0j0_d10_chain_offsets.data() + chain_offset_stride*(i-1) );
-#if 1
+
                     if( wall_line_intersections.empty() ) {
-                        stitchPillarsNoIntersections( bridge,
-                                                      Bridge::ORIENTATION_J,
+                        stitchPillarsNoIntersections( ORIENTATION_J,
                                                       wall_lines );
                     }
                     else {
-                        stitchPillarsHandleIntersections( bridge,
-                                                          Bridge::ORIENTATION_J,
+                        stitchPillarsHandleIntersections( ORIENTATION_J,
                                                           wall_lines,
                                                           wall_line_intersections,
                                                           pi0j0_d10_chains,
                                                           pi0j0_d10_chain_offsets.data() + chain_offset_stride*(i-1) );
                     }
-#endif
+
 #ifdef CHECK_INVARIANTS
                     // Sanity check
-                    for( unsigned int l=0; l<wall_lines.size(); l++ ) {
-                        const unsigned int a = pi0j0_d10_chain_offsets[chain_offset_stride*(i-1) + l + 0 ];
-                        const unsigned int b = pi0j0_d10_chain_offsets[chain_offset_stride*(i-1) + l + 1 ];
-                        for( unsigned int c = a; c<b; c++ ) {
-                            const unsigned int i = pi0j0_d10_chains[c];
+                    for( Index l=0; l<wall_lines.size(); l++ ) {
+                        const Index a = pi0j0_d10_chain_offsets[chain_offset_stride*(i-1) + l + 0 ];
+                        const Index b = pi0j0_d10_chain_offsets[chain_offset_stride*(i-1) + l + 1 ];
+                        for( Index c = a; c<b; c++ ) {
+                            const Index i = pi0j0_d10_chains[c];
                             Intersection& isec = wall_line_intersections[ i ];
                             LOGGER_INVARIANT_EITHER_EQUAL( log, l, isec.m_upwrd_bndry_ix, l, isec.m_dnwrd_bndry_ix );
                         }
                     }
 #endif
                     // replace intersection indices with vertex indices.
-                    const unsigned int c0 = pi0j0_d10_chain_offsets[chain_offset_stride*(i-1) ];
-                    const unsigned int c1 = pi0j0_d10_chain_offsets[chain_offset_stride*(i-1)+wall_lines.size() ];
+                    const Index c0 = pi0j0_d10_chain_offsets[chain_offset_stride*(i-1) ];
+                    const Index c1 = pi0j0_d10_chain_offsets[chain_offset_stride*(i-1)+wall_lines.size() ];
 
-                    for( unsigned int k=c0; k<c1; k++ ) {
+                    for( Index k=c0; k<c1; k++ ) {
                         pi0j0_d10_chains[k] = wall_line_intersections[ pi0j0_d10_chains[k] ].m_vtx_ix;
                     }
                 }
@@ -368,8 +364,7 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
                 // For each full cell
                 if( i>0 && j>0) {
 #if 1
-                    stitchTopBottom( bridge,
-                                     jm1_active_cell_list.data() + (nz*i),
+                    stitchTopBottom( jm1_active_cell_list.data() + (nz*i),
                                      jm1_active_cell_count[i],
                                      jm1_wall_line_ix.data() + 2*nz*( 4*(i-1) + CELL_WALL_O01_D10 ),
                                      jm1_wall_line_ix.data() + 2*nz*( 4*(i-1) + CELL_WALL_O00_D10 ),
@@ -391,19 +386,19 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
                                      nx*ny );
 #endif
                     // process cell column c(i-1,j-1)
-                    for( unsigned int m=0; m < jm1_active_cell_count[ i ]; m++ ) {
-                        const unsigned int k = jm1_active_cell_list[ (nz*i) + m];
+                    for( Index m=0; m < jm1_active_cell_count[ i ]; m++ ) {
+                        const Index k = jm1_active_cell_list[ (nz*i) + m];
                         const size_t gix = i-1 + nx*((j-1) + k*ny);
-                        bridge.setCell( cell_map[gix],
-                                        gix,
-                                        jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O00 ) + m ) + 0 ],
-                                        jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O10 ) + m ) + 0 ],
-                                        jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O01 ) + m ) + 0 ],
-                                        jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O11 ) + m ) + 0 ],
-                                        jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O00 ) + m ) + 1 ],
-                                        jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O10 ) + m ) + 1 ],
-                                        jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O01 ) + m ) + 1 ],
-                                        jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O11 ) + m ) + 1 ] );
+                        m_tessellation.setCell( cell_map[gix],
+                                                gix,
+                                                jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O00 ) + m ) + 0 ],
+                                                jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O10 ) + m ) + 0 ],
+                                                jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O01 ) + m ) + 0 ],
+                                                jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O11 ) + m ) + 0 ],
+                                                jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O00 ) + m ) + 1 ],
+                                                jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O10 ) + m ) + 1 ],
+                                                jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O01 ) + m ) + 1 ],
+                                                jm1_zcorn_ix[ 2*(nz*( 4*(i-1) + CELL_CORNER_O11 ) + m ) + 1 ] );
 
                     }
                 }
@@ -421,56 +416,28 @@ CornerPointTessellator<Bridge>::triangulate( Bridge& bridge,
         jm0_active_cell_count.swap( jm1_active_cell_count );
         jm0_wall_line_ix.swap( jm1_wall_line_ix );
     }
-#ifdef CHECK_INVARIANTS
-    LOGGER_DEBUG( log, "Checking cell topology...")
-    std::vector<CellSanityChecker> cells( bridge.cellCount() );
+    PerfTimer stop;
+    double t = PerfTimer::delta(start, stop);
+    LOGGER_DEBUG( log, "Tessellating grid... done (" << t << " secs)" );
 
-    for( unsigned int i=0; i<bridge.vertexCount(); i++ ) {
-        for( unsigned int j=i+1; j<bridge.vertexCount(); j++) {
-            float dx = bridge.vertexX( i ) - bridge.vertexX( j );
-            float dy = bridge.vertexY( i ) - bridge.vertexY( j );
-            float dz = bridge.vertexZ( i ) - bridge.vertexZ( j );
-            if( dx*dx + dy*dy + dz*dz < std::numeric_limits<float>::epsilon() ) {
-                LOGGER_ERROR( log, "vertices " << i << " and " << j << " are probably identical." );
-            }
-        }
-    }
-
-
-    for( unsigned int i=0; i<bridge.triangleCount(); i++ ) {
-        unsigned int cell_a, cell_b, v0, v1, v2;
-        bridge.triangle( cell_a, cell_b, v0, v1, v2, i );
-        if( cell_a != ~0u ) {
-            cells[cell_a].addTriangle( i, v0, v1, v2 );
-        }
-        if( cell_b != ~0u ) {
-            cells[cell_b].addTriangle( i, v2, v1, v0 );
-        }
-    }
-    for( size_t i=0; i<cells.size(); i++ ) {
-        cells[i].checkTopology();
-    }
-    LOGGER_DEBUG( log, "Checking cell topology... done.")
-#endif
-
-
+    m_tessellation.process();
 }
 
-template<typename Bridge>
-unsigned int
-CornerPointTessellator<Bridge>::segmentIntersection( Bridge& bridge,
-                                                     const unsigned int a0ix, const unsigned int a1ix,
-                                                     const unsigned int b0ix, const unsigned int b1ix,
-                                                     const float* pillar_a,
-                                                     const float* pillar_b )
+template<typename Tessellation>
+typename CornerPointTessellator<Tessellation>::Index
+CornerPointTessellator<Tessellation>::segmentIntersection( const Index a0ix, const Index a1ix,
+                                                           const Index b0ix, const Index b1ix,
+                                                           const SrcReal* pillar_a,
+                                                           const SrcReal* pillar_b )
 {
-    Logger log = getLogger( "CPTessFactory.segmentIntersection" );
+    Logger log = getLogger( package + ".segmentIntersection" );
 
-    float s1_a_z = bridge.vertexZ( a0ix );
-    float s1_b_z = bridge.vertexZ( a1ix );
-    float s2_a_z = bridge.vertexZ( b0ix );
-    float s2_b_z = bridge.vertexZ( b1ix );
-    float m_z = 0.25f*( s1_a_z + s1_b_z + s2_a_z + s2_b_z );
+    Real s1_a_z = m_tessellation.vertex( a0ix ).z();
+    Real s1_b_z = m_tessellation.vertex( a1ix ).z();
+    Real s2_a_z = m_tessellation.vertex( b0ix ).z();
+    Real s2_b_z = m_tessellation.vertex( b1ix ).z();
+
+    Real m_z = 0.25f*( s1_a_z + s1_b_z + s2_a_z + s2_b_z );
     s1_a_z -= m_z;
     s1_b_z -= m_z;
     s2_a_z -= m_z;
@@ -478,32 +445,32 @@ CornerPointTessellator<Bridge>::segmentIntersection( Bridge& bridge,
 
 
 
-    float s = (s2_a_z - s1_a_z)/( (s1_b_z-s1_a_z) - (s2_b_z-s2_a_z) );
+    Real s = (s2_a_z - s1_a_z)/( (s1_b_z-s1_a_z) - (s2_b_z-s2_a_z) );
     if( s < 0.f || 1.f < s ) {
         LOGGER_ERROR( log, "Inter-pillar blend "<<s<<" is outside [0,1]");
     }
 
-    float z = (1.f-s)*s1_a_z + s*s1_b_z + m_z;
+    Real z = (1.f-s)*s1_a_z + s*s1_b_z + m_z;
 
-    float ta = (z-pillar_a[2])/(pillar_a[5]-pillar_a[2]);
-    float tb = (z-pillar_b[2])/(pillar_b[5]-pillar_b[2]);
+    Real ta = (z-pillar_a[2])/(pillar_a[5]-pillar_a[2]);
+    Real tb = (z-pillar_b[2])/(pillar_b[5]-pillar_b[2]);
 
-    float iax = (1.f-ta)*pillar_a[0] + ta*pillar_a[3];
-    float ibx = (1.f-tb)*pillar_b[0] + tb*pillar_b[3];
-    float ix = (1.f-s)*iax + s*ibx;
+    Real iax = (1.f-ta)*pillar_a[0] + ta*pillar_a[3];
+    Real ibx = (1.f-tb)*pillar_b[0] + tb*pillar_b[3];
+    Real ix = (1.f-s)*iax + s*ibx;
 
-    float iay = (1.f-ta)*pillar_a[1] + ta*pillar_a[4];
-    float iby = (1.f-tb)*pillar_b[1] + tb*pillar_b[4];
-    float iy = (1.f-s)*iay + s*iby;
+    Real iay = (1.f-ta)*pillar_a[1] + ta*pillar_a[4];
+    Real iby = (1.f-tb)*pillar_b[1] + tb*pillar_b[4];
+    Real iy = (1.f-s)*iay + s*iby;
 
     glm::vec3 i = glm::vec3( ix, iy, z );
 
 
 #ifdef CHECK_INVARIANTS
-    glm::vec3 v1( bridge.vertexX( a0ix ), bridge.vertexY( a0ix ), bridge.vertexZ( a0ix ) );
-    glm::vec3 v2( bridge.vertexX( a1ix ), bridge.vertexY( a1ix ), bridge.vertexZ( a1ix ) );
-    glm::vec3 v3( bridge.vertexX( b0ix ), bridge.vertexY( b0ix ), bridge.vertexZ( b0ix ) );
-    glm::vec3 v4( bridge.vertexX( b1ix ), bridge.vertexY( b1ix ), bridge.vertexZ( b1ix ) );
+    glm::vec3 v1( m_tessellation.vertex( a0ix ).x(), m_tessellation.vertex( a0ix ).y(), m_tessellation.vertex( a0ix ).z() );
+    glm::vec3 v2( m_tessellation.vertex( a1ix ).x(), m_tessellation.vertex( a1ix ).y(), m_tessellation.vertex( a1ix ).z() );
+    glm::vec3 v3( m_tessellation.vertex( b0ix ).x(), m_tessellation.vertex( b0ix ).y(), m_tessellation.vertex( b0ix ).z() );
+    glm::vec3 v4( m_tessellation.vertex( b1ix ).x(), m_tessellation.vertex( b1ix ).y(), m_tessellation.vertex( b1ix ).z() );
 
     glm::vec3 v12 = glm::normalize( v2-v1 );
     glm::vec3 v1i = glm::normalize( i-v1 );
@@ -524,51 +491,21 @@ CornerPointTessellator<Bridge>::segmentIntersection( Bridge& bridge,
 
 
 #endif
-
-
-    unsigned int retval = bridge.vertexCount();
-    bridge.addVertex( i.x, i.y, i.z );
-    return retval;
-}
-
-template<typename Bridge>
-typename CornerPointTessellator<Bridge>::REAL
-CornerPointTessellator<Bridge>::distancePointLineSquared( Bridge& bridge,
-                                                          const unsigned int pp,
-                                                          const unsigned int l0,
-                                                          const unsigned int l1 )
-{
-    const REAL p[3] = { bridge.vertexX( pp ), bridge.vertexY( pp ), bridge.vertexZ( pp ) };
-    const REAL a[3] = { bridge.vertexX( l0 ), bridge.vertexY( l0 ), bridge.vertexZ( l0 ) };
-    const REAL b[3] = { bridge.vertexX( l1 ), bridge.vertexY( l1 ), bridge.vertexZ( l1 ) };
-    const REAL ab[3] = { b[0]-a[0], b[1]-a[1], b[2]-a[2] };
-    const REAL pa[3] = { a[0]-p[0], a[1]-p[1], a[2]-p[2] };
-    const REAL ab_x_pb[3] = {
-        ab[1]*pa[2] - ab[2]*pa[1],
-        ab[2]*pa[0] - ab[0]*pa[2],
-        ab[0]*pa[1] - ab[1]*pa[0]
-    };
-    const REAL den = ab[0]*ab[0] + ab[1]*ab[1] + ab[2]*ab[2];
-    if( fabsf( den ) < epsilon ) {
-        Logger log = getLogger( "CPTessFactory.distancePointLineSquared" );
-        LOGGER_WARN( log, "Line is degenerate, using pa instead." );
-        return pa[0]*pa[0] + pa[1]*pa[1] + pa[2]*pa[2];
-    }
-    const REAL r = 1.f/den;
-    return r*(ab_x_pb[0]*ab_x_pb[0] + ab_x_pb[1]*ab_x_pb[1] + ab_x_pb[2]*ab_x_pb[2]);
+    return m_tessellation.addVertex( Real4( i.x, i.y, i.z ) );
 }
 
 
-template<typename Bridge>
+
+template<typename Tessellation>
 void
-CornerPointTessellator<Bridge>::findActiveCellsInColumn( unsigned int*       active_cell_list,
-                                                         unsigned int&       active_cell_count,
-                                                         const int* const    actnum,
-                                                         const unsigned int  stride,
-                                                         const unsigned int  nz )
+CornerPointTessellator<Tessellation>::findActiveCellsInColumn( Index*            active_cell_list,
+                                                               Index&            active_cell_count,
+                                                               const int* const  actnum,
+                                                               const Index       stride,
+                                                               const Index       nz )
 {
-    unsigned int n = 0;
-    for( unsigned int k=0; k<nz; k++ ) {
+    Index n = 0;
+    for( Index k=0; k<nz; k++ ) {
         if( actnum[ stride*k ] != 0 ) {
             active_cell_list[n++] = k;
         }
@@ -577,76 +514,75 @@ CornerPointTessellator<Bridge>::findActiveCellsInColumn( unsigned int*       act
 }
 
 
-template<typename Bridge>
+template<typename Tessellation>
 void
-CornerPointTessellator<Bridge>::pillarEdges( Bridge&                          bridge,
-                            const unsigned int               offset,
-                            const std::vector<unsigned int>& adjacent_cells,
-                            const int*                       cell_map_00,
-                            const int*                       cell_map_01,
-                            const int*                       cell_map_10,
-                            const int*                       cell_map_11,
-                            const unsigned int               stride )
+CornerPointTessellator<Tessellation>::pillarEdges( const Index           offset,
+                                                   const vector<Index>&  adjacent_cells,
+                                                   const Index*          cell_map_00,
+                                                   const Index*          cell_map_01,
+                                                   const Index*          cell_map_10,
+                                                   const Index*          cell_map_11,
+                                                   const Index           stride )
 {
     for( size_t i=1; i<adjacent_cells.size()/4; i++) {
-        const unsigned int* adj = adjacent_cells.data() + 4*i;
-        if( (adj[0] != ~0u ) ||
-            (adj[1] != ~0u ) ||
-            (adj[2] != ~0u ) ||
-            (adj[3] != ~0u ) )
+        const Index* adj = adjacent_cells.data() + 4*i;
+        if( (adj[0] != IllegalIndex ) ||
+            (adj[1] != IllegalIndex ) ||
+            (adj[2] != IllegalIndex ) ||
+            (adj[3] != IllegalIndex ) )
         {
-            const unsigned int cells[4] = { adj[0] != ~0u ? cell_map_00[ stride*adj[0] ] : ~0u,
-                                            adj[1] != ~0u ? cell_map_01[ stride*adj[1] ] : ~0u,
-                                            adj[2] != ~0u ? cell_map_10[ stride*adj[2] ] : ~0u,
-                                            adj[3] != ~0u ? cell_map_11[ stride*adj[3] ] : ~0u
+            const Index cells[4] = { adj[0] != IllegalIndex ? cell_map_00[ stride*adj[0] ] : IllegalIndex,
+                                            adj[1] != IllegalIndex ? cell_map_01[ stride*adj[1] ] : IllegalIndex,
+                                            adj[2] != IllegalIndex ? cell_map_10[ stride*adj[2] ] : IllegalIndex,
+                                            adj[3] != IllegalIndex ? cell_map_11[ stride*adj[3] ] : IllegalIndex
                                           };
-            bridge.addEdge(offset + i - 1 , offset + i,
-                           cells[0], cells[1], cells[2], cells[3] );
+            m_tessellation.addEdge( offset + i - 1 , offset + i,
+                                    cells[0], cells[1], cells[2], cells[3] );
         }
     }
 }
 
 
-template<typename Bridge>
+template<typename Tessellation>
 void
-CornerPointTessellator<Bridge>::uniquePillarVertices( Bridge&                     bridge,
-                                                      std::vector<unsigned int>&  adjacent_cells,
-                                                      unsigned int*               zcorn_ix_00,
-                                                      unsigned int*               zcorn_ix_01,
-                                                      unsigned int*               zcorn_ix_10,
-                                                      unsigned int*               zcorn_ix_11,
-                                                      const REAL* const           zcorn_00,
-                                                      const REAL* const           zcorn_01,
-                                                      const REAL* const           zcorn_10,
-                                                      const REAL* const           zcorn_11,
-                                                      const unsigned int          stride,
-                                                      const REAL* const           coord,
-                                                      const unsigned int* const   active_cell_list_00,
-                                                      const unsigned int* const   active_cell_list_01,
-                                                      const unsigned int* const   active_cell_list_10,
-                                                      const unsigned int* const   active_cell_list_11,
-                                                      const unsigned int          active_cell_count_00,
-                                                      const unsigned int          active_cell_count_01,
-                                                      const unsigned int          active_cell_count_10,
-                                                      const unsigned int          active_cell_count_11 )
+CornerPointTessellator<Tessellation>::uniquePillarVertices( vector<Index>&      adjacent_cells,
+                                                            Index*              zcorn_ix_00,
+                                                            Index*              zcorn_ix_01,
+                                                            Index*              zcorn_ix_10,
+                                                            Index*              zcorn_ix_11,
+                                                            const SrcReal* const   zcorn_00,
+                                                            const SrcReal* const   zcorn_01,
+                                                            const SrcReal* const   zcorn_10,
+                                                            const SrcReal* const   zcorn_11,
+                                                            const Index         stride,
+                                                            const SrcReal* const   coord,
+                                                            const Index* const  active_cell_list_00,
+                                                            const Index* const  active_cell_list_01,
+                                                            const Index* const  active_cell_list_10,
+                                                            const Index* const  active_cell_list_11,
+                                                            const Index         active_cell_count_00,
+                                                            const Index         active_cell_count_01,
+                                                            const Index         active_cell_count_10,
+                                                            const Index         active_cell_count_11 )
 {
+    Logger log = getLogger( package + ".uniquePillarVertices" );
     const bool snap_logical_neighbours = true;
 
 
-    static const float maxf = std::numeric_limits<REAL>::max();
-    static const float minf = -std::numeric_limits<REAL>::max();
-    static const float epsf = std::numeric_limits<REAL>::epsilon();
-    const float x1 = coord[ 0 ];
-    const float y1 = coord[ 1 ];
-    const float z1 = coord[ 2 ];
-    const float x2 = coord[ 3 ];
-    const float y2 = coord[ 4 ];
-    const float z2 = coord[ 5 ];
+    static const Real maxf = std::numeric_limits<Real>::max();
+    static const Real minf = -std::numeric_limits<Real>::max();
+    static const Real epsf = std::numeric_limits<Real>::epsilon();
+    const Real x1 = coord[ 0 ];
+    const Real y1 = coord[ 1 ];
+    const Real z1 = coord[ 2 ];
+    const Real x2 = coord[ 3 ];
+    const Real y2 = coord[ 4 ];
+    const Real z2 = coord[ 5 ];
 
-    unsigned int* zcorn_ix[4] = { zcorn_ix_00, zcorn_ix_01, zcorn_ix_10, zcorn_ix_11 };
-    const float* zcorn[4] = { zcorn_00, zcorn_01, zcorn_10, zcorn_11 };
-    const unsigned int* active_cell_list[4] = { active_cell_list_00, active_cell_list_01, active_cell_list_10,  active_cell_list_11 };
-    const unsigned int  active_cell_count[4] = { active_cell_count_00, active_cell_count_01, active_cell_count_10, active_cell_count_11 };
+    Index* zcorn_ix[4] = { zcorn_ix_00, zcorn_ix_01, zcorn_ix_10, zcorn_ix_11 };
+    const Real* zcorn[4] = { zcorn_00, zcorn_01, zcorn_10, zcorn_11 };
+    const Index* active_cell_list[4] = { active_cell_list_00, active_cell_list_01, active_cell_list_10,  active_cell_list_11 };
+    const Index  active_cell_count[4] = { active_cell_count_00, active_cell_count_01, active_cell_count_10, active_cell_count_11 };
 
     adjacent_cells.clear();
     adjacent_cells.reserve( 2*active_cell_count_00 +
@@ -657,13 +593,13 @@ CornerPointTessellator<Bridge>::uniquePillarVertices( Bridge&                   
     bool ascending  = false;
     bool descending = false;
     bool any        = false;
-    for( unsigned int l=0; l<4; l++) {
-        const unsigned int n = active_cell_count[l];
+    for( Index l=0; l<4; l++) {
+        const Index n = active_cell_count[l];
         if( n > 0u ) {
-            const unsigned int k0 = active_cell_list[l][0];
-            const unsigned int kn = active_cell_list[l][n-1u];
-            const float z0 = zcorn[l][ 4*stride*(2*k0+0) ];
-            const float zn = zcorn[l][ 4*stride*(2*kn+1) ];
+            const Index k0 = active_cell_list[l][0];
+            const Index kn = active_cell_list[l][n-1u];
+            const Real z0 = zcorn[l][ 4*stride*(2*k0+0) ];
+            const Real zn = zcorn[l][ 4*stride*(2*kn+1) ];
             if( z0 < zn ) {
                 ascending = true;
             }
@@ -680,29 +616,28 @@ CornerPointTessellator<Bridge>::uniquePillarVertices( Bridge&                   
         throw std::runtime_error( "uniquePillarVertices: zcorn's are both ascending and descending" );
     }
 
-    Logger log = getLogger( "uniquePillarVertices" );
 
-    //unsigned int cells_below[4] = { ~0u, ~0u, ~0u, ~0u };
+    //Index cells_below[4] = { IllegalIndex, IllegalIndex, IllegalIndex, IllegalIndex };
 
 
 
     if( ascending ) {
         bool         first   = true;
-        float        curr_z  = minf;
-        unsigned int curr_ix = ~0;
-        unsigned int i[4]    = { 0, 0, 0, 0 };
-        unsigned int last_k[4] = { ~0u-1u, ~0u-1u, ~0u-1u, ~0u-1u };
+        Real        curr_z  = minf;
+        Index curr_ix = ~0;
+        Index i[4]    = { 0, 0, 0, 0 };
+        Index last_k[4] = { IllegalIndex-1u, IllegalIndex-1u, IllegalIndex-1u, IllegalIndex-1u };
         while(1) {
-            float smallest_z = maxf;
-            unsigned int smallest_l = ~0u;
-            unsigned int smallest_k = ~0u;
-            for( unsigned int l=0; l<4; l++ ) {
+            Real smallest_z = maxf;
+            Index smallest_l = IllegalIndex;
+            Index smallest_k = IllegalIndex;
+            for( Index l=0; l<4; l++ ) {
                 if( i[l] < 2*active_cell_count[l] ) {
-                    const unsigned int ii = i[l]>>1;
-                    const unsigned int ij = i[l]&1;
+                    const Index ii = i[l]>>1;
+                    const Index ij = i[l]&1;
 
-                    const unsigned int k = active_cell_list[l][ ii ];
-                    float z = zcorn[l][ 4*stride*(2*k + ij) ];
+                    const Index k = active_cell_list[l][ ii ];
+                    Real z = zcorn[l][ 4*stride*(2*k + ij) ];
 
                     if( snap_logical_neighbours && (ij==0) && (last_k[l]+1 == k) ) {
                         z = zcorn[l][ 4*stride*(2*last_k[l] + 1) ];
@@ -722,20 +657,22 @@ CornerPointTessellator<Bridge>::uniquePillarVertices( Bridge&                   
 
             if( first || curr_z+epsf < smallest_z ) {
                 // create new vertex
-                curr_ix = bridge.vertexCount();
                 curr_z = smallest_z;
-                const float a = (smallest_z-z1)/(z2-z1);
-                const float b = 1.f - a;
-                bridge.addVertex( b*x1 + a*x2, b*y1 + a*y2, smallest_z );
+                const Real a = (smallest_z-z1)/(z2-z1);
+                const Real b = 1.f - a;
+
+                curr_ix = m_tessellation.addVertex( Real4( b*x1 + a*x2,
+                                                           b*y1 + a*y2,
+                                                           smallest_z ) );
                 //adjacent_cells.push_back( cells_below[0] );
                 //adjacent_cells.push_back( cells_below[1] );
                 //adjacent_cells.push_back( cells_below[2] );
                 //adjacent_cells.push_back( cells_below[3] );
                 first = false;
             }
-            const unsigned int ii = i[smallest_l]>>1;
-            const unsigned int ij = i[smallest_l]&1;
-            //cells_below[ smallest_l ] = ij == 0 ? smallest_k : ~0u;
+            const Index ii = i[smallest_l]>>1;
+            const Index ij = i[smallest_l]&1;
+            //cells_below[ smallest_l ] = ij == 0 ? smallest_k : IllegalIndex;
             zcorn_ix[ smallest_l ][ 2*ii + ij ] = curr_ix;
             i[smallest_l]++;
             last_k[ smallest_l ] = smallest_k;
@@ -743,21 +680,21 @@ CornerPointTessellator<Bridge>::uniquePillarVertices( Bridge&                   
     }
     else {
         bool         first   = true;
-        float        curr_z  = maxf;
-        unsigned int curr_ix = ~0;
-        unsigned int i[4]    = { 0, 0, 0, 0 };
-        unsigned int last_k[4] = { ~0u-1u, ~0u-1u, ~0u-1u, ~0u-1u };
+        Real        curr_z  = maxf;
+        Index curr_ix = ~0;
+        Index i[4]    = { 0, 0, 0, 0 };
+        Index last_k[4] = { IllegalIndex-1u, IllegalIndex-1u, IllegalIndex-1u, IllegalIndex-1u };
         while(1) {
-            float largest_z = minf;
-            unsigned int largest_l = ~0;
-            unsigned int largest_k = ~0;
-            for( unsigned int l=0; l<4; l++ ) {
+            Real largest_z = minf;
+            Index largest_l = ~0;
+            Index largest_k = ~0;
+            for( Index l=0; l<4; l++ ) {
                 if( i[l] < 2*active_cell_count[l] ) {
-                    const unsigned int ii = i[l]>>1;
-                    const unsigned int ij = i[l]&1;
+                    const Index ii = i[l]>>1;
+                    const Index ij = i[l]&1;
 
-                    const unsigned int k = active_cell_list[l][ ii ];
-                    float z = zcorn[l][ 4*stride*(2*k + ij) ];
+                    const Index k = active_cell_list[l][ ii ];
+                    Real z = zcorn[l][ 4*stride*(2*k + ij) ];
                     if( snap_logical_neighbours && (ij==0) && (last_k[l]+1 == k) ) {
                         z = zcorn[l][ 4*stride*(2*last_k[l] + 1) ];
                     }
@@ -775,14 +712,15 @@ CornerPointTessellator<Bridge>::uniquePillarVertices( Bridge&                   
             if( first || largest_z < curr_z-epsf  ) {
                 // create new vertex
                 first = false;
-                curr_ix = bridge.vertexCount();
                 curr_z = largest_z;
-                const float a = (largest_z-z1)/(z2-z1);
-                const float b = 1.f - a;
-                bridge.addVertex( b*x1 + a*x2, b*y1 + a*y2, largest_z );
+                const Real a = (largest_z-z1)/(z2-z1);
+                const Real b = 1.f - a;
+                curr_ix = m_tessellation.addVertex( Real4( b*x1 + a*x2,
+                                                           b*y1 + a*y2,
+                                                           largest_z ) );
             }
-            const unsigned int ii = i[largest_l]>>1;
-            const unsigned int ij = i[largest_l]&1;
+            const Index ii = i[largest_l]>>1;
+            const Index ij = i[largest_l]&1;
             zcorn_ix[ largest_l ][ 2*ii + ij ] = curr_ix;
             i[largest_l]++;
             last_k[ largest_l ] = largest_k;
@@ -792,65 +730,62 @@ CornerPointTessellator<Bridge>::uniquePillarVertices( Bridge&                   
 
 
 
-template<typename Bridge>
+template<typename Tessellation>
 void
-CornerPointTessellator<Bridge>::stitchTopBottom( Bridge& bridge,
-                                                 const unsigned int* const   ci0j0_active_cell_list,
-                                                 const unsigned int          ci0j0_active_cell_count,
-                                                 const unsigned int* const   o01_d10_wall_line_ix,
-                                                 const unsigned int* const   o00_d10_wall_line_ix,
-                                                 const unsigned int* const   o10_d01_wall_line_ix,
-                                                 const unsigned int* const   o00_d01_wall_line_ix,
-                                                 const unsigned int* const   o00_zcorn_ix,
-                                                 const unsigned int* const   o10_zcorn_ix,
-                                                 const unsigned int* const   o01_zcorn_ix,
-                                                 const unsigned int* const   o11_zcorn_ix,
-                                                 const unsigned int* const   o01_d10_chains,
-                                                 const unsigned int* const   o01_d10_chain_offsets,
-                                                 const unsigned int* const   o00_d10_chains,
-                                                 const unsigned int* const   o00_d10_chain_offsets,
-                                                 const unsigned int* const   o10_d01_chains,
-                                                 const unsigned int* const   o10_d01_chain_offsets,
-                                                 const unsigned int* const   o00_d01_chains,
-                                                 const unsigned int* const   o00_d01_chain_offsets,
-                                                 const int* const            cell_map,
-                                                 const unsigned int          stride )
+CornerPointTessellator<Tessellation>::stitchTopBottom( const Index* const   ci0j0_active_cell_list,
+                                                 const Index          ci0j0_active_cell_count,
+                                                 const Index* const   o01_d10_wall_line_ix,
+                                                 const Index* const   o00_d10_wall_line_ix,
+                                                 const Index* const   o10_d01_wall_line_ix,
+                                                 const Index* const   o00_d01_wall_line_ix,
+                                                 const Index* const   o00_zcorn_ix,
+                                                 const Index* const   o10_zcorn_ix,
+                                                 const Index* const   o01_zcorn_ix,
+                                                 const Index* const   o11_zcorn_ix,
+                                                 const Index* const   o01_d10_chains,
+                                                 const Index* const   o01_d10_chain_offsets,
+                                                 const Index* const   o00_d10_chains,
+                                                 const Index* const   o00_d10_chain_offsets,
+                                                 const Index* const   o10_d01_chains,
+                                                 const Index* const   o10_d01_chain_offsets,
+                                                 const Index* const   o00_d01_chains,
+                                                 const Index* const   o00_d01_chain_offsets,
+                                                 const Index* const            cell_map,
+                                                 const Index          stride )
 {
-    typedef typename Bridge::Segment Segment;   // minimize typing
-
     struct StitchTopBottomHelper {
-        unsigned int m_index;
-        unsigned int m_cell_below;
-        unsigned int m_cell_above;
+        Index m_index;
+        Index m_cell_below;
+        Index m_cell_above;
         bool         m_fault;
         bool         m_emit_00_01_10;
         bool         m_emit_11_10_01;
     };
 
-    Logger log = getLogger( "CPTessFactory.stitchTopBottom" );
+    Logger log = getLogger( package + ".stitchTopBottom" );
 
 
-    std::vector<StitchTopBottomHelper> helper;
+    vector<StitchTopBottomHelper> helper;
     helper.reserve( 2*ci0j0_active_cell_count );
 
-    unsigned int last_top_00 = ~0u;
-    unsigned int last_top_01 = ~0u;
-    unsigned int last_top_10 = ~0u;
-    unsigned int last_top_11 = ~0u;
+    Index last_top_00 = IllegalIndex;
+    Index last_top_01 = IllegalIndex;
+    Index last_top_10 = IllegalIndex;
+    Index last_top_11 = IllegalIndex;
 
-    unsigned int last_k = ~0u-1u;
-    for( unsigned int m=0; m<ci0j0_active_cell_count; m++ ) {
-        const unsigned int k = ci0j0_active_cell_list[m];
-        const unsigned int cell = cell_map[ stride*k ];
+    Index last_k = IllegalIndex-1u;
+    for( Index m=0; m<ci0j0_active_cell_count; m++ ) {
+        const Index k = ci0j0_active_cell_list[m];
+        const Index cell = cell_map[ stride*k ];
 
-        const unsigned int i000 = o00_zcorn_ix[2*m + 0];
-        const unsigned int i100 = o10_zcorn_ix[2*m + 0];
-        const unsigned int i010 = o01_zcorn_ix[2*m + 0];
-        const unsigned int i110 = o11_zcorn_ix[2*m + 0];
-        const unsigned int i001 = o00_zcorn_ix[2*m + 1];
-        const unsigned int i101 = o10_zcorn_ix[2*m + 1];
-        const unsigned int i011 = o01_zcorn_ix[2*m + 1];
-        const unsigned int i111 = o11_zcorn_ix[2*m + 1];
+        const Index i000 = o00_zcorn_ix[2*m + 0];
+        const Index i100 = o10_zcorn_ix[2*m + 0];
+        const Index i010 = o01_zcorn_ix[2*m + 0];
+        const Index i110 = o11_zcorn_ix[2*m + 0];
+        const Index i001 = o00_zcorn_ix[2*m + 1];
+        const Index i101 = o10_zcorn_ix[2*m + 1];
+        const Index i011 = o01_zcorn_ix[2*m + 1];
+        const Index i111 = o11_zcorn_ix[2*m + 1];
 
 
         bool degenerate_00_01_10 = (i000 == i001 ) &&
@@ -885,7 +820,7 @@ CornerPointTessellator<Bridge>::stitchTopBottom( Bridge& bridge,
         if( helper.empty() || !attached ) {
             helper.resize( helper.size() + 1 );
             helper.back().m_index = 2*m+0;
-            helper.back().m_cell_below = ~0u;
+            helper.back().m_cell_below = IllegalIndex;
             helper.back().m_cell_above = cell;
             helper.back().m_fault = false; // we define boundary as not fault
         }
@@ -899,7 +834,7 @@ CornerPointTessellator<Bridge>::stitchTopBottom( Bridge& bridge,
         helper.resize( helper.size() + 1 );
         helper.back().m_index = 2*m+1;
         helper.back().m_cell_below = cell;
-        helper.back().m_cell_above = ~0u;
+        helper.back().m_cell_above = IllegalIndex;
         helper.back().m_fault = false; // we define boundary as not fault
 
         last_top_00 = i001;
@@ -910,746 +845,358 @@ CornerPointTessellator<Bridge>::stitchTopBottom( Bridge& bridge,
         last_k = k;
     }
 
-    std::vector<Segment> segments;
-
-    size_t skip = 0;//std::max( 1ul, helper.size() ) - 1u;
-#if 1
-    for( auto it=helper.begin()+skip; it!=helper.end(); ++it ) {
+    vector<Segment> segments;
+    for( auto it=helper.begin(); it!=helper.end(); ++it ) {
         segments.clear();
-        const unsigned int b_ix = it->m_index;
+        const Index b_ix = it->m_index;
 
         // (0,0) -> (0,1)
-        segments.push_back( Segment( o00_zcorn_ix[ b_ix ], 3 ) );
-        unsigned int o00_d01_0 = o00_d01_chain_offsets[ o00_d01_wall_line_ix[ b_ix ] ];
-        unsigned int o00_d01_1 = o00_d01_chain_offsets[ o00_d01_wall_line_ix[ b_ix ] + 1 ];
-        for( unsigned int i=o00_d01_0; i<o00_d01_1; i++ ) {
-            segments.push_back( Segment( o00_d01_chains[i], 3 ) );
+        segments.push_back( Segment( o00_zcorn_ix[ b_ix ], true, true ) );
+        Index o00_d01_0 = o00_d01_chain_offsets[ o00_d01_wall_line_ix[ b_ix ] ];
+        Index o00_d01_1 = o00_d01_chain_offsets[ o00_d01_wall_line_ix[ b_ix ] + 1 ];
+        for( Index i=o00_d01_0; i<o00_d01_1; i++ ) {
+            segments.push_back( Segment( o00_d01_chains[i], true, true ) );
         }
 
         // (0,1) -> (1,1)
-        segments.push_back( Segment( o01_zcorn_ix[ b_ix ], 3 ) );
-        unsigned int o01_d10_0 = o01_d10_chain_offsets[ o01_d10_wall_line_ix[ b_ix ] ];
-        unsigned int o01_d10_1 = o01_d10_chain_offsets[ o01_d10_wall_line_ix[ b_ix ] + 1 ];
-        for( unsigned int i=o01_d10_0; i<o01_d10_1; i++ ) {
-            segments.push_back( Segment( o01_d10_chains[i], 3 ) );
+        segments.push_back( Segment( o01_zcorn_ix[ b_ix ], true, true ) );
+        Index o01_d10_0 = o01_d10_chain_offsets[ o01_d10_wall_line_ix[ b_ix ] ];
+        Index o01_d10_1 = o01_d10_chain_offsets[ o01_d10_wall_line_ix[ b_ix ] + 1 ];
+        for( Index i=o01_d10_0; i<o01_d10_1; i++ ) {
+            segments.push_back( Segment( o01_d10_chains[i], true, true ) );
         }
 
         // (1,1) -> (1,0)
-        unsigned split_hint = segments.size();
-        segments.push_back( Segment( o11_zcorn_ix[ b_ix ], 3 ) );
-        unsigned int o10_d01_0 = o10_d01_chain_offsets[ o10_d01_wall_line_ix[ b_ix ] ];
-        unsigned int o10_d01_1 = o10_d01_chain_offsets[ o10_d01_wall_line_ix[ b_ix ] + 1 ];
-        for( unsigned int i=o10_d01_1; i>o10_d01_0; i-- ) {
-            segments.push_back( Segment( o10_d01_chains[i-1], 3 ) );
+        segments.push_back( Segment( o11_zcorn_ix[ b_ix ], true, true ) );
+        Index o10_d01_0 = o10_d01_chain_offsets[ o10_d01_wall_line_ix[ b_ix ] ];
+        Index o10_d01_1 = o10_d01_chain_offsets[ o10_d01_wall_line_ix[ b_ix ] + 1 ];
+        for( Index i=o10_d01_1; i>o10_d01_0; i-- ) {
+            segments.push_back( Segment( o10_d01_chains[i-1], true, true ) );
         }
 
         // (1,0) -> (0,0)
-        segments.push_back( Segment( o10_zcorn_ix[ b_ix ], 3 ) );
-        unsigned int o00_d10_0 = o00_d10_chain_offsets[ o00_d10_wall_line_ix[ b_ix ] ];
-        unsigned int o00_d10_1 = o00_d10_chain_offsets[ o00_d10_wall_line_ix[ b_ix ] + 1 ];
-        for( unsigned int i=o00_d10_1; i>o00_d10_0; i-- ) {
-            segments.push_back( Segment( o00_d10_chains[i-1], 3 ) );
+        segments.push_back( Segment( o10_zcorn_ix[ b_ix ], true, true ) );
+        Index o00_d10_0 = o00_d10_chain_offsets[ o00_d10_wall_line_ix[ b_ix ] ];
+        Index o00_d10_1 = o00_d10_chain_offsets[ o00_d10_wall_line_ix[ b_ix ] + 1 ];
+        for( Index i=o00_d10_1; i>o00_d10_0; i-- ) {
+            segments.push_back( Segment( o00_d10_chains[i-1], true, true ) );
         }
 
-        bridge.addPolygon( Bridge::ORIENTATION_K,
-                           it->m_fault,
-                           it->m_cell_below, it->m_cell_above,
-                           segments.data(), segments.size(),
-                           split_hint );
+        m_tessellation.addPolygon( Interface( it->m_cell_above, it->m_cell_below, ORIENTATION_K, it->m_fault),
+                                   segments.data(), segments.size() );
     }
-#else
-    for( auto it=helper.begin()+skip; it!=helper.end(); ++it ) {
-        const StitchTopBottomHelper& h = *it;
-
-        const unsigned int cell_boundary_ix = h.m_index;
-        const unsigned int i00 = o00_zcorn_ix[ cell_boundary_ix ];
-        const unsigned int i10 = o10_zcorn_ix[ cell_boundary_ix ];
-        const unsigned int i01 = o01_zcorn_ix[ cell_boundary_ix ];
-        const unsigned int i11 = o11_zcorn_ix[ cell_boundary_ix ];
-
-        //LOGGER_DEBUG( log, "top-bottom: " << i00
-        //              << ", " << i10
-        //              << ", " << i11
-        //              << ", " << i01 );
-
-        // triangulate 00, 01, 10
-        const unsigned int o00_d10_line_ix = o00_d10_wall_line_ix[ cell_boundary_ix ];
-        const unsigned int o00_d01_line_ix = o00_d01_wall_line_ix[ cell_boundary_ix ];
-        unsigned int base_d10 = i10;
-        unsigned int base_d01 = i01;
-        unsigned int curr_d10_0 = o00_d10_chain_offsets[ o00_d10_line_ix ];
-        unsigned int curr_d10_1 = o00_d10_chain_offsets[ o00_d10_line_ix + 1 ];
-        unsigned int curr_d01_0 = o00_d01_chain_offsets[ o00_d01_line_ix ];
-        unsigned int curr_d01_1 = o00_d01_chain_offsets[ o00_d01_line_ix + 1 ];
-        while( (curr_d10_0 != curr_d10_1) || (curr_d01_0 != curr_d01_1 ) ) {
-            LOGGER_INVARIANT_LESS_EQUAL( log, curr_d10_0, curr_d10_1 );
-            LOGGER_INVARIANT_LESS_EQUAL( log, curr_d01_0, curr_d01_1 );
-            if( (curr_d10_1-curr_d10_0) > (curr_d01_1-curr_d01_0) ) {
-                curr_d10_1 = curr_d10_1 - 1u;
-                const unsigned int vertex_ix = o00_d10_chains[ curr_d10_1 ];
-                bridge.addTriangle( Bridge::ORIENTATION_K, h.m_fault,
-                                    h.m_cell_below,
-                                    true,
-                                    false,
-                                    false,
-                                    h.m_cell_above,
-                                    true,
-                                    false,
-                                    false,
-                                    base_d10, vertex_ix, base_d01 );
-                base_d10 = vertex_ix;
-            }
-            else {
-                curr_d01_1 = curr_d01_1 - 1u;
-                const unsigned int vertex_ix = o00_d01_chains[ curr_d01_1 ];
-                bridge.addTriangle( Bridge::ORIENTATION_K, h.m_fault,
-                                    h.m_cell_below,
-                                    true,
-                                    false,
-                                    false,
-                                    h.m_cell_above,
-                                    true,
-                                    false,
-                                    false,
-                                    vertex_ix, base_d01, base_d10 );
-                base_d01 = vertex_ix;
-            }
-        }
-        bridge.addTriangle( Bridge::ORIENTATION_K, h.m_fault,
-                            h.m_cell_below,
-                            true,
-                            true,
-                            false,
-                            h.m_cell_above,
-                            true,
-                            true,
-                            false,
-                            base_d10, i00, base_d01 );
-        //LOGGER_DEBUG( log, "emit "
-        //              << base_d10
-        //              << ", " << i00
-        //              << ", " << base_d01 );
-        // triangulate 11, 10, 01
-        const unsigned int wall_line_ix_o01_d10 = o01_d10_wall_line_ix[ cell_boundary_ix ];
-        const unsigned int wall_line_ix_o10_d01 = o10_d01_wall_line_ix[ cell_boundary_ix ];
-        base_d10 = i01;
-        base_d01 = i10;
-        curr_d10_0 = o01_d10_chain_offsets[ wall_line_ix_o01_d10 ];
-        curr_d10_1 = o01_d10_chain_offsets[ wall_line_ix_o01_d10 + 1 ];
-        curr_d01_0 = o10_d01_chain_offsets[ wall_line_ix_o10_d01 ];
-        curr_d01_1 = o10_d01_chain_offsets[ wall_line_ix_o10_d01 + 1 ];
-        while( (curr_d10_0 != curr_d10_1) || (curr_d01_0 != curr_d01_1 ) ) {
-            LOGGER_INVARIANT_LESS_EQUAL( log, curr_d10_0, curr_d10_1 );
-            LOGGER_INVARIANT_LESS_EQUAL( log, curr_d01_0, curr_d01_1 );
-            if( (curr_d10_1-curr_d10_0) > (curr_d01_1-curr_d01_0) ) {
-                const unsigned int vertex_ix = o01_d10_chains[ curr_d10_0 ];
-                bridge.addTriangle( Bridge::ORIENTATION_K, h.m_fault,
-                                    h.m_cell_below,
-                                    true,
-                                    false,
-                                    false,
-                                    h.m_cell_above,
-                                    true,
-                                    false,
-                                    false,
-                                    base_d10, vertex_ix, base_d01 );
-                base_d10 = vertex_ix;
-                curr_d10_0 = curr_d10_0 + 1u;
-            }
-            else {
-                const unsigned int vertex_ix = o10_d01_chains[ curr_d01_0 ];
-                bridge.addTriangle( Bridge::ORIENTATION_K, h.m_fault,
-                                    h.m_cell_below,
-                                    true,
-                                    false,
-                                    false,
-                                    h.m_cell_above,
-                                    true,
-                                    false,
-                                    false,
-                                    vertex_ix, base_d01, base_d10 );
-                base_d01 = vertex_ix;
-                curr_d01_0 = curr_d01_0 + 1u;
-            }
-        }
-        bridge.addTriangle( Bridge::ORIENTATION_K, h.m_fault,
-                            h.m_cell_below,
-                            true,
-                            true,
-                            false,
-                            h.m_cell_above,
-                            true,
-                            true,
-                            false,
-                            base_d10, i11, base_d01 );
-        //LOGGER_DEBUG( log, "emit "
-        //              << base_d10
-        //              << ", " << i11
-        //              << ", " << base_d01 );
-    }
-#endif
-
 }
 
 
-template<typename Bridge>
+template<typename Tessellation>
 void
-CornerPointTessellator<Bridge>::wallEdges( Bridge&                           bridge,
-                                           const std::vector<WallLine>&      boundaries,
-                                           const std::vector<Intersection>&  intersections,
-                                           const std::vector<unsigned int>&  chains,
-                                           const unsigned int* const         chain_offsets )
+CornerPointTessellator<Tessellation>::wallEdges( const vector<WallLine>&      boundaries,
+                                                 const vector<Intersection>&  intersections,
+                                                 const vector<Index>&  chains,
+                                                 const Index* const         chain_offsets )
 {
     for( size_t b=0; b<boundaries.size(); b++ ) {
         const WallLine& wl = boundaries[b];
-        unsigned int cell_over[2];
-        unsigned int cell_under[2];
+        Index cell_over[2];
+        Index cell_under[2];
         cell_over[0]  = wl.m_cell_over[0];
         cell_over[1]  = wl.m_cell_over[1];
         cell_under[0] = wl.m_cell_under[0];
         cell_under[1] = wl.m_cell_under[1];
-        unsigned other_side = wl.m_side==1 ? 0 : 1;
-        unsigned int end0 = wl.m_ends[0];
+        Index other_side = wl.m_side==1 ? 0 : 1;
+        Index end0 = wl.m_ends[0];
         for( size_t c=chain_offsets[b]; c!=chain_offsets[b+1]; c++ ) {
             const Intersection& i = intersections[ chains[c] ];
             const WallLine& ol = boundaries[ i.m_upwrd_bndry_ix == b ? i.m_upwrd_bndry_ix : i.m_dnwrd_bndry_ix ];
             cell_over[ other_side ]  = ol.m_cell_over[ other_side ];
             cell_under[ other_side ] = ol.m_cell_under[ other_side ];
 
-            unsigned int end1 = i.m_vtx_ix;
-            bridge.addEdge( end0, end1, cell_over[0], cell_under[0], cell_over[1], cell_under[1] );
+            Index end1 = i.m_vtx_ix;
+            m_tessellation.addEdge( end0, end1, cell_over[0], cell_under[0], cell_over[1], cell_under[1] );
             end0 = end1;
         }
-        unsigned int end1 = wl.m_ends[1];
-        bridge.addEdge( end0, end1, cell_over[0], cell_under[0], cell_over[1], cell_under[1] );
+        Index end1 = wl.m_ends[1];
+        m_tessellation.addEdge( end0, end1, cell_over[0], cell_under[0], cell_over[1], cell_under[1] );
     }
 }
 
-template<typename Bridge>
+
+template<typename Tessellation>
 void
-CornerPointTessellator<Bridge>::intersectionArcsPolygon( Bridge& bridge,
-                                                        std::vector<typename Bridge::Segment>&  segments,
-                                                        const typename Bridge::Orientation  orientation,
-                                                        const std::vector<Intersection>&    intersections,
-                                                        const unsigned int first_upper_isec,
-                                                        const unsigned int first_lower_isec )
+CornerPointTessellator<Tessellation>::stitchPillarsHandleIntersections( const Orientation                 orientation,
+                                                                        const vector<WallLine>&      boundaries,
+                                                                        const vector<Intersection>&  intersections,
+                                                                        const vector<Index>&  chains,
+                                                                        const Index* const         chain_offsets )
 {
-    typedef typename Bridge::Segment Segment;
+    Logger log = getLogger( package + ".stitchPillarsHandleIntersections" );
 
-    Logger log = getLogger( "CPTessFactory.intersectionArcsPolygon" );
+    vector<Segment> segments;
 
-    // Follow lower arc forward
-    bool hit_pillar = false;
+    // First, process as polygons that are attached at pillar 0. We start by
+    // pairing adjacent edges and follow them out until a common intersection or
+    // until they hit pillar 1.
+    for( size_t b=0; (b+1u)<boundaries.size(); b++ ) {
+        const WallLine& u_0_1_l = boundaries[b+1];
+        const WallLine& l_0_1_l = boundaries[b];
 
-    unsigned int i_l_1 = intersections[ first_upper_isec ].m_nxt_dnwrd_isec_ix;
-    if( (end_flag & i_l_1 ) == 0 ) {
-        segments.push_back( Segment( intersections[ i_l_1 ].m_vtx_ix, 3 ) );
-
-        unsigned int i_l_2 = intersections[ i_l_1 ].m_nxt_upwrd_isec_ix;
-        if( (end_flag & i_l_2 ) == 0 ) {
-            segments.push_back( Segment(intersections[ i_l_2 ].m_vtx_ix, 3 ) );
-        }
-        else {
-            segments.push_back( Segment( end_mask & i_l_2, 3 ) );
-            hit_pillar = true;
-        }
-    }
-    else {
-        segments.push_back( Segment( end_mask & i_l_1, 3 ) );
-        hit_pillar = true;
-    }
-
-    // Follow upper arc
-    std::vector<Segment> segments_u;
-    unsigned int i_u_1 = intersections[ first_lower_isec ].m_nxt_upwrd_isec_ix;
-    if( (end_flag & i_u_1) == 0 ) {
-        segments_u.push_back( Segment( intersections[ i_u_1 ].m_vtx_ix, 3 ) );
-
-        unsigned int i_u_2 = intersections[ i_u_1 ].m_nxt_dnwrd_isec_ix;
-        if( (end_flag & i_u_2 ) == 0 ) {
-            segments_u.push_back( Segment( intersections[ i_u_2 ].m_vtx_ix, 3 ) );
-        }
-        else {
-            segments_u.push_back( Segment( end_mask & i_u_2, 3 ) );
-            LOGGER_INVARIANT_EQUAL( log, hit_pillar, true );
-       }
-    }
-    else {
-        segments_u.push_back( Segment( end_mask & i_u_1, 3 ) );
-        LOGGER_INVARIANT_EQUAL( log, hit_pillar, true );
-    }
-
-    if( hit_pillar ) {
-        LOGGER_INVARIANT_LESS_EQUAL( log, segments.back().m_v, segments_u.back().m_v );
-        // vertices along pillar 1
-        for( unsigned int v=segments.back().m_v+1; v<=segments_u.back().m_v; v++ ) {
-            segments.push_back( Segment( v, 3 ) );
-        }
-    }
-    else {
-        LOGGER_INVARIANT_EQUAL( log, segments_u.back().m_v, segments.back().m_v );
-    }
-    segments_u.pop_back();
-
-    for( auto it=segments_u.rbegin(); it!=segments_u.rend(); ++it ) {
-        segments.push_back( *it );
-    }
-
-
-
-    /*
-    for(size_t i=0; i<intersections.size(); i++ ) {
-
-        segments_u.clear();
-
-
-        // upper arc
-
-
-        segments.clear();
-        segments.resize( segments.size()+1 );
-        segments.back().m_v = intersections[i].m_vtx_ix;
-        segments.back().m_flags = 2;
-
-        for( auto it=segments_l.begin(); it!=segments_l.end(); ++it ) {
-            segments.push_back( *it );
-        }
-        if( lower_hit_pillar ) {
-            for( unsigned int v=segments_l.back().m_v+1; v<segments_u.back().m_v; v++ ) {
-                segments.resize( segments.size()+1 );
-                segments.back().m_v = v;
-                segments.back().m_flags = 2;
+        if( u_0_1_l.m_side == 3 && l_0_1_l.m_side == 3 ) {      // Non-fault (fully matching) interface
+            Index cells[2];
+            cells[0] = l_0_1_l.m_cell_over[0];
+            cells[1] = l_0_1_l.m_cell_over[1];
+            LOGGER_INVARIANT_EQUAL( log, cells[0], u_0_1_l.m_cell_under[0] );
+            LOGGER_INVARIANT_EQUAL( log, cells[1], u_0_1_l.m_cell_under[1] );
+            if( cells[0] == IllegalIndex && cells[1] == IllegalIndex ) {
+                continue;
             }
-        }
-
-        segments_u.pop_back();
-        for(auto it=segments_u.end(); it!=segments_u.begin(); --it ) {
-            segments.push_back( *it );
-        }
-
-
-        LOGGER_INVARIANT_EQUAL( log, upper_hit_pillar, lower_hit_pillar );
-
-        LOGGER_DEBUG( log, "segments:" << segments.size()  << " uhp=" << upper_hit_pillar);
-
-*/
-}
-
-
-template<typename Bridge>
-void
-CornerPointTessellator<Bridge>::stitchPillarsHandleIntersections( Bridge&                             bridge,
-                                                                  const typename Bridge::Orientation  orientation,
-                                                                  const std::vector<WallLine>&        boundaries,
-                                                                  const std::vector<Intersection>&    intersections,
-                                                                  const std::vector<unsigned int>&    chains,
-                                                                  const unsigned int* const           chain_offsets )
-{
-    typedef typename Bridge::Segment Segment;
-
-    Logger log = getLogger( "CPTessFactory.stitchPillarsHandleIntersections" );
-
-#if 1
-
-    std::vector<Segment> segments;
-
-/*
-    for(size_t b=0; b<boundaries.size(); b++) {
-
-        const unsigned int ix_c0 = boundaries[b].m_ends[0];     // index at pillar 0
-
-
-
-        unsigned int ix_c1, id_c1;                              // index and id at pillar 1
-        bool is_isec_c1;
-        if( chain_offsets[b] == chain_offsets[b+1] ) {          // no intersections
-            ix_c1 = boundaries[b].m_ends[1];
-            id_c1 = end_flag | ix_c1;
-            is_isec_c1 = false;
-        }
-        else {
-            id_c1 = chains[ chain_offsets[b] ];
-            ix_c1 = intersections[id_c1].m_vtx_ix;
-            is_isec_c1 = true;
-        }
-        const unsigned ccu_a = boundaries[b].m_cell_under[0];  // cells in this span
-        const unsigned ccu_b = boundaries[b].m_cell_under[1];
-        const bool pinch_0 = (ix_c0 == ix_p0);
-        const bool pinch_1 = (ix_c1 == ix_p1);
-
-        bool c_a_e = (boundaries[b].m_side & 0x1) != 0u;
-        bool c_b_e = (boundaries[b].m_side & 0x2) != 0u;
-
-        if( b > 0 && (ccu_a != ~0u || ccu_b != ~0u) ) {       // add first triangle/quad
-            bool fault = true;
-            if( boundaries[b-1].m_side == 0x3 && boundaries[b].m_side == 0x3 ) {
-                if( boundaries[b-1].m_match_over ) {
-                    fault = false;
-                }
+            segments.clear();
+            for( Index v=u_0_1_l.m_ends[0]; v>l_0_1_l.m_ends[0]; v-- ) {
+                segments.push_back( Segment( v, true, true ) );
             }
-
-            if( !pinch_0 ) {
-                bridge.addTriangle( orientation, fault,
-                                    ccu_b,
-                                    pinch_1 ? c_b_e : false,
-                                    true,
-                                    p_b_e,
-                                    ccu_a,
-                                    pinch_1 ? c_a_e : false,
-                                    true,
-                                    p_a_e,
-                                    ix_p1, ix_c0, ix_p0 );
+            segments.push_back( Segment( l_0_1_l.m_ends[0], true, true ) );
+            for( Index v=l_0_1_l.m_ends[1]; v<=u_0_1_l.m_ends[1]; v++ ) {
+                segments.push_back( Segment( v, true, true ) );
             }
+            m_tessellation.addPolygon( Interface( cells[0], cells[1], orientation, false ),
+                                       segments.data(), segments.size() );
+        }
+        else {                                                  // Fault (partially matching) interface
+            Index cell[2];
+            cell[0] = l_0_1_l.m_cell_over[0];
+            cell[1] = l_0_1_l.m_cell_over[1];
+            LOGGER_INVARIANT_EQUAL( log, u_0_1_l.m_cell_under[0], cell[0] );
+            LOGGER_INVARIANT_EQUAL( log, u_0_1_l.m_cell_under[1], cell[1] );
 
-            if( !pinch_1 ) {
-                bridge.addTriangle( orientation, fault,
-                                    ccu_b,
-                                    pinch_0 ? p_b_e : false,
-                                    !is_isec_c1 && !is_isec_p1 ? true : false,
-                                    c_b_e,
-                                    ccu_a,
-                                    pinch_0 ? p_a_e : false,
-                                    !is_isec_c1 && !is_isec_p1 ? true : false,
-                                    c_a_e,
-                                    ix_c0, ix_p1, ix_c1 );
+            if( cell[0] == IllegalIndex && cell[1] == IllegalIndex ) {
+                continue;
             }
-        }
-        if( front.empty() || front.back() != id_c1 ) {          // add to front
-            front.push_back( id_c1 );
-        }
-        ix_p0 = ix_c0;
-        ix_p1 = ix_c1;
-        p_a_e = c_a_e;
-        p_b_e = c_b_e;
-        is_isec_p1 = is_isec_c1;
-    }
-*/
+            segments.clear();
 
-    for(size_t i=0; i<intersections.size(); i++ ) {
-
-        segments.clear();
-        segments.push_back( Segment( intersections[i].m_vtx_ix, 3 ) );
-
-        intersectionArcsPolygon( bridge,
-                                 segments,
-                                 orientation,
-                                 intersections,
-                                 i,
-                                 i );
-        bridge.addPolygon( orientation, true, 0, 0,
-                           segments.data(), segments.size() );
-    }
-
-#else
-
-
-    // triangulate up to first intersections and extract front
-    std::vector<unsigned int> front;
-    front.reserve( intersections.size() + boundaries.size() );
-    unsigned int ix_p0 = 0u;
-    unsigned int ix_p1 = 0u;
-    bool is_isec_p1 = false;
-
-    bool p_a_e = false;
-    bool p_b_e = false;
-
-    for(size_t b=0; b<boundaries.size(); b++) {
-        const unsigned int ix_c0 = boundaries[b].m_ends[0];     // index at pillar 0
-        unsigned int ix_c1, id_c1;                              // index and id at pillar 1
-        bool is_isec_c1;
-        if( chain_offsets[b] == chain_offsets[b+1] ) {          // no intersections
-            ix_c1 = boundaries[b].m_ends[1];
-            id_c1 = end_flag | ix_c1;
-            is_isec_c1 = false;
-        }
-        else {
-            id_c1 = chains[ chain_offsets[b] ];
-            ix_c1 = intersections[id_c1].m_vtx_ix;
-            is_isec_c1 = true;
-        }
-        const unsigned ccu_a = boundaries[b].m_cell_under[0];  // cells in this span
-        const unsigned ccu_b = boundaries[b].m_cell_under[1];
-        const bool pinch_0 = (ix_c0 == ix_p0);
-        const bool pinch_1 = (ix_c1 == ix_p1);
-
-        bool c_a_e = (boundaries[b].m_side & 0x1) != 0u;
-        bool c_b_e = (boundaries[b].m_side & 0x2) != 0u;
-
-        if( b > 0 && (ccu_a != ~0u || ccu_b != ~0u) ) {       // add first triangle/quad
-            bool fault = true;
-            if( boundaries[b-1].m_side == 0x3 && boundaries[b].m_side == 0x3 ) {
-                if( boundaries[b-1].m_match_over ) {
-                    fault = false;
-                }
+            // follow upper arc backwards from towards pilalr1 to pillar 0
+            bool process_pillar_1 = false;
+            Index u_v_1;
+            if( chain_offsets[b+1] == chain_offsets[b+2] ) {
+                // First intersection is on pillar
+                u_v_1 = u_0_1_l.m_ends[1];
+                process_pillar_1 = true;
             }
-
-            if( !pinch_0 ) {
-                bridge.addTriangle( orientation, fault,
-                                    ccu_b,
-                                    pinch_1 ? c_b_e : false,
-                                    true,
-                                    p_b_e,
-                                    ccu_a,
-                                    pinch_1 ? c_a_e : false,
-                                    true,
-                                    p_a_e,
-                                    ix_p1, ix_c0, ix_p0 );
-            }
-
-            if( !pinch_1 ) {
-                bridge.addTriangle( orientation, fault,
-                                    ccu_b,
-                                    pinch_0 ? p_b_e : false,
-                                    !is_isec_c1 && !is_isec_p1 ? true : false,
-                                    c_b_e,
-                                    ccu_a,
-                                    pinch_0 ? p_a_e : false,
-                                    !is_isec_c1 && !is_isec_p1 ? true : false,
-                                    c_a_e,
-                                    ix_c0, ix_p1, ix_c1 );
-            }
-        }
-        if( front.empty() || front.back() != id_c1 ) {          // add to front
-            front.push_back( id_c1 );
-        }
-        ix_p0 = ix_c0;
-        ix_p1 = ix_c1;
-        p_a_e = c_a_e;
-        p_b_e = c_b_e;
-        is_isec_p1 = is_isec_c1;
-    }
-
-
-    // move front forward step by step
-    std::vector<unsigned int> new_front;
-    new_front.reserve( intersections.size() + boundaries.size() );
-    for( unsigned int iteration = 0; iteration < 1000; iteration++ ) {
-        // search for intersection closest to pillar 0
-        unsigned int k = ~0u;
-        float d = std::numeric_limits<float>::max();
-        for( unsigned int i=0; i<front.size(); i++ ) {
-            if( (end_flag&front[i]) == 0 ) {
-                if( intersections[ front[i] ].m_distance < d ) {
-                    k = i;
-                    d = intersections[ front[i] ].m_distance;
-                }
-            }
-        }
-        new_front.clear();
-        if( k != ~0u ) {
-            // expand at front item k
-            for( unsigned int i=0; i<front.size(); i++ ) {
-
-                // triangulate triangle below split if necessary
-                if( i+1 == k ) {
-                    /*     |  / <----- isec.upwrd
-                    //     | /  split
-                    //     |/
-                    // i+1 b-----c- <- isec.dnwrd
-                    //     |    /
-                    //     |  --  <- ?
-                    //   i a-/
-                    //
-                    */
-
-                    //const Intersection& a_isec = intersections[ front[i]   ];
-                    const Intersection& b_isec = intersections[ front[i+1] ];
-
-                    unsigned int id_a = front[i];
-                    unsigned int id_b = front[i+1];
-                    unsigned int id_c = b_isec.m_nxt_dnwrd_isec_ix;
-                    if( id_a != id_b && id_b != id_c && id_c != id_a ) {
-                        // determine if we should produce a boundary line
-                        const bool is_isec_a = (id_a&end_flag)==0;
-                        const bool is_isec_c = (id_c&end_flag)==0;
-                        // determine vertex indices of the triangle
-                        unsigned int ix_a = is_isec_a ? intersections[ id_a ].m_vtx_ix : (id_a&end_mask);
-                        unsigned int ix_b = intersections[ id_b ].m_vtx_ix;
-                        unsigned int ix_c = is_isec_c ? intersections[ id_c ].m_vtx_ix : (id_c&end_mask);
-                        // determine which cells that face this triangle
-                        LOGGER_INVARIANT( log, b_isec.m_dnwrd_bndry_ix < boundaries.size() );
-                        LOGGER_INVARIANT( log, b_isec.m_upwrd_bndry_ix < boundaries.size() );
-                        unsigned int side1 = boundaries[ b_isec.m_upwrd_bndry_ix ].m_side - 1u;
-                        unsigned int side2 = boundaries[ b_isec.m_dnwrd_bndry_ix ].m_side - 1u;
-                        LOGGER_INVARIANT( log, side1 < 2 );
-                        LOGGER_INVARIANT( log, side2 < 2 );
-                        LOGGER_INVARIANT( log, side1 != side2 );
-                        unsigned int cells_curr[2];
-                        cells_curr[ side1 ] = boundaries[ b_isec.m_upwrd_bndry_ix ].m_cell_under[ side1 ];
-                        cells_curr[ side2 ] = boundaries[ b_isec.m_dnwrd_bndry_ix ].m_cell_under[ side2 ];
-                        if( cells_curr[0] != ~0u || cells_curr[1] != ~0u ) {
-
-                            bool edge_ac_pillar = !is_isec_a && !is_isec_c;
-
-                            bool edge_cb[2];
-
-                            edge_cb[ side1 ] = false;
-                            edge_cb[ side2 ] = boundaries[ b_isec.m_dnwrd_bndry_ix ].m_cell_over[  side2 ]
-                                            != boundaries[ b_isec.m_dnwrd_bndry_ix ].m_cell_under[ side2 ];
-
-
-                            bridge.addTriangle( orientation, true,
-                                                cells_curr[1],
-                                                edge_ac_pillar,
-                                                edge_cb[1],
-                                                false,
-                                                cells_curr[0],
-                                                edge_ac_pillar,
-                                                edge_cb[0],
-                                                false,
-                                                ix_a, ix_c, ix_b );
-                        }
+            else {
+                // First intersection is on wall
+                const Intersection& u_1_isec = intersections[ chains[ chain_offsets[b+1] ] ];
+                if( u_1_isec.m_dnwrd_bndry_ix != (b+1) ) {
+                    // We haven't turned downwards yet
+                    const WallLine& u_1_2_l = boundaries[ u_1_isec.m_dnwrd_bndry_ix ];
+                    NextIntersection ni = u_1_isec.m_nxt_dnwrd_isec_ix;
+                    Index u_v_2;
+                    if( ni.isIntersection() ) {
+                        // Second intersection is on wall
+                        u_v_2 = intersections[ ni.intersection() ].m_vtx_ix;
                     }
-                    new_front.push_back( front[i] );
+                    else {
+                        // Second intersection is on pillar
+                        u_v_2 = ni.vertex();
+                        process_pillar_1 = true;
+                    }
+
+                    segments.push_back( Segment( u_v_2, u_1_2_l.m_side ) );
                 }
-                // split intersection and triangulate
-                else if( i == k ) {
-                    const Intersection& isec = intersections[ front[i] ];
+                u_v_1 = u_1_isec.m_vtx_ix;
+            }
+            segments.push_back( Segment( u_v_1, u_0_1_l.m_side ) );
 
-                    // split from intersection into two items
-                    unsigned int nxt_dnwrd_id = isec.m_nxt_dnwrd_isec_ix;
-                    unsigned int nxt_upwrd_id = isec.m_nxt_upwrd_isec_ix;
-                    if( new_front.empty() || new_front.back() != nxt_dnwrd_id ) {
-                        new_front.push_back( nxt_dnwrd_id );
-                    }
-                    if( i+1 == front.size() || front[i+1] != nxt_upwrd_id ) {
-                        new_front.push_back( nxt_upwrd_id );
-                    }
-                    // determine if we should produce a boundary line
-                    const bool is_isec_b = (nxt_dnwrd_id&end_flag) == 0;
-                    const bool is_isec_c = (nxt_upwrd_id&end_flag) == 0;
-                    // determine vertex indices of the triangle
-                    unsigned int ix_a = isec.m_vtx_ix;
-                    unsigned int ix_b = is_isec_b ? intersections[ nxt_dnwrd_id ].m_vtx_ix : (nxt_dnwrd_id & end_mask);
-                    unsigned int ix_c = is_isec_c ? intersections[ nxt_upwrd_id ].m_vtx_ix : (nxt_upwrd_id & end_mask);
-                    // determine which cells that face this triangle
-                    unsigned int side1 = boundaries[ isec.m_upwrd_bndry_ix ].m_side - 1u;
-                    unsigned int side2 = boundaries[ isec.m_dnwrd_bndry_ix ].m_side - 1u;
-                    LOGGER_INVARIANT( log, side1 < 2 );
-                    LOGGER_INVARIANT( log, side2 < 2 );
-                    LOGGER_INVARIANT( log, side1 != side2 );
-                    unsigned int cells[2];
-                    cells[ side1 ] = boundaries[ isec.m_upwrd_bndry_ix ].m_cell_under[ side1 ];
-                    cells[ side2 ] = boundaries[ isec.m_dnwrd_bndry_ix ].m_cell_over[ side2 ];
-                    if( cells[0] != ~0u || cells[1] != ~0u ) {
-                        bool edges_above[2], edges_below[2];
-                        edges_above[ side1 ] = boundaries[ isec.m_upwrd_bndry_ix ].m_cell_under[ side1 ]
-                                            != boundaries[ isec.m_upwrd_bndry_ix ].m_cell_over[ side1 ];
-                        edges_above[ side2 ] = false;
-                        edges_below[ side2 ] = boundaries[ isec.m_dnwrd_bndry_ix ].m_cell_under[ side2 ]
-                                            != boundaries[ isec.m_dnwrd_bndry_ix ].m_cell_over[ side2 ];
-                        edges_below[ side1 ] = false;
+            // from (b+1).end[0] to (b).end[0]
+            for(Index v=boundaries[b+1].m_ends[0]; v>boundaries[b].m_ends[0]; v-- ) {
+                segments.push_back( Segment(v, true, true)  );
+            }
+            segments.push_back( Segment(boundaries[b].m_ends[0], boundaries[b].m_side )  );
 
-                        bridge.addTriangle( orientation, true,
-                                            cells[1],
-                                            !is_isec_b && !is_isec_c ? true : false,
-                                            edges_above[1],
-                                            edges_below[1],
-                                            cells[0],
-                                            !is_isec_b && !is_isec_c ? true : false,
-                                            edges_above[0],
-                                            edges_below[0],
-                                            ix_b, ix_c, ix_a );
-                    }
-                }
-                // triangulate triangle above if necessary
-                else if( i == k+1 ) {
-
-                    /*    c
-                    //    |
-                    //    |
-                    //    a-----b  <-- isec.upwrd
-                    //    |\
-                    //    | \  <-- isec.dwnwrd
-                    */
-
-                    const Intersection& isec = intersections[ front[i-1] ];
-
-                    unsigned int id_a = front[i-1];
-                    unsigned int id_b = isec.m_nxt_upwrd_isec_ix;
-                    unsigned int id_c = front[i];
-                    if( id_a != id_b && id_b != id_c && id_c != id_a ) {
-                        // determine if we should produce a boundary line
-                        const bool is_isec_b = (id_b&end_flag) == 0;
-                        const bool is_isec_c = (id_c&end_flag) == 0;
-                        // determine vertex indices of the triangle
-                        unsigned int ix_a = isec.m_vtx_ix;
-                        unsigned int ix_b = is_isec_b ? intersections[ id_b ].m_vtx_ix : (id_b&end_mask);
-                        unsigned int ix_c = is_isec_c ? intersections[ id_c ].m_vtx_ix : (id_c&end_mask);
-                        // determine which cells that face this triangle
-                        unsigned int side1 = boundaries[ isec.m_upwrd_bndry_ix ].m_side - 1u;
-                        unsigned int side2 = boundaries[ isec.m_dnwrd_bndry_ix ].m_side - 1u;
-                        LOGGER_INVARIANT( log, side1 < 2 );
-                        LOGGER_INVARIANT( log, side2 < 2 );
-                        LOGGER_INVARIANT( log, side1 != side2 );
-                        unsigned int cells[2];
-                        cells[ side1 ] = boundaries[ isec.m_upwrd_bndry_ix ].m_cell_over[ side1 ];
-                        cells[ side2 ] = boundaries[ isec.m_dnwrd_bndry_ix ].m_cell_over[ side2 ];
-                        if( cells[0] != ~0u || cells[1] != ~0u ) {
-
-                            bool edge_bc = !is_isec_b && !is_isec_c;
-
-                            bool edge_ab[2];
-                            edge_ab[ side2 ] = false;
-                            edge_ab[ side1 ] = boundaries[ isec.m_upwrd_bndry_ix ].m_cell_over[  side1 ]
-                                            != boundaries[ isec.m_upwrd_bndry_ix ].m_cell_under[ side1 ];
-
-                            bridge.addTriangle( orientation, true,
-                                                cells[1],
-                                                edge_bc,
-                                                false,
-                                                edge_ab[1],
-                                                cells[0],
-                                                edge_bc,
-                                                false,
-                                                edge_ab[0],
-                                                ix_b, ix_c, ix_a );
-                        }
-                    }
-                    new_front.push_back( front[i] );
+            // follow lower arc forwards from pillar 0 towards pillar 1
+            if( chain_offsets[b] == chain_offsets[b+1] ) {
+                // First intersection on pillar
+                LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
+                if( segments.front().vertex() == boundaries[b].m_ends[1] ) {
+                    // Loop is closed
+                    process_pillar_1 = false;
                 }
                 else {
-                    new_front.push_back( front[i] );
+                    segments.push_back( Segment( boundaries[b].m_ends[1], true, true ) );
                 }
+            }
+            else {
+                // First intersection is on wall
+                const Intersection& l_1_isec = intersections[ chains[ chain_offsets[b] ] ];
+                if( l_1_isec.m_upwrd_bndry_ix == b ) {
+                    // We already moving upwards, should close the loop
+                    LOGGER_INVARIANT_EQUAL( log, segments.front().vertex(), l_1_isec.m_vtx_ix );
+                }
+                else {
+                    const WallLine& l_1_2_l = boundaries[ l_1_isec.m_upwrd_bndry_ix ];
+                    segments.push_back( Segment( l_1_isec.m_vtx_ix, l_1_2_l.m_side ) );
 
+                    NextIntersection l_2_ix = l_1_isec.m_nxt_upwrd_isec_ix;
+                    if( l_2_ix.isIntersection() ) {
+                        // Second intersection is on wall, and we should have closed the loop
+                        const Intersection& l_2_isec = intersections[ l_2_ix.intersection() ];
+                        LOGGER_INVARIANT_EQUAL( log, process_pillar_1, false );
+                        LOGGER_INVARIANT_EQUAL( log, segments.front().vertex(), l_2_isec.m_vtx_ix );
+                    }
+                    else if( segments.front().vertex() == l_2_ix.vertex() ) {
+                        // Second intersection is on pillar, and matches upper loop
+                        LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
+                        process_pillar_1 = false;
+                    }
+                    else {
+                        // Second intersection is on pillar, no match, so we must close the loop
+                        LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
+                        segments.push_back( Segment( l_2_ix.vertex(), true, true) );
+                    }
+                }
+            }
+            if( process_pillar_1 ) {
+                Index b = segments.front().vertex();
+                Index a = segments.back().vertex();
+                for(Index v=a+1; v<b; v++ ) {
+                    segments.push_back( Segment( v, true, true ) );
+                }
+            }
+            m_tessellation.addPolygon( Interface( boundaries[b].m_cell_over[0],
+                                                  boundaries[b].m_cell_over[1],
+                                                  orientation,
+                                                  true ),
+                                       segments.data(), segments.size() );
+        }
+    }
+
+    // Second, process all polygons that are not attached to pillar 1, but
+    // origins in an intersection and extens towards pillar 1.
+    // The adjacent cells of the polygon are the cell above the downward edge
+    // and below the upward edge.
+    for( size_t i=0; i<intersections.size(); i++ ) {
+        const Intersection& is = intersections[i];
+        const WallLine& u_0_1_l = boundaries[ is.m_upwrd_bndry_ix ];
+        const WallLine& l_0_1_l = boundaries[ is.m_dnwrd_bndry_ix ];
+
+        Index side1 = u_0_1_l.m_side - 1u;
+        Index side2 = l_0_1_l.m_side - 1u;
+
+        Index cell[2];
+        cell[ side1 ] = u_0_1_l.m_cell_under[ side1 ];
+        cell[ side2 ] = l_0_1_l.m_cell_over[  side2 ];
+        if( cell[0] == IllegalIndex && cell[1] == IllegalIndex ) {
+            continue;   // Empty hole
+        }
+
+        segments.clear();
+
+        // Follow upper arc backwards
+        NextIntersection u_1_ix = is.m_nxt_upwrd_isec_ix;
+        bool process_pillar_1 = false;
+        Index v_1;
+        if( u_1_ix.isIntersection() ) {         // First intersection is on wall
+            const Intersection& u_1_isec = intersections[ u_1_ix.intersection() ];
+            const WallLine& u_1_2_l = boundaries[ u_1_isec.m_dnwrd_bndry_ix ];
+            NextIntersection u_2_ix = u_1_isec.m_nxt_dnwrd_isec_ix;
+            Index v_2;
+            if( u_2_ix.isIntersection() ) {     // Second intersection is on wall
+                const Intersection& isec_u_2 = intersections[ u_2_ix.intersection() ];
+                v_2 = isec_u_2.m_vtx_ix;
+                LOGGER_INVARIANT_EQUAL( log, cell[side2], u_1_2_l.m_cell_under[ side2 ] );
+            }
+            else {                              // Second intersection is on pillar
+                v_2 = u_2_ix.vertex();
+                process_pillar_1 = true;
+            }
+            segments.push_back( Segment( v_2, u_1_2_l.m_side ) );
+            v_1 =  u_1_isec.m_vtx_ix;
+        }
+        else {                                  // First intersection is on pillar
+            v_1 = u_1_ix.vertex();
+            process_pillar_1 = true;
+        }
+        segments.push_back( Segment(  v_1, u_0_1_l.m_side ) );
+
+        // Follow lower arc forwards
+        NextIntersection l_1_ix = is.m_nxt_dnwrd_isec_ix;
+        segments.push_back( Segment( is.m_vtx_ix, l_0_1_l.m_side ) );
+
+        if( l_1_ix.isIntersection() ) {
+            // First intersection is on wall, cannot be u_1_ix.
+            const Intersection& l_1_isec = intersections[ l_1_ix.intersection() ];
+            const WallLine& l_1_2_l = boundaries[ l_1_isec.m_upwrd_bndry_ix ];
+
+            segments.push_back( Segment( l_1_isec.m_vtx_ix, l_1_2_l.m_side ) );
+
+            NextIntersection l_2_ix = intersections[l_1_ix.intersection()].m_nxt_upwrd_isec_ix;
+            if( l_2_ix.isIntersection() ) {
+                // Second intersection is on wall, must be identical to upper arc
+                const Intersection& l_2_isec = intersections[ l_2_ix.intersection() ];
+                LOGGER_INVARIANT_EQUAL( log, process_pillar_1, false );
+                LOGGER_INVARIANT_EQUAL( log, cell[side1], l_1_2_l.m_cell_over[ side1 ] );
+                LOGGER_INVARIANT_EQUAL( log, segments.front().vertex(),l_2_isec.m_vtx_ix );
+            }
+            else if( segments.front().vertex() == l_2_ix.vertex() ) {
+                // Second intersection is on pillar and closes loop
+                LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
+                process_pillar_1 = false;
+            }
+            else {
+                // Second intersection is on pillar and doesn't close loop
+                LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
+                segments.push_back( Segment( l_2_ix.vertex(), true, true ) );
             }
         }
-        else {
-            break;
+        else if( segments.front().vertex() == l_1_ix.vertex() ) {
+            // First intersection is on pillar and closes loop
+            LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
+            process_pillar_1 = false;
         }
-        front.swap( new_front );
+        else {
+            // First intersection is on pillar and doesn't close loop
+            LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
+            segments.push_back( Segment( l_1_ix.vertex(), true, true) );
+        }
+
+        if( process_pillar_1 ) {
+            // Add vertices along pillar 1
+            Index b = segments.front().vertex();
+            Index a = segments.back().vertex();
+            for(Index v=a+1; v<b; v++ ) {
+                segments.push_back( Segment( v, true, true ) );
+            }
+        }
+
+        m_tessellation.addPolygon( Interface( cell[0], cell[1],orientation, true),
+                                   segments.data(), segments.size() );
     }
-#endif
 }
 
 
-template<typename Bridge>
+template<typename Tessellation>
 void
-CornerPointTessellator<Bridge>::stitchPillarsNoIntersections( Bridge&                             bridge,
-                                                              const typename Bridge::Orientation  orientation,
-                                                              const std::vector<WallLine>&        boundaries )
+CornerPointTessellator<Tessellation>::stitchPillarsNoIntersections( const Orientation             orientation,
+                                                                    const vector<WallLine>&  boundaries )
 {
-    Logger log = getLogger( "CornerPointTessellator.stitchPillarsNoIntersections" );
+    Logger log = getLogger( package + ".stitchPillarsNoIntersections" );
 
     if( boundaries.empty() ) {
         return;
     }
-    std::vector<typename Bridge::Segment> segments;
+    vector<Segment> segments;
 
     bool edge_under[2] = {
-        boundaries[0].m_cell_over[0] != ~0u,
-        boundaries[0].m_cell_over[1] != ~0u,
+        boundaries[0].m_cell_over[0] != IllegalIndex,
+        boundaries[0].m_cell_over[1] != IllegalIndex,
     };
-    unsigned int l[2] = {
+    Index l[2] = {
             boundaries[0].m_ends[0],
             boundaries[0].m_ends[1]
     };
     for(size_t b=1; b<boundaries.size(); b++) {
-        unsigned int cells[2] = {
+        Index cells[2] = {
             boundaries[b].m_cell_under[0],
             boundaries[b].m_cell_under[1]
         };
-        unsigned int u[2] = {
+        Index u[2] = {
             boundaries[b].m_ends[0],
             boundaries[b].m_ends[1]
         };
@@ -1657,51 +1204,27 @@ CornerPointTessellator<Bridge>::stitchPillarsNoIntersections( Bridge&           
             boundaries[b].m_cell_over[0] != cells[0],
             boundaries[b].m_cell_over[1] != cells[1]
         };
-        if( cells[0] != ~0u || cells[1] != ~0u ) {
-            bool match = (boundaries[b-1].m_side == 3) && (boundaries[b].m_side==3);
-#if 1
+        if( cells[0] != IllegalIndex || cells[1] != IllegalIndex ) {
+            Interface interface( cells[0], cells[1],
+                                 orientation,
+                                 (boundaries[b-1].m_side != 3) || (boundaries[b].m_side!=3) );
+
             LOGGER_INVARIANT_LESS_EQUAL( log, l[1], u[1] );
             LOGGER_INVARIANT_LESS_EQUAL( log, l[0], u[0] );
             segments.clear();
-            for( unsigned int v=l[1]; v<=u[1]; v++ ) {
-                typename Bridge::Segment s;
-                s.m_v = v;
-                s.m_flags = 3u;
-                segments.push_back( s );
+            for( Index v=l[1]; v<=u[1]; v++ ) {
+                segments.push_back( Segment( v, true, true ) );
             }
-            segments.back().m_flags = (edge_over[0]?2:0) | (edge_over[1]?1:0);
-            for( unsigned int v=u[0]+1; v>l[0]; v-- ) {
-                typename Bridge::Segment s;
-                s.m_v = v-1;
-                s.m_flags = 3u;
-                segments.push_back( s );
+            segments.back().setEdges( edge_over[0], edge_over[1] );
+            //segments.back().m_flags = (edge_over[0]?2:0) | (edge_over[1]?1:0);
+            for( Index v=u[0]+1; v>l[0]; v-- ) {
+                segments.push_back( Segment(v-1, true, true ) );
             }
-            segments.back().m_flags = (edge_under[0]?2:0) | (edge_under[1]?1:0);
-            bridge.addPolygon( orientation, !match,
-                               cells[1], cells[0],
-                               segments.data(),
-                               segments.size() );
-#else
-            if( l[0] == u[0] ) {
-                bridge.addTriangle( orientation, !match,
-                                    cells[1], edge_under[1], true, edge_over[1],
-                                    cells[0], edge_under[0], true, edge_over[0],
-                                    l[0], l[1], u[1] );
-            }
-            else if( l[1] == u[1] ) {
-                bridge.addTriangle( orientation, !match,
-                                    cells[1], edge_under[1], edge_over[1], true,
-                                    cells[0], edge_under[0], edge_over[0], true,
-                                    l[0], l[1], u[0] );
-
-            }
-            else {
-                bridge.addQuadrilateral( orientation, !match,
-                                         cells[1], edge_under[1], true, edge_over[1], true,
-                                         cells[0], edge_under[0], true, edge_over[0], true,
-                                         l[0], l[1], u[1], u[0]  );
-            }
-#endif
+            segments.back().setEdges( edge_under[0], edge_under[1] );
+            //segments.back().m_flags = (edge_under[0]?2:0) | (edge_under[1]?1:0);
+            m_tessellation.addPolygon( interface,
+                                       segments.data(),
+                                       segments.size() );
         }
         l[0] = u[0];
         l[1] = u[1];
@@ -1711,77 +1234,76 @@ CornerPointTessellator<Bridge>::stitchPillarsNoIntersections( Bridge&           
 }
 
 
-template<typename Bridge>
+template<typename Tessellation>
 void
-CornerPointTessellator<Bridge>::extractWallLines( std::vector<WallLine>&      wall_lines,
-                                                  unsigned int*               boundary_line_index_a,
-                                                  unsigned int*               boundary_line_index_b,
-                                                  const unsigned int* const   zcorn_ix_a_0,
-                                                  const unsigned int* const   zcorn_ix_a_1,
-                                                  const unsigned int* const   zcorn_ix_b_0,
-                                                  const unsigned int* const   zcorn_ix_b_1,
-                                                  const unsigned int* const   active_cell_list_a,
-                                                  const unsigned int* const   active_cell_list_b,
-                                                  const unsigned int          active_cell_count_a,
-                                                  const unsigned int          active_cell_count_b,
-                                                  const int* const            cell_map_a,
-                                                  const int* const            cell_map_b,
-                                                  const unsigned int          stride,
-                                                  const unsigned int          adjacent_stride )
+CornerPointTessellator<Tessellation>::extractWallLines( vector<WallLine>&   wall_lines,
+                                                        Index*              boundary_line_index_a,
+                                                        Index*              boundary_line_index_b,
+                                                        const Index* const  zcorn_ix_a_0,
+                                                        const Index* const  zcorn_ix_a_1,
+                                                        const Index* const  zcorn_ix_b_0,
+                                                        const Index* const  zcorn_ix_b_1,
+                                                        const Index* const  active_cell_list_a,
+                                                        const Index* const  active_cell_list_b,
+                                                        const Index         active_cell_count_a,
+                                                        const Index         active_cell_count_b,
+                                                        const Index* const  cell_map_a,
+                                                        const Index* const  cell_map_b,
+                                                        const Index         stride,
+                                                        const Index         adjacent_stride )
 {
     // Helper struct for wall lines on one side of the wall
     struct SidedWallLine {
-        unsigned int m_ends[2];
-        unsigned int m_cell_under;
-        unsigned int m_cell_over;
-        unsigned int m_twin_under;
-        unsigned int m_twin_over;
-        unsigned int m_maps_to_merged_ix;
+        Index  m_ends[2];
+        Index  m_cell_under;
+        Index  m_cell_over;
+        Index  m_twin_under;
+        Index  m_twin_over;
+        Index  m_maps_to_merged_ix;
     };
-    Logger log = getLogger( "CPTessFactory.extractBoundaryLinesOnWalls" );
+    Logger log = getLogger( package + ".extractWallLines" );
 
     // Convert to arrays so we can use loops.
-    const unsigned int* zcorn_ix[4] = {
+    const Index* zcorn_ix[4] = {
         zcorn_ix_a_0,
         zcorn_ix_a_1,
         zcorn_ix_b_0,
         zcorn_ix_b_1
     };
-    const unsigned int* active_cell_list[2] = {
+    const Index* active_cell_list[2] = {
         active_cell_list_a,
         active_cell_list_b
     };
-    const unsigned int active_cell_count[2] = {
+    const Index active_cell_count[2] = {
         active_cell_count_a,
         active_cell_count_b
     };
-    const int* cell_map[2] = {
+    const Index* cell_map[2] = {
         cell_map_a,
         cell_map_b
     };
-    unsigned int* boundary_line_index[2] = {
+    Index* boundary_line_index[2] = {
         boundary_line_index_a,
         boundary_line_index_b,
     };
 
 
-
     // Step 1: Extract all wall lines on each side of the wall.
-    std::vector<SidedWallLine> sided_wall_lines[2];
-    for( unsigned int side=0; side<2; side++) {
-        std::vector<SidedWallLine>& current_lines = sided_wall_lines[side];
+    vector<SidedWallLine> sided_wall_lines[2];
+    for( Index side=0; side<2; side++) {
+        vector<SidedWallLine>& current_lines = sided_wall_lines[side];
 
         current_lines.reserve( 2*active_cell_count[ side ] );
 
-        for(unsigned int m=0; m<active_cell_count[ side ]; m++ ) {
-            const unsigned int b0 = zcorn_ix[2*side+0][ 2*m + 0 ];
-            const unsigned int b1 = zcorn_ix[2*side+1][ 2*m + 0 ];
-            const unsigned int t0 = zcorn_ix[2*side+0][ 2*m + 1 ];
-            const unsigned int t1 = zcorn_ix[2*side+1][ 2*m + 1 ];
-            LOGGER_INVARIANT( log, b0 != ~ 0u );
-            LOGGER_INVARIANT( log, b1 != ~ 0u );
-            LOGGER_INVARIANT( log, t0 != ~ 0u );
-            LOGGER_INVARIANT( log, t1 != ~ 0u );
+        for(Index m=0; m<active_cell_count[ side ]; m++ ) {
+            const Index b0 = zcorn_ix[2*side+0][ 2*m + 0 ];
+            const Index b1 = zcorn_ix[2*side+1][ 2*m + 0 ];
+            const Index t0 = zcorn_ix[2*side+0][ 2*m + 1 ];
+            const Index t1 = zcorn_ix[2*side+1][ 2*m + 1 ];
+            LOGGER_INVARIANT( log, b0 != IllegalIndex );
+            LOGGER_INVARIANT( log, b1 != IllegalIndex );
+            LOGGER_INVARIANT( log, t0 != IllegalIndex );
+            LOGGER_INVARIANT( log, t1 != IllegalIndex );
 
             const int k = active_cell_list[side][ m ];
             const int cell_ix  = cell_map[ side   ][ stride*k ];
@@ -1801,8 +1323,8 @@ CornerPointTessellator<Bridge>::extractWallLines( std::vector<WallLine>&      wa
                     SidedWallLine& current_line = current_lines.back();
                     current_line.m_ends[0] = b0;
                     current_line.m_ends[1] = b1;
-                    current_line.m_cell_under = ~0;
-                    current_line.m_cell_over  = ~0;
+                    current_line.m_cell_under = IllegalIndex;
+                    current_line.m_cell_over  = IllegalIndex;
                 }
                 boundary_line_index[side][2*m+0] = current_lines.size()-1u;
                 boundary_line_index[side][2*m+1] = current_lines.size()-1u;
@@ -1819,9 +1341,9 @@ CornerPointTessellator<Bridge>::extractWallLines( std::vector<WallLine>&      wa
                     SidedWallLine& top_line = current_lines.back();
                     top_line.m_ends[0]    = b0;
                     top_line.m_ends[1]    = b1;
-                    top_line.m_cell_under = ~0u;
+                    top_line.m_cell_under = IllegalIndex;
                     top_line.m_cell_over  = cell_ix;
-                    top_line.m_twin_under = ~0u;
+                    top_line.m_twin_under = IllegalIndex;
                     top_line.m_twin_over  = twin_ix;
                 }
                 else {
@@ -1838,9 +1360,9 @@ CornerPointTessellator<Bridge>::extractWallLines( std::vector<WallLine>&      wa
                 top_line.m_ends[0]    = t0;
                 top_line.m_ends[1]    = t1;
                 top_line.m_cell_under = cell_ix;
-                top_line.m_cell_over  = ~0u;
+                top_line.m_cell_over  = IllegalIndex;
                 top_line.m_twin_under = twin_ix;
-                top_line.m_twin_over  = ~0u;
+                top_line.m_twin_over  = IllegalIndex;
                 boundary_line_index[side][2*m+1] = current_lines.size()-1u;
             }
         }
@@ -1850,22 +1372,22 @@ CornerPointTessellator<Bridge>::extractWallLines( std::vector<WallLine>&      wa
     // Step 2: Merge the lines from the two sides.
     wall_lines.clear();
     wall_lines.reserve( sided_wall_lines[0].size() + sided_wall_lines[1].size() );
-    unsigned int i[2] = {0u, 0u };
-    unsigned int cells_below[2] = { ~0u, ~0u };
-    unsigned int twins_above[2] = { ~0u, ~0u };
+    Index i[2] = {0u, 0u };
+    Index cells_below[2] = { IllegalIndex, IllegalIndex };
+    Index twins_above[2] = { IllegalIndex, IllegalIndex };
     while( 1 ) {
 
         // check the current edge on each side to find the lexicographically smallest
-        unsigned int smallest_p0   = ~0u;
-        unsigned int smallest_p1   = ~0u;
-        unsigned int overall_smallest_p1      = ~0u;   // the p1 of the largest edge
-        unsigned int smallest_side = ~0u;
-        for(unsigned int side=0; side<2; side++) {
-            const unsigned int ii = i[side];
-            const std::vector<SidedWallLine>& swls = sided_wall_lines[side];
+        Index smallest_p0   = IllegalIndex;
+        Index smallest_p1   = IllegalIndex;
+        Index overall_smallest_p1      = IllegalIndex;   // the p1 of the largest edge
+        Index smallest_side = IllegalIndex;
+        for(Index side=0; side<2; side++) {
+            const Index ii = i[side];
+            const vector<SidedWallLine>& swls = sided_wall_lines[side];
             if( ii < swls.size() ) {
-                const unsigned int p0 = swls[ii].m_ends[0];
-                const unsigned int p1 = swls[ii].m_ends[1];
+                const Index p0 = swls[ii].m_ends[0];
+                const Index p1 = swls[ii].m_ends[1];
                 overall_smallest_p1 = std::min( overall_smallest_p1, p1 );
                 if( (p0 < smallest_p0 ) ||
                         ( (p0 == smallest_p0 ) &&
@@ -1879,14 +1401,14 @@ CornerPointTessellator<Bridge>::extractWallLines( std::vector<WallLine>&      wa
         }
         if( 2 < smallest_side ) {
             // This may be triggered if edges on a side is decreasing
-            LOGGER_INVARIANT( log, smallest_p0 == ~0u );
-            LOGGER_INVARIANT( log, smallest_p1 == ~0u );
+            LOGGER_INVARIANT( log, smallest_p0 == IllegalIndex );
+            LOGGER_INVARIANT( log, smallest_p1 == IllegalIndex );
             break;
         }
         SidedWallLine& sl = sided_wall_lines[ smallest_side ][ i[smallest_side] ];
 
 
-        unsigned int cells_above[2] = { cells_below[0], cells_below[1] };
+        Index cells_above[2] = { cells_below[0], cells_below[1] };
         cells_above[ smallest_side ] = sl.m_cell_over;
         twins_above[ smallest_side ] = sl.m_twin_over;
 
@@ -1930,9 +1452,9 @@ CornerPointTessellator<Bridge>::extractWallLines( std::vector<WallLine>&      wa
     }
 
 #ifdef CHECK_INVARIANTS
-    for( unsigned int side=0; side<2; side++) {
-        for( unsigned int m=0; m<active_cell_count[side]; m++ ) {
-            for(unsigned int i=0; i<2; i++ ) {
+    for( Index side=0; side<2; side++) {
+        for( Index m=0; m<active_cell_count[side]; m++ ) {
+            for(Index i=0; i<2; i++ ) {
                 SidedWallLine& sl = sided_wall_lines[side][ boundary_line_index[side][2*m+i] ];
                 LOGGER_INVARIANT_EQUAL( log, zcorn_ix[2*side+0][2*m+i], sl.m_ends[0] );
                 LOGGER_INVARIANT_EQUAL( log, zcorn_ix[2*side+1][2*m+i], sl.m_ends[1] );
@@ -1941,43 +1463,42 @@ CornerPointTessellator<Bridge>::extractWallLines( std::vector<WallLine>&      wa
     }
 #endif
     // update sided indices to merged indices
-    for( unsigned int side=0; side<2; side++ ) {
-        for( unsigned int m = 0; m<2*active_cell_count[side]; m++ ) {
+    for( Index side=0; side<2; side++ ) {
+        for( Index m = 0; m<2*active_cell_count[side]; m++ ) {
             LOGGER_INVARIANT( log, boundary_line_index[side][m] < sided_wall_lines[side].size() );
-            const unsigned int sided_ix = boundary_line_index[ side ][ m ];
-            const unsigned int merged_ix = sided_wall_lines[ side ][ sided_ix ].m_maps_to_merged_ix;
+            const Index sided_ix = boundary_line_index[ side ][ m ];
+            const Index merged_ix = sided_wall_lines[ side ][ sided_ix ].m_maps_to_merged_ix;
             boundary_line_index[ side ][ m ] = merged_ix;
         }
     }
 
 #ifdef CHECK_INVARIANTS
-    for( unsigned int side=0; side<2; side++) {
-        for( unsigned int m=0; m<active_cell_count[side]; m++ ) {
-            for(unsigned int i=0; i<2; i++ ) {
+    for( Index side=0; side<2; side++) {
+        for( Index m=0; m<active_cell_count[side]; m++ ) {
+            for(Index i=0; i<2; i++ ) {
                 WallLine& l = wall_lines[ boundary_line_index[side][ 2*m+i ] ];
                 LOGGER_INVARIANT_EQUAL( log, zcorn_ix[2*side+0][2*m+i], l.m_ends[0] );
                 LOGGER_INVARIANT_EQUAL( log, zcorn_ix[2*side+1][2*m+i], l.m_ends[1] );
             }
         }
     }
-    for(unsigned int i=1; i<wall_lines.size(); i++ ) {
+    for(Index i=1; i<wall_lines.size(); i++ ) {
         LOGGER_INVARIANT_EQUAL( log, wall_lines[i-1].m_cell_over[0], wall_lines[i].m_cell_under[0] );
         LOGGER_INVARIANT_EQUAL( log, wall_lines[i-1].m_cell_over[1], wall_lines[i].m_cell_under[1] );
     }
 #endif
 }
 
-template<typename Bridge>
+template<typename Tessellation>
 void
-CornerPointTessellator<Bridge>::intersectWallLines( Bridge&                       bridge,
-                                                    std::vector<Intersection>&    wall_line_intersections,
-                                                    std::vector<unsigned int>&    chains,
-                                                    unsigned int*                 chain_offsets,
-                                                    const std::vector<WallLine>&  wall_lines,
-                                                    const float*                  pillar_a,
-                                                    const float*                  pillar_b )
+CornerPointTessellator<Tessellation>::intersectWallLines( vector<Intersection>&    wall_line_intersections,
+                                                          vector<Index>&    chains,
+                                                          Index*                 chain_offsets,
+                                                          const vector<WallLine>&  wall_lines,
+                                                          const float*                  pillar_a,
+                                                          const float*                  pillar_b )
 {
-    Logger log = getLogger( "CPTessFactory.intersectWallLines" );
+    Logger log = getLogger( package + ".intersectWallLines" );
     if( wall_lines.empty() ) {
         return;
     }
@@ -1993,10 +1514,10 @@ CornerPointTessellator<Bridge>::intersectWallLines( Bridge&                     
     // for 'lowest_at_p0', while the converse is true for 'larger_at_p0', all
     // found intersections come after.
 #ifdef CHECK_INVARIANTS
-    const unsigned int isec_base_offset = wall_line_intersections.size();
+    const Index isec_base_offset = wall_line_intersections.size();
 #endif
 
-    std::vector< std::list<unsigned int> > chains_tmp( wall_lines.size() );
+    vector< std::list<Index> > chains_tmp( wall_lines.size() );
     for( size_t lower = 0; lower < wall_lines.size(); lower++ ) {
         const WallLine& lowest_at_p0 = wall_lines[lower];
 
@@ -2022,9 +1543,8 @@ CornerPointTessellator<Bridge>::intersectWallLines( Bridge&                     
                 // be from different sides.
 
                 LOGGER_INVARIANT( log, (wall_lines[ upper ].m_side ^ wall_lines[ lower ].m_side) == 3 );
-                const unsigned int is_ix = wall_line_intersections.size();
-                const unsigned int vtx_ix = segmentIntersection( bridge,
-                                                                 lowest_at_p0.m_ends[0], lowest_at_p0.m_ends[1],
+                const Index is_ix = wall_line_intersections.size();
+                const Index vtx_ix = segmentIntersection( lowest_at_p0.m_ends[0], lowest_at_p0.m_ends[1],
                                                                  larger_at_p0.m_ends[0], larger_at_p0.m_ends[1],
                                                                  pillar_a,
                                                                  pillar_b );
@@ -2038,12 +1558,6 @@ CornerPointTessellator<Bridge>::intersectWallLines( Bridge&                     
                 i.m_vtx_ix = vtx_ix;
                 i.m_upwrd_bndry_ix = lower;
                 i.m_dnwrd_bndry_ix = upper;
-                i.m_distance = distancePointLineSquared( bridge,
-                                                         vtx_ix,
-                                                         wall_lines.front().m_ends[0],
-                                                         wall_lines.back().m_ends[0] );
-                i.m_nxt_dnwrd_isec_ix = ~0u;
-                i.m_nxt_upwrd_isec_ix = ~0u;
             }
         }
     }
@@ -2064,10 +1578,10 @@ CornerPointTessellator<Bridge>::intersectWallLines( Bridge&                     
 
     for(size_t b_ix=0; b_ix<wall_lines.size(); b_ix++) {
 
-        LOGGER_INVARIANT( log, chain_offsets[b_ix] == ~0u );
+        LOGGER_INVARIANT( log, chain_offsets[b_ix] == IllegalIndex );
         chain_offsets[b_ix] = chains.size();
 
-        const std::list<unsigned int>& chain = chains_tmp[b_ix];
+        const std::list<Index>& chain = chains_tmp[b_ix];
         if( !chain.empty() ) {
 
             for( auto it=chain.begin(); it!=chain.end(); ++it ) {
@@ -2078,29 +1592,29 @@ CornerPointTessellator<Bridge>::intersectWallLines( Bridge&                     
             auto c = p;
             for( c++; c != chain.end(); c++ ) {
                 if( b_ix == wall_line_intersections[*p].m_dnwrd_bndry_ix ) {
-                    wall_line_intersections[ *p ].m_nxt_dnwrd_isec_ix = *c;
+                    wall_line_intersections[ *p ].m_nxt_dnwrd_isec_ix = NextIntersection::intersection( *c );
                 }
                 else if( b_ix == wall_line_intersections[*p].m_upwrd_bndry_ix ) {
-                    wall_line_intersections[ *p ].m_nxt_upwrd_isec_ix = *c;
+                    wall_line_intersections[ *p ].m_nxt_upwrd_isec_ix = NextIntersection::intersection( *c );
                 }
                 p = c;
             }
             if( b_ix == wall_line_intersections[*p].m_dnwrd_bndry_ix ) {
-                wall_line_intersections[ *p ].m_nxt_dnwrd_isec_ix = end_flag | wall_lines[b_ix].m_ends[1];
+                wall_line_intersections[ *p ].m_nxt_dnwrd_isec_ix = NextIntersection::vertex( wall_lines[b_ix].m_ends[1] );
             }
             else if( b_ix == wall_line_intersections[*p].m_upwrd_bndry_ix ) {
-                wall_line_intersections[ *p ].m_nxt_upwrd_isec_ix = end_flag | wall_lines[b_ix].m_ends[1];
+                wall_line_intersections[ *p ].m_nxt_upwrd_isec_ix = NextIntersection::vertex( wall_lines[b_ix].m_ends[1] );
             }
         }
     }
     chain_offsets[ wall_lines.size() ] = chains.size();
 
 #ifdef CHECK_INVARIANTS
-    for( unsigned int l = 0; l < wall_lines.size(); l++ ) {
-        const unsigned int a = chain_offsets[l];
-        const unsigned int b = chain_offsets[l+1];
-        for( unsigned int c=a; c<b; c++) {
-            const unsigned int i = chains[c];
+    for( Index l = 0; l < wall_lines.size(); l++ ) {
+        const Index a = chain_offsets[l];
+        const Index b = chain_offsets[l+1];
+        for( Index c=a; c<b; c++) {
+            const Index i = chains[c];
             LOGGER_INVARIANT_LESS_EQUAL( log, isec_base_offset, i );
             Intersection& isec = wall_line_intersections[ i ];
             LOGGER_INVARIANT_EITHER_EQUAL(log,
@@ -2116,4 +1630,4 @@ CornerPointTessellator<Bridge>::intersectWallLines( Bridge&                     
 }
 
 
-template class CornerPointTessellator<GridTessBridge>;
+template class CornerPointTessellator< PolygonTessellator<GridTessBridge> >;

@@ -13,10 +13,12 @@ IF( EXTEND_CMAKE_MODULE_PATH )
     "."
     )
 ENDIF( EXTEND_CMAKE_MODULE_PATH )
-
+OPTION( PROFILE "Enable profiling" OFF )
 OPTION( USE_SSE2 "Use SSE2 intrinsics" ON )
 OPTION( USE_SSSE3 "Use SSSE3 intrinsics" ON )
+OPTION( USE_SSE4 "Use SSE4.1 and SSE4.2 intrinsics" ON )
 OPTION( CHECK_INVARIANTS "Check invariants throughout the code" OFF )
+OPTION( DEBUG_GRAPHICS "Enable debug graphics" OFF )
 
 # Versioning
 SET( svn_revision $ENV{SVN_REVISION} )
@@ -80,18 +82,28 @@ IF( UNIX )
 #        SET( CMAKE_CXX_FLAGS "-Wall -fprofile-arcs -ftest-coverage -pg -g2 -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
 #        SET( CMAKE_CXX_FLAGS "-Wall -O3 -msse2 -mfpmath=sse -g2 -DCHECK_INVARIANTS -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
     SET( CMAKE_CXX_FLAGS "-Wall -O3 -g2 -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )
+    IF( PROFILE )
+        SET( CMAKE_CXX_FLAGS " -fprofile-arcs -ftest-coverage -pg -g2 ${CMAKE_CXX_FLAGS}" )
+    ENDIF( PROFILE )
     IF( CHECK_INVARIANTS )
         SET( CMAKE_CXX_FLAGS "-DCHECK_INVARIANTS ${CMAKE_CXX_FLAGS}" )
     ENDIF( CHECK_INVARIANTS )
-    IF( USE_SSSE3 )
-        SET( CMAKE_CXX_FLAGS "-mssse3 -mfpmath=sse ${CMAKE_CXX_FLAGS}" )
-    ELSE( USE_SSSE3 )
-        IF( USE_SSE2 )
-            SET( CMAKE_CXX_FLAGS "-msse2 -mfpmath=sse ${CMAKE_CXX_FLAGS}" )
-        ELSE( USE_SSE2 )
-            MESSAGE( "Sure that the CPU doesn't have SSE capabilites?" )
-        ENDIF( USE_SSE2 )
-    ENDIF( USE_SSSE3 )
+    IF( DEBUG_GRAPHICS )
+        SET( CMAKE_CXX_FLAGS "-DDEBUG_GRAPHICS ${CMAKE_CXX_FLAGS}" )
+    ENDIF( DEBUG_GRAPHICS )
+    IF( USE_SSE4 )
+        SET( CMAKE_CXX_FLAGS "-msse4 ${CMAKE_CXX_FLAGS}" )
+    ELSE( USE_SSE4 )
+        IF( USE_SSSE3 )
+            SET( CMAKE_CXX_FLAGS "-mssse3 -mfpmath=sse ${CMAKE_CXX_FLAGS}" )
+        ELSE( USE_SSSE3 )
+            IF( USE_SSE2 )
+                SET( CMAKE_CXX_FLAGS "-msse2 -mfpmath=sse ${CMAKE_CXX_FLAGS}" )
+            ELSE( USE_SSE2 )
+                MESSAGE( "Sure that the CPU doesn't have SSE capabilites?" )
+            ENDIF( USE_SSE2 )
+        ENDIF( USE_SSSE3 )
+    ENDIF( USE_SSE4 )
 ENDIF( UNIX )
 
 
@@ -116,13 +128,18 @@ INCLUDE_DIRECTORIES(
     ${Freeglut_INCLUDE_DIR}
 )
 
-SET( VIEWJOB_SRC
-     "src/Logger.cpp"
-     "src/PerfTimer.cpp"
-     "src/Project.cpp"
+
+ADD_LIBRARY( eclipseio
      "src/Eclipse.cpp"
      "src/EclipseParser.cpp"
      "src/EclipseReader.cpp"
+     "src/Logger.cpp"
+     "src/PerfTimer.cpp"
+)
+TARGET_LINK_LIBRARIES( eclipseio ${LOG4CXX_LIBRARIES} )
+
+ADD_LIBRARY( cpview
+     "src/Project.cpp"
      "src/ClipPlane.cpp"
      "src/CellSelector.cpp"
      "src/GridTess.cpp"
@@ -131,6 +148,7 @@ SET( VIEWJOB_SRC
      "src/GridTessSurf.cpp"
      "src/GridTessSurfBuilder.cpp"
      "src/GridTessSurfRenderer.cpp"
+     "src/PolygonTessellator.cpp"
      "src/GridField.cpp"
      "src/CornerPointTessellatorSimple.cpp"
      "src/CornerPointTessellator.cpp"
@@ -139,10 +157,12 @@ SET( VIEWJOB_SRC
      "src/TextRenderer.cpp"
      "src/TextRendererFont.cpp"
 )
+TARGET_LINK_LIBRARIES( cpview )
 
-SET( CPVIEWJOB_SRC "src/main_job.cpp" "src/CPViewJob.cpp" ${VIEWJOB_SRC} )
-ADD_EXECUTABLE( cpview_job ${CPVIEWJOB_SRC} )
+ADD_EXECUTABLE( cpview_job "src/main_job.cpp" "src/CPViewJob.cpp" )
 TARGET_LINK_LIBRARIES( cpview_job
+                       cpview
+                       eclipseio
                        ${QTOBSERVER}
                        ${GLEW}
                        ${OPENGL_LIBRARIES}
@@ -154,9 +174,10 @@ TARGET_LINK_LIBRARIES( cpview_job
                        ${LOG4CXX_LIBRARIES}
 )
 
-SET( CPVIEWGLUT_SRC "src/main_glut.cpp" ${VIEWJOB_SRC} )
-ADD_EXECUTABLE( cpview_glut ${CPVIEWGLUT_SRC} )
+ADD_EXECUTABLE( cpview_glut "src/main_glut.cpp" )
 TARGET_LINK_LIBRARIES( cpview_glut
+                       cpview
+                       eclipseio
                        ${SIUT2_LIBRARY}
                        ${Freeglut_LIBRARY}
                        ${GLEW}
@@ -172,12 +193,8 @@ TARGET_LINK_LIBRARIES( cpview_glut
 ADD_EXECUTABLE( sseplayground "src/SSEPlayGround.cpp" )
 TARGET_LINK_LIBRARIES( sseplayground rt )
 
-SET( ECLIPSESCAN_SRC
-  "src/eclipsescan.cpp"
-  "src/Eclipse.cpp"
-  "src/EclipseReader.cpp"
-  "src/PerfTimer.cpp"
-  "src/Logger.cpp"
+ADD_EXECUTABLE( eclipsescan "src/eclipsescan.cpp" )
+TARGET_LINK_LIBRARIES( eclipsescan
+                       eclipseio
+                       ${LOG4CXX_LIBRARIES}
 )
-ADD_EXECUTABLE( eclipsescan ${ECLIPSESCAN_SRC} )
-TARGET_LINK_LIBRARIES( eclipsescan ${LOG4CXX_LIBRARIES} )

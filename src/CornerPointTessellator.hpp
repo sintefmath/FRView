@@ -12,29 +12,58 @@
 #include "GridTess.hpp"
 #include "EclipseReader.hpp"
 
-template<typename Bridge>
+
+template<typename Tessellation>
 class CornerPointTessellator
 {
 public:
-    typedef typename Bridge::REAL REAL;
+    /** \name Forwarding
+      * Forwarding of tessellation types and constants. */
+    /** \@{ */
+    typedef float                               SrcReal;
+    typedef typename Tessellation::Real         Real;
+    typedef typename Tessellation::Index        Index;
+    typedef typename Tessellation::Real4        Real4;
+    typedef typename Tessellation::Orientation  Orientation;
+    typedef typename Tessellation::Segment      Segment;
+    typedef typename Tessellation::Interface    Interface;
+    static const Orientation ORIENTATION_I = Tessellation::ORIENTATION_I;
+    static const Orientation ORIENTATION_J = Tessellation::ORIENTATION_J;
+    static const Orientation ORIENTATION_K = Tessellation::ORIENTATION_K;
+    static const Index IllegalIndex = (~(Index)0u);
+    /** @} */
 
-    static
+    /** Constructor, attaches itself to an empty tessellation. */
+    CornerPointTessellator( Tessellation& tessellation );
+
     void
-    triangulate( Bridge&                   bridge,
-                 const unsigned int        nx,
-                 const unsigned int        ny,
-                 const unsigned int        nz,
-                 const unsigned int        nr,
-                 const std::vector<REAL>&  coord,
-                 const std::vector<REAL>&  zcorn,
-                 const std::vector<int>&   actnum );
+    triangulate( const Index                  nx,
+                 const Index                  ny,
+                 const Index                  nz,
+                 const Index                  nr,
+                 const std::vector<SrcReal>&  coord,
+                 const std::vector<SrcReal>&  zcorn,
+                 const std::vector<int>&      actnum );
 
 private:
-    static const float          epsilon;
-    static const unsigned int   end_flag;
-    static const unsigned int   end_mask;
 
-
+    /** Helper struct used for ordering intersection paths along inbetween pillar walls.
+      *
+      * Everything is currently encoded as an uint32, where the single upper bit
+      * is used to signal if the index is a vertex index or a intersection
+      * index. Maximum index is thus restricted to 2^31-1.
+      */
+    struct NextIntersection
+    {
+        static inline NextIntersection intersection( Index ix ) { NextIntersection ni; ni.m_value = ix; return ni; }
+        static inline NextIntersection vertex( Index ix ) { NextIntersection ni; ni.m_value = ix | (1u<<31u); return ni; }
+        inline NextIntersection() : m_value( IllegalIndex ) {}
+        inline bool isVertex() const { return (m_value & (1u<<31u)) != 0u; }
+        inline bool isIntersection() const { return (m_value & (1u<<31u)) == 0u; }
+        inline Index vertex() const { return m_value & (~(1u<<31u)); }
+        inline Index intersection() const { return m_value; }
+        Index        m_value;
+    };
 
     /** A boundary between cells along a wall between two pillars.
       *
@@ -44,211 +73,158 @@ private:
       */
     struct WallLine
     {
-        /** Vertex index of end points at pillar 0 and pillar 1. */
-        unsigned int    m_ends[2];
-        /** Which side this boundary belongs to (1=side a, 2=side b, 3=both). */
-        unsigned int    m_side;
-        /** Minimum p1 index of all lines above, used for early exit in intersection search. */
-        unsigned int    m_cutoff;
-        /** The index of the cell over (increasing k) this boundary, for side a and b. */
-        unsigned int    m_cell_over[2];
-        /** The index of the cell under (decreasing k) this boundary, for side a and b. */
-        unsigned int    m_cell_under[2];
-        /** True if cells above are logical neighbours. */
-        bool            m_match_over;
+        Index               m_ends[2];          ///< Vertex index of end points at pillar 0 and pillar 1.
+        Index               m_cell_over[2];     ///< The index of the cell over (increasing k) this boundary, for side a and b.
+        Index               m_cell_under[2];    ///< The index of the cell under (decreasing k) this boundary, for side a and b.
+        Index               m_cutoff;           ///< Minimum p1 index of all lines above, used for early exit in intersection search.
+        unsigned short int  m_side;             ///< Which side this boundary belongs to (1=side a, 2=side b, 3=both).
+        bool                m_match_over;       ///< True if cells above are logical neighbours.
     };
 
     /** An intersection between two boundary lines. */
     struct Intersection
     {
-        /** Vertex index of intersection position.*/
-        unsigned int    m_vtx_ix;
-        /** Boundary with min index at pillar 0 (and max index at pillar 1) */
-        unsigned int    m_upwrd_bndry_ix;
-        /** Boundary with max index at pillar 1 (and min index at pillar 0) */
-        unsigned int    m_dnwrd_bndry_ix;
-        /** Minimum distance between intersection and pillar 0. */
-        float           m_distance;
-        /** Next intersection along downwards boundary. */
-        unsigned int    m_nxt_dnwrd_isec_ix;
-        /** Next intersection along upwards boundary. */
-        unsigned int    m_nxt_upwrd_isec_ix;
+        Index             m_vtx_ix;             ///< Vertex index of intersection position.
+        Index             m_upwrd_bndry_ix;     ///< Boundary with min index at pillar 0 (and max index at pillar 1).
+        Index             m_dnwrd_bndry_ix;     ///< Boundary with max index at pillar 1 (and min index at pillar 0).
+        NextIntersection  m_nxt_dnwrd_isec_ix;  ///< Next intersection along downwards boundary.
+        NextIntersection  m_nxt_upwrd_isec_ix;  ///< Next intersection along upwards boundary.
     };
 
-    // cell layout:
-    //
-    //      p(i,j) +------------+ p(i+1,j)
-    //             | I0J0  I1J0 |
-    //             |            |
-    //             |   c(i,j)   |
-    //             |            |
-    //             | I0J1  I1J1 |
-    //    p(i,j+1) +------------+ p(i+1,j+1)
+    /** Enumeration of logical cell corners in IJ-plane. */
     enum {
-        CELL_CORNER_O11 = 0,
-        CELL_CORNER_O01 = 1,
-        CELL_CORNER_O10 = 2,
-        CELL_CORNER_O00 = 3
+        CELL_CORNER_O11 = 0,    ///< Corner (1,1) of cell c(i,j).
+        CELL_CORNER_O01 = 1,    ///< Corner (0,1) of cell c(i,j).
+        CELL_CORNER_O10 = 2,    ///< Corner (1,0) of cell c(i,j).
+        CELL_CORNER_O00 = 3     ///< Corner (0,0) of cell c(i,j).
     };
+
+    /** Enumeration of locical cell edges in the IJ-plane. */
     enum {
-        CELL_WALL_O00_D10 = 0,
-        CELL_WALL_O00_D01 = 1,
-        CELL_WALL_O10_D01 = 2,
-        CELL_WALL_O01_D10 = 3
+        CELL_WALL_O00_D10 = 0,  ///< Edge [(0,0),(1,0)] of cell c(i,j).
+        CELL_WALL_O00_D01 = 1,  ///< Edge [(0,0),(0,1)] of cell c(i,j).
+        CELL_WALL_O10_D01 = 2,  ///< Edge [(1,0),(1,1)] of cell c(i,j).
+        CELL_WALL_O01_D10 = 3   ///< Edge [(0,1),(1,1)] of cell c(i,j).
     };
 
-    static
-    void
-    findActiveCellsInColumn( unsigned int*       active_cell_list,
-                             unsigned int&       active_cell_count,
-                             const int* const    actnum,
-                             const unsigned int  stride,
-                             const unsigned int  nz );
+    Tessellation&                   m_tessellation;
 
-    static
     void
-    uniquePillarVertices( Bridge&                     bridge,
-                          std::vector<unsigned int>&  adjacent_cells,
-                          unsigned int*               zcorn_ix_00,
-                          unsigned int*               zcorn_ix_01,
-                          unsigned int*               zcorn_ix_10,
-                          unsigned int*               zcorn_ix_11,
-                          const REAL* const           zcorn_00,
-                          const REAL* const           zcorn_01,
-                          const REAL* const           zcorn_10,
-                          const REAL* const           zcorn_11,
-                          const unsigned int          stride,
-                          const REAL* const           coord,
-                          const unsigned int* const   active_cell_list_00,
-                          const unsigned int* const   active_cell_list_01,
-                          const unsigned int* const   active_cell_list_10,
-                          const unsigned int* const   active_cell_list_11,
-                          const unsigned int          active_cell_count_00,
-                          const unsigned int          active_cell_count_01,
-                          const unsigned int          active_cell_count_10,
-                          const unsigned int          active_cell_count_11 );
+    findActiveCellsInColumn( Index*            active_cell_list,
+                             Index&            active_cell_count,
+                             const int* const  actnum,
+                             const Index       stride,
+                             const Index       nz );
 
-    static
     void
-    pillarEdges( Bridge&                          bridge,
-                 const unsigned int               offset,
-                 const std::vector<unsigned int>& adjacent_cells,
-                 const int*                       cell_map_00,
-                 const int*                       cell_map_01,
-                 const int*                       cell_map_10,
-                 const int*                       cell_map_11,
-                 const unsigned int               stride );
+    uniquePillarVertices( std::vector<Index>&   adjacent_cells,
+                          Index*                zcorn_ix_00,
+                          Index*                zcorn_ix_01,
+                          Index*                zcorn_ix_10,
+                          Index*                zcorn_ix_11,
+                          const SrcReal* const  zcorn_00,
+                          const SrcReal* const  zcorn_01,
+                          const SrcReal* const  zcorn_10,
+                          const SrcReal* const  zcorn_11,
+                          const Index           stride,
+                          const SrcReal* const  coord,
+                          const Index* const    active_cell_list_00,
+                          const Index* const    active_cell_list_01,
+                          const Index* const    active_cell_list_10,
+                          const Index* const    active_cell_list_11,
+                          const Index           active_cell_count_00,
+                          const Index           active_cell_count_01,
+                          const Index           active_cell_count_10,
+                          const Index           active_cell_count_11 );
+
+    void
+    pillarEdges( const Index               offset,
+                 const std::vector<Index>& adjacent_cells,
+                 const Index*              cell_map_00,
+                 const Index*              cell_map_01,
+                 const Index*              cell_map_10,
+                 const Index*              cell_map_11,
+                 const Index               stride );
 
 
     /** Extracts all line segments across a pillar wall. */
-    static
     void
     extractWallLines( std::vector<WallLine>&      boundary_lines,
-                      unsigned int*               boundary_line_index_a,
-                      unsigned int*               boundary_line_index_b,
-                      const unsigned int* const   zcorn_ix_a_0,
-                      const unsigned int* const   zcorn_ix_a_1,
-                      const unsigned int* const   zcorn_ix_b_0,
-                      const unsigned int* const   zcorn_ix_b_1,
-                      const unsigned int* const   active_cell_list_a,
-                      const unsigned int* const   active_cell_list_b,
-                      const unsigned int          active_cell_count_a,
-                      const unsigned int          active_cell_count_b,
-                      const int* const            cell_map_a,
-                      const int* const            cell_map_b,
-                      const unsigned int          stride,
-                      const unsigned int          adjacent_stride );
+                      Index*               boundary_line_index_a,
+                      Index*               boundary_line_index_b,
+                      const Index* const   zcorn_ix_a_0,
+                      const Index* const   zcorn_ix_a_1,
+                      const Index* const   zcorn_ix_b_0,
+                      const Index* const   zcorn_ix_b_1,
+                      const Index* const   active_cell_list_a,
+                      const Index* const   active_cell_list_b,
+                      const Index          active_cell_count_a,
+                      const Index          active_cell_count_b,
+                      const Index* const            cell_map_a,
+                      const Index* const            cell_map_b,
+                      const Index          stride,
+                      const Index          adjacent_stride );
 
     /** Find intersections on a pillar wall, defining line segments for affected edges. */
-    static
     void
-    intersectWallLines( Bridge&                       bridge,
-                        std::vector<Intersection>&    intersections,
-                        std::vector<unsigned int>&    chains,
-                        unsigned int*                 chain_offsets,
+    intersectWallLines( std::vector<Intersection>&    intersections,
+                        std::vector<Index>&    chains,
+                        Index*                 chain_offsets,
                         const std::vector<WallLine>&  wall_lines,
                         const float*                  pillar_a,
                         const float*                  pillar_b );
 
     /** Extract wireframe edges across a pillar wall. */
-    static
     void
-    wallEdges( Bridge&                           bridge,
-               const std::vector<WallLine>&      boundaries,
+    wallEdges( const std::vector<WallLine>&      boundaries,
                const std::vector<Intersection>&  intersections,
-               const std::vector<unsigned int>&  chains,
-               const unsigned int* const         chain_offsets );
+               const std::vector<Index>&  chains,
+               const Index* const         chain_offsets );
 
 
     /** Stitch the wall between two pillars, simple case where there are no intersections. */
-    static
     void
-    stitchPillarsNoIntersections( Bridge&                       bridge,
-                                  const typename Bridge::Orientation  orientation,
+    stitchPillarsNoIntersections( const Orientation             orientation,
                                   const std::vector<WallLine>&  boundaries );
 
 
     /** Stitch the wall between two pillars, do handle intersections. */
-    static
     void
-    stitchPillarsHandleIntersections(  Bridge&                             bridge,
-                                       const typename Bridge::Orientation  orientation,
-                                       const std::vector<WallLine>&        boundaries,
-                                       const std::vector<Intersection>&    intersections,
-                                       const std::vector<unsigned int>&    chains,
-                                       const unsigned int* const           chain_offsets );
-
-
-    static
-    void
-    intersectionArcsPolygon( Bridge& bridge,
-                            std::vector<typename Bridge::Segment>&  segments,
-                            const typename Bridge::Orientation  orientation,
-                            const std::vector<Intersection>&    intersections,
-                            const unsigned int first_upper_isec,
-                            const unsigned int first_lower_isec );
+    stitchPillarsHandleIntersections( const Orientation                 orientation,
+                                      const std::vector<WallLine>&      boundaries,
+                                      const std::vector<Intersection>&  intersections,
+                                      const std::vector<Index>&  chains,
+                                      const Index* const         chain_offsets );
 
     /** Stitch the quadrilaterals between cells in a stack of cells. */
-    static
     void
-    stitchTopBottom( Bridge&                     bridge,
-                     const unsigned int* const   ci0j0_active_cell_list,
-                     const unsigned int          ci0j0_active_cell_count,
-                     const unsigned int* const   ci0j0_p00_p10_wall_line_ix,
-                     const unsigned int* const   ci0j0_p00_p01_wall_line_ix,
-                     const unsigned int* const   ci0j0_p10_p11_wall_line_ix,
-                     const unsigned int* const   ci0j0_p01_p11_wall_line_ix,
-                     const unsigned int* const   ci0j0_i0j0_zcorn_ix,
-                     const unsigned int* const   ci0j0_i1j0_zcorn_ix,
-                     const unsigned int* const   ci0j0_i0j1_zcorn_ix,
-                     const unsigned int* const   ci0j0_i1j1_zcorn_ix,
-                     const unsigned int* const   pi1j0_along_i_chains,
-                     const unsigned int* const   pi1j0_along_i_chain_offsets,
-                     const unsigned int* const   pi1j1_along_i_chains,
-                     const unsigned int* const   pi1j1_along_i_chain_offsets,
-                     const unsigned int* const   pi0j1_along_j_chains,
-                     const unsigned int* const   pi0j1_along_j_chain_offsets,
-                     const unsigned int* const   pi1j1_along_j_chains,
-                     const unsigned int* const   pi1j1_along_j_chain_offsets,
-                     const int* const            cell_map,
-                     const unsigned int          stride );
+    stitchTopBottom( const Index* const   ci0j0_active_cell_list,
+                     const Index          ci0j0_active_cell_count,
+                     const Index* const   ci0j0_p00_p10_wall_line_ix,
+                     const Index* const   ci0j0_p00_p01_wall_line_ix,
+                     const Index* const   ci0j0_p10_p11_wall_line_ix,
+                     const Index* const   ci0j0_p01_p11_wall_line_ix,
+                     const Index* const   ci0j0_i0j0_zcorn_ix,
+                     const Index* const   ci0j0_i1j0_zcorn_ix,
+                     const Index* const   ci0j0_i0j1_zcorn_ix,
+                     const Index* const   ci0j0_i1j1_zcorn_ix,
+                     const Index* const   pi1j0_along_i_chains,
+                     const Index* const   pi1j0_along_i_chain_offsets,
+                     const Index* const   pi1j1_along_i_chains,
+                     const Index* const   pi1j1_along_i_chain_offsets,
+                     const Index* const   pi0j1_along_j_chains,
+                     const Index* const   pi0j1_along_j_chain_offsets,
+                     const Index* const   pi1j1_along_j_chains,
+                     const Index* const   pi1j1_along_j_chain_offsets,
+                     const Index* const            cell_map,
+                     const Index          stride );
 
 
-
-    static
-    unsigned int
-    segmentIntersection( Bridge& bridge,
-                         const unsigned int a0, const unsigned int a1,
-                         const unsigned int b0, const unsigned int b1,
-                         const float* pillar_a,
-                         const float* pillar_b );
-
-    static
-    REAL
-    distancePointLineSquared( Bridge& bridge,
-                              const unsigned int p,
-                              const unsigned int l0,
-                              const unsigned int l1 );
-
+    /** Create the intersection point between two lines on the wall between two pillars. */
+    Index
+    segmentIntersection( const Index a0, const Index a1,
+                         const Index b0, const Index b1,
+                         const SrcReal* pillar_a,
+                         const SrcReal* pillar_b );
 
 };

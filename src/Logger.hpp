@@ -40,6 +40,12 @@ static inline Logger getLogger( const std::string name )
 #define LOGGER_INVARIANT_EQUAL(a,b,c) if(!((b) == (c))) { \
     LOGGER_FATAL( a, "Invariant (" << #b << "=" << (b) << ") == (" << #c << "=" << (c) << ") broken at" << __FILE__ << '@' << __LINE__ ); \
 }
+#define LOGGER_INVARIANT_NOT_EQUAL(a,b,c) if(!((b) != (c))) { \
+    LOGGER_FATAL( a, "Invariant (" << #b << "=" << (b) << ") != (" << #c << "=" << (c) << ") broken at" << __FILE__ << '@' << __LINE__ ); \
+}
+#define LOGGER_INVARIANT_WITHIN_CLOSED_RANGE(a,b,c,d) if( ((b)<(c))||((d)<(b)) ) { \
+    LOGGER_FATAL( a, "Invariant (" << #b << " in [" << #c << ", "<< #d << "] broken at " << __FILE__ << '@' << __LINE__ ); \
+}
 #define LOGGER_INVARIANT_EITHER_EQUAL(a,b,c,d,e) if(!( ((b) == (c)) || ((d) == (e))  ) ) { \
     LOGGER_FATAL( a, "Invariant (" << #b << "=" << (b) << ") == (" << #c << "=" << (c) << ") || (" << #d << "=" << (d) << ") == (" << #e << "=" << (e) << ") broken at" << __FILE__ << '@' << __LINE__ ); \
 }
@@ -55,6 +61,8 @@ static inline Logger getLogger( const std::string name )
 #else
 #define LOGGER_INVARIANT(a,b)
 #define LOGGER_INVARIANT_EQUAL(a,b,c)
+#define LOGGER_INVARIANT_NOT_EQUAL(a,b,c)
+#define LOGGER_INVARIANT_WITHIN_CLOSED_RANGE(a,b,c,d)
 #define LOGGER_INVARIANT_EITHER_EQUAL(a,b,c,d,e)
 #define LOGGER_INVARIANT_EITHER_NOT_EQUAL(a,b,c,d,e)
 #define LOGGER_INVARIANT_LESS(a,b,c)

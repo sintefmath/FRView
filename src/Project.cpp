@@ -13,6 +13,7 @@
 #include "GridFieldBridge.hpp"
 #include "Logger.hpp"
 #include "Project.hpp"
+#include "PolygonTessellator.hpp"
 #include "CornerPointTessellator.hpp"
 #include "FooBarParser.hpp"
 
@@ -530,20 +531,20 @@ template<typename Bridge>
 void
 Project<REAL>::geometry( Bridge& bridge )
 {
-    switch( m_geometry_type ) {
-    case GEOMETRY_NONE:
+    if( m_geometry_type == GEOMETRY_NONE ) {
         throw std::runtime_error( "no geometry set" );
-        break;
-    case GEOMETRY_CORNERPOINT_GRID:
-        CornerPointTessellator<Bridge>::triangulate( bridge,
-                                                     m_cornerpoint_geometry.m_nx,
-                                                     m_cornerpoint_geometry.m_ny,
-                                                     m_cornerpoint_geometry.m_nz,
-                                                     m_cornerpoint_geometry.m_nr,
-                                                     m_cornerpoint_geometry.m_coord,
-                                                     m_cornerpoint_geometry.m_zcorn,
-                                                     m_cornerpoint_geometry.m_actnum );
-        break;
+    }
+    else if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        PolygonTessellator<Bridge> polytess( bridge );
+        CornerPointTessellator< PolygonTessellator<Bridge> > tess( polytess );
+
+        tess.triangulate(m_cornerpoint_geometry.m_nx,
+                         m_cornerpoint_geometry.m_ny,
+                         m_cornerpoint_geometry.m_nz,
+                         m_cornerpoint_geometry.m_nr,
+                         m_cornerpoint_geometry.m_coord,
+                         m_cornerpoint_geometry.m_zcorn,
+                         m_cornerpoint_geometry.m_actnum );
     }
 }
 
