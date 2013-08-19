@@ -130,8 +130,15 @@ ADD_LIBRARY( eclipseio
 )
 TARGET_LINK_LIBRARIES( eclipseio ${LOG4CXX_LIBRARIES} )
 
+# --- small data files ---------------------------------------------------------
+FILE( GLOB frview_EXAMPLE_DATA "data/*.gtxt" )
+SOURCE_GROUP( "Example data" FILES ${frview_EXAMPLE_DATA} )
+SET_SOURCE_FILES_PROPERTIES( ${frview_EXAMPLE_DATA} PROPERTIES HEADER_FILE_ONLY TRUE )
+
 # --- shader files -------------------------------------------------------------
 FILE( GLOB frview_core_SHADERS "shaders/*glsl" )
+SOURCE_GROUP( "GLSL" FILES ${frview_core_SHADERS} )
+SET_SOURCE_FILES_PROPERTIES( ${frview_core_SHADERS} PROPERTIES HEADER_FILE_ONLY TRUE )
 FOREACH( file ${frview_core_SHADERS} )
     GET_FILENAME_COMPONENT( symbol ${file} NAME_WE)
     ADD_TEXT_FILE( ${symbol} "resources::${symbol}" ${file} )
@@ -140,6 +147,8 @@ ENDFOREACH()
 
 # --- javscript scriptlets -----------------------------------------------------
 FILE( GLOB frview_core_JS "js/*.js" )
+SOURCE_GROUP( "JS" FILES ${frview_core_JS} )
+SET_SOURCE_FILES_PROPERTIES( ${frview_core_JS} PROPERTIES HEADER_FILE_ONLY TRUE )
 FOREACH( file ${frview_core_JS} )
     GET_FILENAME_COMPONENT( symbol ${file} NAME_WE)
     ADD_TEXT_FILE( ${symbol} "resources::${symbol}" ${file} )
@@ -148,6 +157,9 @@ ENDFOREACH()
 
 # --- Compile and link code that is common for all eclipse viz apps ------------
 ADD_LIBRARY( frview_core
+             ${frview_core_SHADERS}         # Add deps to make them appear in solution
+             ${frview_core_JS}              # Add deps to make them appear in solution
+             ${frview_EXAMPLE_DATA}         # Add deps to make them appear in solution
              "src/models/Appearance.cpp"
              "src/models/GridStats.cpp"
              "src/models/File.cpp"
@@ -178,7 +190,9 @@ ADD_LIBRARY( frview_core
              "src/render/TimerQuery.cpp"
 )
 
-TARGET_LINK_LIBRARIES( frview_core ${SHADER_LIBS} ${JS_LIBS} )
+TARGET_LINK_LIBRARIES( frview_core
+                       ${SHADER_LIBS}
+                       ${JS_LIBS} )
 
 # --- Compile and link job (common to both desktop and cloud jobs) -------------
 ADD_LIBRARY( frview_job "src/CPViewJob.cpp"
