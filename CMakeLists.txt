@@ -271,24 +271,7 @@ ENDIF( CLOUD_JOB )
 # ${tinia_qtcontroller_LIBRARY}
 # ${tinia_trell_LIBRARY}
 
-# --- Compile and link simple glut app (doesn't use policylib at all) ----------
-IF( GLUT_APP )
-    ADD_EXECUTABLE( frview_glut_app "src/main_glut.cpp" )
-    TARGET_LINK_LIBRARIES( frview_glut_app
-                           frview_core
-                           eclipseio
-                           ${SIUT2_LIBRARY}
-                           ${Freeglut_LIBRARY}
-                           ${GLEW}
-                           ${OPENGL_LIBRARIES}
-                           ${QT_LIBRARIES}
-                           ${QT_QTOPENGL_LIBRARIES}
-                           ${PolicyLib_LIBRARIES}
-                           ${JobObserver_LIBRARIES}
-                           ${Boost_LIBRARIES}
-                           ${LOG4CXX_LIBRARIES}
-    )
-ENDIF( GLUT_APP )
+
 
 # --- Compile and link simple app that scans through eclipse files -------------
 IF( ECLIPSESCAN_APP )
