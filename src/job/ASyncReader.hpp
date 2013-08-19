@@ -12,7 +12,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <tinia/model/ExposedModel.hpp>
-#include "Project.hpp"
+#include "dataset/Project.hpp"
 #include "render/GridTessBridge.hpp"
 #include "render/GridFieldBridge.hpp"
 
@@ -37,10 +37,10 @@ public:
                       const bool triangulate = false );
 
     bool
-    issueReadSolution( const Project<float>::Solution& solution_location );
+    issueReadSolution( const dataset::Project<float>::Solution& solution_location );
 
     bool
-    getProject( boost::shared_ptr< Project<float> >& project,
+    getProject( boost::shared_ptr< dataset::Project<float> >& project,
                 boost::shared_ptr< render::GridTessBridge>&  tess_bridge );
 
 
@@ -63,7 +63,7 @@ protected:
         int                                     m_refine_j;
         int                                     m_refine_k;
         bool                                    m_triangulate;
-        Project<float>::Solution                m_solution_location;
+        dataset::Project<float>::Solution                m_solution_location;
     };
 
     struct Response
@@ -72,7 +72,7 @@ protected:
             PROJECT,
             SOLUTION
         }                                       m_type;
-        boost::shared_ptr< Project<float> >       m_project;
+        boost::shared_ptr< dataset::Project<float> >       m_project;
         boost::shared_ptr< render::GridTessBridge >       m_project_grid;
         boost::shared_ptr< render::GridFieldBridge >      m_solution;
     };

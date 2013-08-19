@@ -17,7 +17,7 @@
 #include <tinia/model/GUILayout.hpp>
 //#include <tinia/model/PolicyLock.hpp>
 
-#include "job/Project.hpp"
+#include "dataset/Project.hpp"
 #include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
@@ -396,7 +396,7 @@ FRViewJob::loadFile( const std::string& filename,
 
     m_load_geometry = false;
     m_load_color_field = false;
-    m_project = boost::shared_ptr< Project<float> >();
+    m_project = boost::shared_ptr< dataset::Project<float> >();
     std::list<std::string> solutions = {"none"};
     m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
     m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
@@ -448,7 +448,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
                 break;
             }
         }
-        Project<float>::Solution sol;
+        dataset::Project<float>::Solution sol;
         if( m_project->solution( sol, m_solution_index, m_report_step_index ) ) {
             if( m_async_reader->issueReadSolution( sol ) ) {
             }
@@ -458,7 +458,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         int value;
         stateElement->getValue<int>( value );
         m_report_step_index = value;
-        Project<float>::Solution sol;
+        dataset::Project<float>::Solution sol;
         if( m_project->solution( sol, m_solution_index, m_report_step_index ) ) {
             if( m_async_reader->issueReadSolution( sol ) ) {
             }
@@ -728,11 +728,11 @@ FRViewJob::updateProxyMatrices()
 
 static void APIENTRY debugLogger( GLenum source,
                                   GLenum type,
-                                  GLuint id,
+                                  GLuint /*id*/,
                                   GLenum severity,
-                                  GLsizei length,
+                                  GLsizei /*length*/,
                                   const GLchar* message,
-                                  void* data )
+                                  void* /*data*/ )
 {
     if( strncmp( "Texture state usage warning", message, 27 ) == 0 ) {
         return;
@@ -759,7 +759,7 @@ static void APIENTRY debugLogger( GLenum source,
     }
 
     Logger log = getLogger( std::string("GL_KHR_debug.") + source_str + "." + type_str );
-    const char* severity_str = "---";
+    // const char* severity_str = "---";
     switch( severity ) {
     case GL_DEBUG_SEVERITY_HIGH:
         LOGGER_FATAL( log, message );

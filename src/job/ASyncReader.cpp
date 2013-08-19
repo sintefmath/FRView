@@ -47,7 +47,7 @@ ASyncReader::issueReadProject( const std::string& file,
 }
 
 bool
-ASyncReader::issueReadSolution( const Project<float>::Solution& solution_location )
+ASyncReader::issueReadSolution( const dataset::Project<float>::Solution& solution_location )
 {
     Command cmd;
     cmd.m_type = Command::READ_SOLUTION;
@@ -58,7 +58,7 @@ ASyncReader::issueReadSolution( const Project<float>::Solution& solution_locatio
 
 
 bool
-ASyncReader::getProject( boost::shared_ptr< Project<float> >& project,
+ASyncReader::getProject( boost::shared_ptr< dataset::Project<float> >& project,
                          boost::shared_ptr< render::GridTessBridge>&  tess_bridge )
 {
     std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
@@ -121,11 +121,11 @@ ASyncReader::handleReadProject( const Command& cmd )
         m_model->updateElement<std::string>( "asyncreader_what", "Indexing files..." );
         m_model->updateElement<int>( "asyncreader_progress", 0 );
 
-        boost::shared_ptr< Project<float> > project( new Project<float>( cmd.m_project_file,
+        boost::shared_ptr< dataset::Project<float> > project( new dataset::Project<float>( cmd.m_project_file,
                                                                        cmd.m_refine_i,
                                                                        cmd.m_refine_j,
                                                                        cmd.m_refine_k ) );
-        if( project->geometryType() == Project<float>::GEOMETRY_CORNERPOINT_GRID ) {
+        if( project->geometryType() == dataset::Project<float>::GEOMETRY_CORNERPOINT_GRID ) {
 
             boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
 
@@ -175,7 +175,7 @@ ASyncReader::handleReadSolution( const Command& cmd )
 
     Response rsp;
     rsp.m_type = Response::SOLUTION;
-    if( cmd.m_solution_location.m_reader == Project<float>::READER_UNFORMATTED_ECLIPSE ) {
+    if( cmd.m_solution_location.m_reader == dataset::Project<float>::READER_UNFORMATTED_ECLIPSE ) {
 
         if( !m_field_remap.empty() ) {
             rsp.m_solution.reset( new render::GridFieldBridge( m_field_remap.size() ) );

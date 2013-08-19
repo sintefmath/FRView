@@ -17,7 +17,7 @@
 #include "Project.hpp"
 #include "eclipse/EclipseParser.hpp"
 #include "cornerpoint/Tessellator.hpp"
-#include "FooBarParser.hpp"
+#include "dataset/FooBarParser.hpp"
 #include "render/GridTessBridge.hpp"
 #include "render/GridFieldBridge.hpp"
 
@@ -25,7 +25,9 @@ using std::vector;
 using std::string;
 using std::list;
 
-static const std::string package = "Project";
+namespace dataset {
+
+static const std::string package = "dataset.Project";
 
 template<typename REAL>
 Project<REAL>::Project(const std::string filename,
@@ -307,7 +309,7 @@ Project<REAL>::refineCornerpointGeometry( unsigned int rx,
         uint jm = j/ry;
         uint jp = (j+ry-1)/ry;
         float jr = glm::fract( (float)j/(float)ry );
-        for(int i=0; i<=new_nx; i++ ) {
+        for(uint i=0; i<=new_nx; i++ ) {
             uint im = i/rx;
             uint ip = (i+rx-1)/rx;
             float ir = glm::fract( (float)i/(float)rx );
@@ -340,15 +342,15 @@ Project<REAL>::refineCornerpointGeometry( unsigned int rx,
     }
 
     m_cornerpoint_geometry.m_refine_map_compact.clear();
-    for( int new_k=0; new_k<new_nz; new_k++ ) {
+    for( uint new_k=0; new_k<new_nz; new_k++ ) {
         uint old_k = new_k/rz;
-        float krm = glm::fract( (float)new_k/(float)rz );
-        float krp = glm::fract( (float)(new_k+1.f)/(float)rz);
+        // float krm = glm::fract( (float)new_k/(float)rz );
+        // float krp = glm::fract( (float)(new_k+1.f)/(float)rz);
 
 
-        for( int new_j=0; new_j<new_ny; new_j++ ) {
+        for( uint new_j=0; new_j<new_ny; new_j++ ) {
             uint old_j = new_j/ry;
-            for( int new_i=0; new_i<new_nx; new_i++ ) {
+            for( uint new_i=0; new_i<new_nx; new_i++ ) {
                 uint old_i = new_i/rx;
 
                 float z000 = old_zcorn[ 2*old_nx*2*old_ny*(2*old_k+0)  + 2*old_nx*(2*old_j+0) + 2*old_i+0 ];
@@ -1028,3 +1030,5 @@ Project<REAL>::reportStepDate( unsigned int step ) const
 template class Project<float>;
 //template void Project<float>::geometry<GridTessBridge>( GridTessBridge& );
 template void Project<float>::field<render::GridFieldBridge>( render::GridFieldBridge&, const unsigned int, const unsigned int );
+
+} // of namespace dataset

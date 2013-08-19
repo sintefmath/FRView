@@ -5,7 +5,9 @@
 #include <tinia/model/ExposedModel.hpp>
 #include "models/Logic.hpp"
 
-template<typename REAL> class Project;
+namespace dataset {
+    template<typename REAL> class Project;
+}
 namespace render {
     class GridTess;
 } // of namespace render
@@ -33,7 +35,7 @@ public:
     update( );
 
     void
-    update( boost::shared_ptr<Project<float> > project,
+    update( boost::shared_ptr<dataset::Project<float> > project,
             boost::shared_ptr<render::GridTess> tessellation );
 
 protected:

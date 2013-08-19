@@ -22,7 +22,9 @@
 #include "models/UnderTheHood.hpp"
 #include "render/TimerQuery.hpp"
 
-template<typename REAL> class Project;
+namespace dataset {
+    template<typename REAL> class Project;
+} // of namespace dataset
 
 class ASyncReader;
 namespace render {
@@ -110,7 +112,7 @@ private:
         PROJECT_UPDATE_SUBSET,
         PROJECT_OK
     }                                               m_project_state;
-    boost::shared_ptr<Project<float> >                m_project;
+    boost::shared_ptr<dataset::Project<float> >                m_project;
     /** @} */
 
     /** @{ */

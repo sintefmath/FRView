@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include "eclipse/Eclipse.hpp"
 
+namespace dataset {
+
 template<typename REAL>
 class Project : public boost::noncopyable
 {
@@ -238,3 +240,4 @@ private:
 
 };
 
+} // of namespace dataset

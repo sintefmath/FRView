@@ -1,4 +1,4 @@
-#include "job/Project.hpp"
+#include "dataset/Project.hpp"
 #include "models/GridStats.hpp"
 #include "render/GridTess.hpp"
 
@@ -43,13 +43,13 @@ GridStats::~GridStats()
 void
 GridStats::update( )
 {
-    boost::shared_ptr<Project<float> > project;
+    boost::shared_ptr<dataset::Project<float> > project;
     boost::shared_ptr<render::GridTess> tessellation;
     update( project, tessellation );
 }
 
 void
-GridStats::update( boost::shared_ptr<Project<float> > project,
+GridStats::update( boost::shared_ptr<dataset::Project<float> > project,
                    boost::shared_ptr<render::GridTess> tessellation )
 {
     int nx = 0;

@@ -146,13 +146,15 @@ FILE( GLOB frview_core_SRC "src/models/*.cpp"
                            "src/cornerpoint/*.cpp"
                            "src/eclipse/*.cpp"
                            "src/job/*.cpp"
-                           "src/utils/*.cpp" )
+                           "src/utils/*.cpp"
+                           "src/dataset/*.cpp" )
 FILE( GLOB frview_core_HDR "src/models/*.hpp"
                            "src/render/*.hpp"
                            "src/cornerpoint/*.hpp"
                            "src/eclipse/*.hpp"
                            "src/job/*.hpp"
-                           "src/utils/*.hpp" )
+                           "src/utils/*.hpp"
+                           "src/dataset/*.hpp" )
 
 SET_SOURCE_FILES_PROPERTIES( ${frview_HDR} PROPERTIES HEADER_FILE_ONLY TRUE )
 

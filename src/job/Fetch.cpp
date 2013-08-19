@@ -2,7 +2,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "job/Project.hpp"
+#include "dataset/Project.hpp"
 #include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
@@ -23,7 +23,7 @@ FRViewJob::fetchData()
     // import geometry
     if( m_load_geometry ) {
 
-        boost::shared_ptr< Project<float> > project;
+        boost::shared_ptr< dataset::Project<float> > project;
         boost::shared_ptr< render::GridTessBridge > tess_bridge;
         if( m_async_reader->getProject( project, tess_bridge ) ) {
             if( !m_has_pipeline ) {
