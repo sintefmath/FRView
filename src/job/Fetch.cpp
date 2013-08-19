@@ -2,8 +2,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "CPViewJob.hpp"
-#include "Project.hpp"
+#include "job/Project.hpp"
+#include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "eclipse/EclipseReader.hpp"
@@ -16,7 +16,7 @@
 
 
 void
-CPViewJob::fetchData()
+FRViewJob::fetchData()
 {
     Logger log = getLogger( "CPViewJob.doCompute" );
 

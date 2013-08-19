@@ -15,7 +15,7 @@
 #include <tinia/renderlist/SetPixelState.hpp>
 #include <tinia/renderlist/SetRasterState.hpp>
 
-#include "CPViewJob.hpp"
+#include "job/FRViewJob.hpp"
 #include "render/GridTess.hpp"
 #include "render/ClipPlane.hpp"
 #include "render/GridVoxelization.hpp"
@@ -29,7 +29,7 @@ namespace resources {
 }
 
 const tinia::renderlist::DataBase*
-CPViewJob::getRenderList( const std::string& session, const std::string& key )
+FRViewJob::getRenderList( const std::string& session, const std::string& key )
 {
     if( !m_renderlist_initialized ) {
         initRenderList();
@@ -63,7 +63,7 @@ CPViewJob::getRenderList( const std::string& session, const std::string& key )
 }
 
 void
-CPViewJob::initRenderList()
+FRViewJob::initRenderList()
 {
     namespace rl = tinia::renderlist;
 
@@ -144,7 +144,7 @@ CPViewJob::initRenderList()
 }
 
 void
-CPViewJob::updateRenderList( )
+FRViewJob::updateRenderList( )
 {
     namespace rl = tinia::renderlist;
 

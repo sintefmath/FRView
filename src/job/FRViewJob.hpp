@@ -46,15 +46,15 @@ namespace render {
     class VoxelSurface;
 } // of namespace render
 
-class CPViewJob
+class FRViewJob
         : public tinia::jobcontroller::OpenGLJob,
           public tinia::model::StateListener,
           public models::Logic
 {
 public:
-    CPViewJob( const std::list<std::string>& files );
+    FRViewJob( const std::list<std::string>& files );
 
-    ~CPViewJob();
+    ~FRViewJob();
 
     void stateElementModified( tinia::model::StateElement *stateElement );
 

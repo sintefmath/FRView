@@ -1,9 +1,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "CPViewJob.hpp"
+#include "job/Project.hpp"
+#include "job/FRViewJob.hpp"
 #include "render/GridTess.hpp"
-#include "Project.hpp"
 #include "utils/Logger.hpp"
 #include "render/GridTessSubset.hpp"
 #include "render/GridTessSurf.hpp"
@@ -14,7 +14,7 @@
 #include "render/ClipPlane.hpp"
 
 void
-CPViewJob::doCompute()
+FRViewJob::doCompute()
 {
     Logger log = getLogger( "CPViewJob.doCompute" );
     if( !m_has_pipeline ) {

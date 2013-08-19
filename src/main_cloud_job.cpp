@@ -2,7 +2,7 @@
 #include <string>
 #include <tinia/trell/IPCGLJobController.hpp>
 #include "utils/Logger.hpp"
-#include "job/CPViewJob.hpp"
+#include "job/FRViewJob.hpp"
 
 namespace resources {
     extern std::string cameramanipulator;
@@ -19,7 +19,7 @@ main( int argc, char** argv )
 
     std::list<std::string> files;
 
-    CPViewJob job( files );
+    FRViewJob job( files );
     tinia::trell::IPCGLJobController controller( is_master );
     controller.setJob( &job );
     controller.addScript( resources::cameramanipulator );

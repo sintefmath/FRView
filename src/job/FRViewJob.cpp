@@ -17,9 +17,9 @@
 #include <tinia/model/GUILayout.hpp>
 //#include <tinia/model/PolicyLock.hpp>
 
-#include "CPViewJob.hpp"
+#include "job/Project.hpp"
+#include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
-#include "Project.hpp"
 #include "ASyncReader.hpp"
 #include "utils/PerfTimer.hpp"
 #include "render/GridTess.hpp"
@@ -41,7 +41,7 @@ using std::string;
 using std::stringstream;
 
 
-CPViewJob::CPViewJob( const std::list<string>& files )
+FRViewJob::FRViewJob( const std::list<string>& files )
     : tinia::jobcontroller::OpenGLJob(),
       m_file( m_model, *this ),
       m_under_the_hood( m_model, *this ),
@@ -363,18 +363,18 @@ CPViewJob::CPViewJob( const std::list<string>& files )
 }
 
 bool
-CPViewJob::init()
+FRViewJob::init()
 {
     return true;
 }
 
-CPViewJob::~CPViewJob()
+FRViewJob::~FRViewJob()
 {
    m_model->removeStateListener(this);
 }
 
 bool
-CPViewJob::handleButtonClick( tinia::model::StateElement *stateElement )
+FRViewJob::handleButtonClick( tinia::model::StateElement *stateElement )
 {
     bool value;
     stateElement->getValue<bool>( value );
@@ -386,7 +386,7 @@ CPViewJob::handleButtonClick( tinia::model::StateElement *stateElement )
 }
 
 void
-CPViewJob::loadFile( const std::string& filename,
+FRViewJob::loadFile( const std::string& filename,
                      int refine_i,
                      int refine_j,
                      int refine_k,
@@ -419,7 +419,7 @@ CPViewJob::loadFile( const std::string& filename,
 }
 
 void
-CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
+FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
 {
     if( !m_care_about_updates ) {
         return;
@@ -654,7 +654,7 @@ CPViewJob::stateElementModified( tinia::model::StateElement *stateElement )
 }
 
 void
-CPViewJob::triggerRedraw( const string& viewer_key )
+FRViewJob::triggerRedraw( const string& viewer_key )
 {
     tinia::model::Viewer viewer;
     m_model->getElementValue( viewer_key, viewer );
@@ -662,7 +662,7 @@ CPViewJob::triggerRedraw( const string& viewer_key )
 }
 
 void
-CPViewJob::updateModelMatrices()
+FRViewJob::updateModelMatrices()
 {
     if( m_has_pipeline ) {
         glm::vec3 bbmin( m_grid_tess->minBBox()[0], m_grid_tess->minBBox()[1], m_grid_tess->minBBox()[2] );
@@ -698,7 +698,7 @@ CPViewJob::updateModelMatrices()
 }
 
 void
-CPViewJob::updateProxyMatrices()
+FRViewJob::updateProxyMatrices()
 {
     if( m_has_pipeline ) {
         const float* t = m_proxy_transform;
@@ -774,7 +774,7 @@ static void APIENTRY debugLogger( GLenum source,
 }
 
 bool
-CPViewJob::initGL()
+FRViewJob::initGL()
 {
     Logger log = getLogger( "CPViewJob.initGL" );
     glewInit();
@@ -796,7 +796,7 @@ CPViewJob::initGL()
 }
 
 void
-CPViewJob::releasePipeline()
+FRViewJob::releasePipeline()
 {
     if( !m_has_context ) {
         return;
@@ -824,7 +824,7 @@ CPViewJob::releasePipeline()
     m_has_pipeline = false;
 }
 
-bool CPViewJob::setupPipeline()
+bool FRViewJob::setupPipeline()
 {
     if( !m_has_context ) {
         return false;
@@ -861,7 +861,7 @@ bool CPViewJob::setupPipeline()
 }
 
 void
-CPViewJob::doLogic()
+FRViewJob::doLogic()
 {
     if( m_zscale != m_grid_stats.zScale() ) {
         m_zscale = m_grid_stats.zScale();
@@ -898,7 +898,7 @@ CPViewJob::doLogic()
 }
 
 bool
-CPViewJob::renderFrame( const string&  session,
+FRViewJob::renderFrame( const string&  session,
                         const string&  key,
                         unsigned int        fbo,
                         const size_t        width,

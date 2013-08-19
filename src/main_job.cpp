@@ -11,7 +11,7 @@
 #include <list>
 #include <tinia/qtcontroller/QTController.hpp>
 
-#include "job/CPViewJob.hpp"
+#include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 
 namespace resources {
@@ -27,7 +27,7 @@ main( int argc, char** argv )
         files.push_back( argv[i] );
     }
 
-    CPViewJob job( files );
+    FRViewJob job( files );
     tinia::qtcontroller::QTController controller;
     controller.setJob( &job );
     controller.addScript( resources::cameramanipulator );

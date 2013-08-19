@@ -1,10 +1,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "CPViewJob.hpp"
+#include "job/Project.hpp"
+#include "job/FRViewJob.hpp"
 #include "render/GridTess.hpp"
 #include "utils/Logger.hpp"
-#include "Project.hpp"
 #include "render/GridCubeRenderer.hpp"
 #include "render/ClipPlane.hpp"
 #include "render/GridTessSurfRenderer.hpp"
@@ -16,7 +16,7 @@
 #include "render/VoxelSurface.hpp"  // move to renderlist
 
 void
-CPViewJob::render( const float*  projection,
+FRViewJob::render( const float*  projection,
                    const float*  modelview,
                    unsigned int  fbo,
                    const size_t  width,
