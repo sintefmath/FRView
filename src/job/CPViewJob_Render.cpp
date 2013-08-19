@@ -3,7 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "CPViewJob.hpp"
 #include "render/GridTess.hpp"
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "Project.hpp"
 #include "render/GridCubeRenderer.hpp"
 #include "render/ClipPlane.hpp"

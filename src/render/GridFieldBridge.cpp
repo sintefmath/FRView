@@ -1,4 +1,4 @@
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include <siut2/gl_utils/GLSLtools.hpp>
 #include "GridField.hpp"
 #include "GridFieldBridge.hpp"

@@ -14,7 +14,7 @@
 #include <tinia/jobcontroller/OpenGLJob.hpp>
 #include <tinia/model/StateListener.hpp>
 #include <tinia/renderlist/DataBase.hpp>
-#include "PerfTimer.hpp"
+#include "utils/PerfTimer.hpp"
 #include "models/Logic.hpp"
 #include "models/Appearance.hpp"
 #include "models/GridStats.hpp"

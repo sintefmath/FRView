@@ -7,7 +7,7 @@
  *
  ******************************************************************************/
 #include <stdexcept>
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "EclipseReader.hpp"
 #include "EclipseParser.hpp"
 

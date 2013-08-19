@@ -29,8 +29,6 @@ ENDIF( EXTEND_CMAKE_MODULE_PATH )
 
 INCLUDE( txt2cpp )
 
-
-
 # Versioning
 SET( svn_revision $ENV{SVN_REVISION} )
 IF ( NOT DEFINED svn_revision )
@@ -120,15 +118,6 @@ INCLUDE_DIRECTORIES(
     ${HPMC_INCLUDE_DIR}
 )
 
-# --- Compile and link eclipse io library --------------------------------------
-ADD_LIBRARY( eclipseio
-     "src/eclipse/Eclipse.cpp"
-     "src/eclipse/EclipseParser.cpp"
-     "src/eclipse/EclipseReader.cpp"
-     "src/Logger.cpp"
-     "src/PerfTimer.cpp"
-)
-TARGET_LINK_LIBRARIES( eclipseio ${LOG4CXX_LIBRARIES} )
 
 # --- small data files ---------------------------------------------------------
 FILE( GLOB frview_EXAMPLE_DATA "data/*.gtxt" )
@@ -156,55 +145,32 @@ FOREACH( file ${frview_core_JS} )
 ENDFOREACH()
 
 # --- Compile and link code that is common for all eclipse viz apps ------------
+
+FILE( GLOB frview_core_SRC "src/models/*.cpp"
+                           "src/render/*.cpp"
+                           "src/cornerpoint/*.cpp"
+                           "src/eclipse/*.cpp"
+                           "src/job/*.cpp"
+                           "src/utils/*.cpp" )
+FILE( GLOB frview_core_HDR "src/models/*.hpp"
+                           "src/render/*.hpp"
+                           "src/cornerpoint/*.hpp"
+                           "src/eclipse/*.hpp"
+                           "src/job/*.hpp"
+                           "src/utils/*.hpp" )
+
+SET_SOURCE_FILES_PROPERTIES( ${frview_HDR} PROPERTIES HEADER_FILE_ONLY TRUE )
+
 ADD_LIBRARY( frview_core
              ${frview_core_SHADERS}         # Add deps to make them appear in solution
              ${frview_core_JS}              # Add deps to make them appear in solution
              ${frview_EXAMPLE_DATA}         # Add deps to make them appear in solution
-             "src/models/Appearance.cpp"
-             "src/models/GridStats.cpp"
-             "src/models/File.cpp"
-             "src/models/UnderTheHood.cpp"
-             "src/Project.cpp"
-             "src/render/ClipPlane.cpp"
-             "src/render/CellSelector.cpp"
-             "src/render/GridTess.cpp"
-             "src/render/GridTessBridge.cpp"
-             "src/render/GridTessSubset.cpp"
-             "src/render/GridTessSurf.cpp"
-             "src/render/GridTessSurfBuilder.cpp"
-             "src/render/GridTessSurfRenderer.cpp"
-             "src/render/GridFieldBridge.cpp"
-             "src/render/GridCubeRenderer.cpp"
-             "src/render/GridField.cpp"
-             "src/cornerpoint/Tessellator.cpp"
-             "src/cornerpoint/PillarFloorSampler.cpp"
-             "src/cornerpoint/PillarWallSampler.cpp"
-             "src/FooBarParser.cpp"
-             "src/CellSanityChecker.cpp"
-             "src/render/TextRenderer.cpp"
-             "src/render/TextRendererFont.cpp"
-             "src/render/WellRenderer.cpp"
-             "src/render/CoordSysRenderer.cpp"
-             "src/render/GridVoxelization.cpp"
-             "src/render/VoxelSurface.cpp"
-             "src/render/TimerQuery.cpp"
-)
+             ${frview_core_SRC}
+             ${frview_core_HDR} )
 
 TARGET_LINK_LIBRARIES( frview_core
                        ${SHADER_LIBS}
                        ${JS_LIBS} )
-
-# --- Compile and link job (common to both desktop and cloud jobs) -------------
-ADD_LIBRARY( frview_job "src/CPViewJob.cpp"
-                        "src/ASyncReader.cpp"
-                        "src/CPViewJob_Fetch.cpp"
-                        "src/CPViewJob_Compute.cpp"
-                        "src/CPViewJob_Render.cpp"
-                        "src/CPViewJob_RenderList.cpp"
-)
-TARGET_LINK_LIBRARIES( frview_job
-                       frview_core
-)
 
 
 # --- Compile and link desktop job ---------------------------------------------
@@ -219,10 +185,8 @@ IF( DESKTOP_JOB )
     )
     ADD_EXECUTABLE( frview_desktop_job "src/main_job.cpp" )
     TARGET_LINK_LIBRARIES( frview_desktop_job
-      ${TINIA_LIBRARIES}
-                           frview_job
+                           ${TINIA_LIBRARIES}
                            frview_core
-                           eclipseio
                            ${tinia_RenderListGL_LIBRARY}
                            ${tinia_RenderList_LIBRARY}
                            ${tinia_jobcontroller_LIBRARY}
@@ -244,10 +208,8 @@ IF( CLOUD_JOB )
     INCLUDE_DIRECTORIES( ${LIBXML2_INCLUDE_DIR} )
     ADD_EXECUTABLE( frview_cloud_job "src/main_cloud_job.cpp" )
     TARGET_LINK_LIBRARIES( frview_cloud_job
-      ${TINIA_LIBRARIES}
-                           frview_job
+                           ${TINIA_LIBRARIES}
                            frview_core
-                           eclipseio
                            ${tinia_RenderListGL_LIBRARY}
                            ${tinia_RenderList_LIBRARY}
                            ${tinia_jobcontroller_LIBRARY}
@@ -263,21 +225,18 @@ IF( CLOUD_JOB )
 ENDIF( CLOUD_JOB )
 
 
-# ${tinia_RenderListGL_LIBRARY}
-# ${tinia_RenderList_LIBRARY}
-# ${tinia_jobcontroller_LIBRARY}
-# ${tinia_model_LIBRARY}
-# ${tinia_modelxml_LIBRARY}
-# ${tinia_qtcontroller_LIBRARY}
-# ${tinia_trell_LIBRARY}
-
 
 
 # --- Compile and link simple app that scans through eclipse files -------------
 IF( ECLIPSESCAN_APP )
-    ADD_EXECUTABLE( eclipsescan "src/eclipsescan.cpp" )
+    ADD_EXECUTABLE( eclipsescan "src/eclipsescan.cpp" 
+                                "src/eclipse/Eclipse.cpp"
+                                "src/eclipse/EclipseParser.cpp"
+                                "src/eclipse/EclipseReader.cpp"
+                                "src/utils/Logger.cpp"
+                                "src/utils/PerfTimer.cpp"
+    )
     TARGET_LINK_LIBRARIES( eclipsescan
-                           eclipseio
                            ${LOG4CXX_LIBRARIES}
     )
 ENDIF( ECLIPSESCAN_APP )

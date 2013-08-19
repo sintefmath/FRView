@@ -14,8 +14,8 @@
 #include <sstream>
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
-#include "Logger.hpp"
-#include "PerfTimer.hpp"
+#include "utils/Logger.hpp"
+#include "utils/PerfTimer.hpp"
 #include "cornerpoint/Tessellator.hpp"
 #include "cornerpoint/PillarFloorSampler.hpp"
 #include "cornerpoint/PillarWallSampler.hpp"

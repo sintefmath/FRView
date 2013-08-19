@@ -15,8 +15,8 @@
 #include <ctype.h>
 #include <cstring>
 #include <limits>
-#include "Logger.hpp"
-#include "PerfTimer.hpp"
+#include "utils/Logger.hpp"
+#include "utils/PerfTimer.hpp"
 #include "EclipseReader.hpp"
 #ifdef __SSE2__
 #include <xmmintrin.h>

@@ -18,10 +18,10 @@
 //#include <tinia/model/PolicyLock.hpp>
 
 #include "CPViewJob.hpp"
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "Project.hpp"
 #include "ASyncReader.hpp"
-#include "PerfTimer.hpp"
+#include "utils/PerfTimer.hpp"
 #include "render/GridTess.hpp"
 #include "render/GridTessSubset.hpp"
 #include "render/GridTessSurf.hpp"

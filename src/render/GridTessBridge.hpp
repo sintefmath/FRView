@@ -10,7 +10,7 @@
 #include <vector>
 #include <list>
 #include <boost/utility.hpp>
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 
 namespace render {
     class GridTess;

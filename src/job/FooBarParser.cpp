@@ -14,7 +14,7 @@
 #include <cstring>
 #include <algorithm>
 #include <stdexcept>
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "FooBarParser.hpp"
 #include "render/GridField.hpp"
 

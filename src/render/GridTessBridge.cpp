@@ -12,10 +12,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "GridTess.hpp"
 #include "GridTessBridge.hpp"
-#include "PerfTimer.hpp"
+#include "utils/PerfTimer.hpp"
 #ifdef __SSE2__
 #include <xmmintrin.h>
 #endif

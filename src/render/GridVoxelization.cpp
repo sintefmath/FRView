@@ -11,7 +11,7 @@
 #include <glm/gtx/string_cast.hpp>
 
 #include <siut2/gl_utils/GLSLtools.hpp>
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "GridTess.hpp"
 #include "GridTessSubset.hpp"
 #include "GridVoxelization.hpp"

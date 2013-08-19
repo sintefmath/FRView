@@ -9,7 +9,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <siut2/gl_utils/GLSLtools.hpp>
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "GridTess.hpp"
 #include "GridTessSurf.hpp"
 #include "GridField.hpp"

@@ -7,7 +7,7 @@
 #include <tinia/model/ExposedModel.hpp>
 #include "models/Logic.hpp"
 #include "render/TimerQuery.hpp"
-#include "PerfTimer.hpp"
+#include "utils/PerfTimer.hpp"
 
 namespace models {
 

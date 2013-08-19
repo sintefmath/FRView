@@ -14,7 +14,7 @@
 #include <sys/mman.h>
 #include <ctype.h>
 #include <cstring>
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "Eclipse.hpp"
 
 namespace eclipse {

@@ -11,8 +11,8 @@
 #include <list>
 #include <tinia/qtcontroller/QTController.hpp>
 
-#include "CPViewJob.hpp"
-#include "Logger.hpp"
+#include "job/CPViewJob.hpp"
+#include "utils/Logger.hpp"
 
 namespace resources {
     extern std::string cameramanipulator;

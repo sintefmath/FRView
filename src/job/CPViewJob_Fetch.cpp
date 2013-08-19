@@ -4,7 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "CPViewJob.hpp"
 #include "Project.hpp"
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "eclipse/EclipseReader.hpp"
 #include "render/GridTess.hpp"

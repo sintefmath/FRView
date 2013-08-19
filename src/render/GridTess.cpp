@@ -16,7 +16,7 @@
 #include "GridField.hpp"
 #include "GridTessBridge.hpp"
 #include "GridTessSubset.hpp"
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include <siut2/gl_utils/GLSLtools.hpp>
 #include <siut2/io_utils/snarf.hpp>
 

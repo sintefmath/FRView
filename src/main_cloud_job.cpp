@@ -1,8 +1,8 @@
 #include <list>
 #include <string>
 #include <tinia/trell/IPCGLJobController.hpp>
-#include "Logger.hpp"
-#include "CPViewJob.hpp"
+#include "utils/Logger.hpp"
+#include "job/CPViewJob.hpp"
 
 namespace resources {
     extern std::string cameramanipulator;

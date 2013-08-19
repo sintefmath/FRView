@@ -13,7 +13,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <cstring>
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "Project.hpp"
 #include "eclipse/EclipseParser.hpp"
 #include "cornerpoint/Tessellator.hpp"

@@ -7,11 +7,11 @@
  *
  ******************************************************************************/
 #include <atomic>
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "cornerpoint/Tessellator.hpp"
 #include "eclipse/EclipseReader.hpp"
-#include "PerfTimer.hpp"
+#include "utils/PerfTimer.hpp"
 
 static const std::string package = "ASyncReader";
 

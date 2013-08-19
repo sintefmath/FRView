@@ -6,7 +6,7 @@
  *  Copyright (C) 2009 by SINTEF.  All rights reserved.
  *
  ******************************************************************************/
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "GridTess.hpp"
 #include "GridTessSubset.hpp"
 #include <siut2/gl_utils/GLSLtools.hpp>

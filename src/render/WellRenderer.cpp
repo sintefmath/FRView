@@ -14,7 +14,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <siut2/gl_utils/GLSLtools.hpp>
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "WellRenderer.hpp"
 
 namespace resources {

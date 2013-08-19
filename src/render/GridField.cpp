@@ -9,7 +9,7 @@
 #include <GL/glew.h>
 #include <iostream>
 #include <siut2/gl_utils/GLSLtools.hpp>
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "GridTess.hpp"
 #include "GridField.hpp"
 #include "GridFieldBridge.hpp"

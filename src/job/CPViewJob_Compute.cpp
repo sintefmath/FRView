@@ -4,7 +4,7 @@
 #include "CPViewJob.hpp"
 #include "render/GridTess.hpp"
 #include "Project.hpp"
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "render/GridTessSubset.hpp"
 #include "render/GridTessSurf.hpp"
 #include "render/GridTessSurfBuilder.hpp"

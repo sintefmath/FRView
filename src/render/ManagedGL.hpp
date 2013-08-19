@@ -1,6 +1,6 @@
 #pragma once
 #include <GL/glew.h>
-#include <Logger.hpp>
+#include "utils/Logger.hpp"
 
 namespace render {
 
