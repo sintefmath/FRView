@@ -200,10 +200,6 @@ private:
             const size_t        width,
             const size_t        height );
 
-#ifdef DEBUG_GRAPHICS
-    std::vector<float>      m_debug_points;
-#endif
-
     bool
     handleButtonClick( tinia::model::StateElement *stateElement );
 

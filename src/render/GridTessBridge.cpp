@@ -609,7 +609,7 @@ GridTessBridge::addEdge( const Index ix0, const Index ix1,
          const Index cell_a, const Index cell_b,
          const Index cell_c, const Index cell_d )
 {
-#ifndef OMIT_GEOMETRIC_EDGES
+#ifdef EXTRACT_EDGE_GEOMETRY
     Logger log = getLogger( package + ".addEdge" );
 
     // Make sure that edge is not degenerate

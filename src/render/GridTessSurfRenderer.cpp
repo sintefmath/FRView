@@ -434,53 +434,6 @@ GridTessSurfRenderer::renderCells(GLuint                          fbo,
     glEnable( GL_DEPTH_TEST );
     glDisable( GL_BLEND );
     glDepthMask( GL_TRUE );
-
-#ifdef DEBUG_GRAPHICSz
-    glBindFramebuffer( GL_FRAMEBUFFER, fbo );
-    glMatrixMode( GL_PROJECTION );
-    glLoadMatrixf( projection );
-    glMatrixMode( GL_MODELVIEW );
-    glLoadMatrixf( modelview );
-
-    glUseProgram( 0 );
-    glColor3f( 1.f, 1.f, 0.f );
-    glBegin( GL_LINES );
-
-    const float l = 0.1f;
-    for(int i=0; i<tess->triangleCount(); i++ ) {
-
-        const float mx = (1.f/3.f)*(tess->vertexData()[ 4*tess->vertexIndexData()[3*i+0] + 0 ] +
-                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+1] + 0 ] +
-                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+2] + 0 ] );
-        const float my = (1.f/3.f)*(tess->vertexData()[ 4*tess->vertexIndexData()[3*i+0] + 1 ] +
-                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+1] + 1 ] +
-                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+2] + 1 ] );
-        const float mz = (1.f/3.f)*(tess->vertexData()[ 4*tess->vertexIndexData()[3*i+0] + 2 ] +
-                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+1] + 2 ] +
-                                    tess->vertexData()[ 4*tess->vertexIndexData()[3*i+2] + 2 ] );
-
-        for( unsigned int k=0; k<3; k++ ) {
-            const float px = 0.1*mx + 0.9*tess->vertexData()[ 4*tess->vertexIndexData()[3*i+k] + 0 ];
-            const float py = 0.1*my + 0.9*tess->vertexData()[ 4*tess->vertexIndexData()[3*i+k] + 1 ];
-            const float pz = 0.1*mz + 0.9*tess->vertexData()[ 4*tess->vertexIndexData()[3*i+k] + 2 ];
-
-            const float nx = l*tess->normalData()[ 4*tess->normalIndexData()[3*i+k] + 0 ];
-            const float ny = l*tess->normalData()[ 4*tess->normalIndexData()[3*i+k] + 1 ];
-            const float nz = l*tess->normalData()[ 4*tess->normalIndexData()[3*i+k] + 2 ];
-            const float nw = tess->normalData()[ 4*tess->normalIndexData()[3*i+k] + 3 ];
-
-            if( nw > 2.9f ) {
-//            if( nx*nx + ny*ny + nz*nz > std::numeric_limits<float>::epsilon() ) {
-//            glVertex3f( px, py, pz );
-                glVertex3f( px-nx, py-ny, pz-nz );
-                glVertex3f( px+nx, py+ny, pz+nz );
-            }
-        }
-
-    }
-    glEnd();
-#endif
-
 }
 
 
