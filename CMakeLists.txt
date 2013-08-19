@@ -1,4 +1,4 @@
-PROJECT( cpview )
+PROJECT( FRView )
 CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )
 
 OPTION( EXTEND_CMAKE_MODULE_PATH "Extend the CMAKE_MODULE_PATH variable with user directories?"  ON )
@@ -131,23 +131,23 @@ ADD_LIBRARY( eclipseio
 TARGET_LINK_LIBRARIES( eclipseio ${LOG4CXX_LIBRARIES} )
 
 # --- shader files -------------------------------------------------------------
-FILE( GLOB cpview_core_SHADERS "shaders/*glsl" )
-FOREACH( file ${cpview_core_SHADERS} )
+FILE( GLOB frview_core_SHADERS "shaders/*glsl" )
+FOREACH( file ${frview_core_SHADERS} )
     GET_FILENAME_COMPONENT( symbol ${file} NAME_WE)
     ADD_TEXT_FILE( ${symbol} "resources::${symbol}" ${file} )
     LIST( APPEND SHADER_LIBS ${symbol} )
 ENDFOREACH()
 
 # --- javscript scriptlets -----------------------------------------------------
-FILE( GLOB cpview_core_JS "js/*.js" )
-FOREACH( file ${cpview_core_JS} )
+FILE( GLOB frview_core_JS "js/*.js" )
+FOREACH( file ${frview_core_JS} )
     GET_FILENAME_COMPONENT( symbol ${file} NAME_WE)
     ADD_TEXT_FILE( ${symbol} "resources::${symbol}" ${file} )
     LIST( APPEND JS_LIBS ${symbol} )
 ENDFOREACH()
 
 # --- Compile and link code that is common for all eclipse viz apps ------------
-ADD_LIBRARY( cpview_core
+ADD_LIBRARY( frview_core
              "src/models/Appearance.cpp"
              "src/models/GridStats.cpp"
              "src/models/File.cpp"
@@ -178,18 +178,18 @@ ADD_LIBRARY( cpview_core
              "src/render/TimerQuery.cpp"
 )
 
-TARGET_LINK_LIBRARIES( cpview_core ${SHADER_LIBS} ${JS_LIBS} )
+TARGET_LINK_LIBRARIES( frview_core ${SHADER_LIBS} ${JS_LIBS} )
 
 # --- Compile and link job (common to both desktop and cloud jobs) -------------
-ADD_LIBRARY( cpview_job "src/CPViewJob.cpp"
+ADD_LIBRARY( frview_job "src/CPViewJob.cpp"
                         "src/ASyncReader.cpp"
                         "src/CPViewJob_Fetch.cpp"
                         "src/CPViewJob_Compute.cpp"
                         "src/CPViewJob_Render.cpp"
                         "src/CPViewJob_RenderList.cpp"
 )
-TARGET_LINK_LIBRARIES( cpview_job
-                       cpview_core
+TARGET_LINK_LIBRARIES( frview_job
+                       frview_core
 )
 
 
@@ -203,11 +203,11 @@ IF( DESKTOP_JOB )
         ${QT_INCLUDE_DIR}
         ${QT_QTOPENGL_INCLUDE_DIR}
     )
-    ADD_EXECUTABLE( cpview_desktop_job "src/main_job.cpp" )
-    TARGET_LINK_LIBRARIES( cpview_desktop_job
+    ADD_EXECUTABLE( frview_desktop_job "src/main_job.cpp" )
+    TARGET_LINK_LIBRARIES( frview_desktop_job
       ${TINIA_LIBRARIES}
-                           cpview_job
-                           cpview_core
+                           frview_job
+                           frview_core
                            eclipseio
                            ${tinia_RenderListGL_LIBRARY}
                            ${tinia_RenderList_LIBRARY}
@@ -228,11 +228,11 @@ ENDIF( DESKTOP_JOB )
 IF( CLOUD_JOB )
     FIND_PACKAGE(LibXml2 REQUIRED)
     INCLUDE_DIRECTORIES( ${LIBXML2_INCLUDE_DIR} )
-    ADD_EXECUTABLE( cpview_cloud_job "src/main_cloud_job.cpp" )
-    TARGET_LINK_LIBRARIES( cpview_cloud_job
+    ADD_EXECUTABLE( frview_cloud_job "src/main_cloud_job.cpp" )
+    TARGET_LINK_LIBRARIES( frview_cloud_job
       ${TINIA_LIBRARIES}
-                           cpview_job
-                           cpview_core
+                           frview_job
+                           frview_core
                            eclipseio
                            ${tinia_RenderListGL_LIBRARY}
                            ${tinia_RenderList_LIBRARY}
@@ -259,9 +259,9 @@ ENDIF( CLOUD_JOB )
 
 # --- Compile and link simple glut app (doesn't use policylib at all) ----------
 IF( GLUT_APP )
-    ADD_EXECUTABLE( cpview_glut_app "src/main_glut.cpp" )
-    TARGET_LINK_LIBRARIES( cpview_glut_app
-                           cpview_core
+    ADD_EXECUTABLE( frview_glut_app "src/main_glut.cpp" )
+    TARGET_LINK_LIBRARIES( frview_glut_app
+                           frview_core
                            eclipseio
                            ${SIUT2_LIBRARY}
                            ${Freeglut_LIBRARY}
