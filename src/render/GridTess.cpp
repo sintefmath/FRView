@@ -298,7 +298,7 @@ GridTess::updateNormals( GridTessBridge& bridge )
     m_normals_num = bridge.m_normals.size();
     if( m_normals_num > 0 ) {
         m_normal_vectors_host.resize( 4*m_normals_num );
-        for(unsigned int i=0; i<m_normals_num; i++ ) {
+        for(GLsizei i=0; i<m_normals_num; i++ ) {
             m_normal_vectors_host[ 4*i+0 ] = bridge.m_normals[i].x();
             m_normal_vectors_host[ 4*i+1 ] = bridge.m_normals[i].y();
             m_normal_vectors_host[ 4*i+2 ] = bridge.m_normals[i].z();

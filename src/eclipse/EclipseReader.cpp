@@ -20,11 +20,11 @@
 #include "EclipseReader.hpp"
 #ifdef __SSE2__
 #include <xmmintrin.h>
-#warning "Using SSE2 intrinsics"
+/*#warning "Using SSE2 intrinsics"*/
 #endif
 #ifdef __SSSE3__
 #include <tmmintrin.h>
-#warning "Using SSSE3 intrinsics"
+/*#warning "Using SSSE3 intrinsics"*/
 #endif
 
 namespace eclipse {

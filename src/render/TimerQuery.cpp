@@ -4,7 +4,7 @@
 namespace render {
 
 TimerQuery::TimerQuery()
-    : m_query(0), m_has_data( false )
+    : m_has_data( false ), m_query(0) 
 {
     reset();
 }

@@ -36,12 +36,12 @@ parseRestartStep( std::list<ReportStep>&            report_steps,
 
     unsigned int nwell = 0;     // number of wells
     unsigned int ncwma = 0;     // max no of completions per well
-    unsigned int nwgmax = 0;    // max no of wells in any well group
-    unsigned int ngmaxz = 0;   // max no of wells in field
+    //unsigned int nwgmax = 0;    // max no of wells in any well group
+    //unsigned int ngmaxz = 0;   // max no of wells in field
     unsigned int niwelz = 0;     // no of data elements per well in IWEL array
     unsigned int nzwelz = 0;
     unsigned int niconz = 0;     // no of data elements per completion in ICON array
-    unsigned int nigrpz = 0;    // no of data elements per group in IGRP array
+    //unsigned int nigrpz = 0;    // no of data elements per group in IGRP array
 
     unsigned int nswlmx = 0;    // max no of segmented wells
     unsigned int nsegmx = 0;    // max no of segments per well
@@ -115,12 +115,12 @@ parseRestartStep( std::list<ReportStep>&            report_steps,
             }
             nwell  = intehead[16];      // Number of wells
             ncwma  = intehead[17];      // Max # completions per well.
-            nwgmax = intehead[19];      // Max number of wells in any well group.
-            ngmaxz = intehead[20];      // Maximum number of groups in field.
+            //nwgmax = intehead[19];      // Max number of wells in any well group.
+            //ngmaxz = intehead[20];      // Maximum number of groups in field.
             niwelz = intehead[24];      // Number of data elements per well in IWEL.
             nzwelz = intehead[27];      // Number of 8-character strings per well in ZWEL
             niconz = intehead[32];      // Number of data elements per completion in ICON.
-            nigrpz = intehead[36];      // Number of data elements per group in ZGRP.
+            //nigrpz = intehead[36];      // Number of data elements per group in ZGRP.
 
 
             step.m_properties["nwell"] = intehead[ ITEM_INTEHEAD_NWELLS ];
@@ -342,7 +342,7 @@ parseRestartStep( std::list<ReportStep>&            report_steps,
                 well.m_name = well.m_name.substr( 0, pos+1 );
             }
 
-            for(unsigned int comp_no=0; comp_no<ncomp; comp_no++ ) {
+            for(int comp_no=0; comp_no<ncomp; comp_no++ ) {
                 Completion completion;
 
                 const unsigned int icon_offset = niconz*(ncwma*i + comp_no);
@@ -386,7 +386,7 @@ parseRestartStep( std::list<ReportStep>&            report_steps,
                     branch = iseg[ iseg_offset + ITEM_ISEG_BRANCH ];
                 }
 
-                if( well.m_branches.size() <= branch ) {
+                if( (int)well.m_branches.size() <= branch ) {
                     well.m_branches.resize( branch+1 );
                 }
                 well.m_branches[ branch ].push_back( completion );
@@ -400,8 +400,8 @@ parseRestartStep( std::list<ReportStep>&            report_steps,
     }
     else {
         for( size_t w=0; w<step.m_wells.size(); w++ ) {
-            const Well& well = step.m_wells[w];
 #if 0
+            const Well& well = step.m_wells[w];
             LOGGER_INFO( log, "Well " << w << ": " << well.m_name
                          << ", head: [" << well.m_head_i
                          << ", " << well.m_head_j

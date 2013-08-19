@@ -961,11 +961,15 @@ Tessellator<Tessellation>::stitchPillarsHandleIntersections( const Orientation  
     Logger log = getLogger( package + ".stitchPillarsHandleIntersections" );
 
 
-    const Real c_x[4] = { o0_coord[0], o1_coord[0], o0_coord[3], o1_coord[3] };
-    const Real c_y[4] = { o0_coord[1], o1_coord[1], o0_coord[4], o1_coord[4] };
-    const Real c_z[4] = { o0_coord[2], o1_coord[2], o0_coord[5], o1_coord[5] };
-    const Real s[2] = { 1.f/(c_z[2]-c_z[0]), 1.f/(c_z[3]-c_z[1]) };
-    const Real dl_xy[4] = { s[0]*(c_x[2]-c_x[0]), s[1]*(c_x[3]-c_x[1]), s[0]*(c_y[2]-c_y[0]), s[1]*(c_y[3]-c_y[1]) };
+    //const Real c_x[4] = { o0_coord[0], o1_coord[0], o0_coord[3], o1_coord[3] };
+    //const Real c_y[4] = { o0_coord[1], o1_coord[1], o0_coord[4], o1_coord[4] };
+    //const Real c_z[4] = { o0_coord[2], o1_coord[2], o0_coord[5], o1_coord[5] };
+    //const Real s[2] = { 1.f/(c_z[2]-c_z[0]),
+    //                    1.f/(c_z[3]-c_z[1]) };
+    //const Real dl_xy[4] = { s[0]*(c_x[2]-c_x[0]),
+    //                        s[1]*(c_x[3]-c_x[1]),
+    //                        s[0]*(c_y[2]-c_y[0]),
+    //                        s[1]*(c_y[3]-c_y[1]) };
 
     vector<Segment> segments;
 
@@ -1103,20 +1107,26 @@ Tessellator<Tessellation>::stitchPillarsHandleIntersections( const Orientation  
                                                  line_l12.m_side ) );
                     NextIntersection isec_l2_ix = l_1_isec.m_nxt_upwrd_isec_ix;
                     if( isec_l2_ix.isIntersection() ) {
+#ifdef CHECK_INVARIANTS
                         // Second intersection is on wall, and we should have closed the loop
                         const Intersection& isec_l2 = intersections[ isec_l2_ix.intersection() ];
                         LOGGER_INVARIANT_EQUAL( log, process_pillar_1, false );
                         LOGGER_INVARIANT_EQUAL( log, segments.front().vertex(), isec_l2.m_vtx_ix );
+#endif
                     }
                     else if( segments.front().vertex() == isec_l2_ix.vertex() ) {
+#ifdef CHECK_INVARIANTS
                         // Second intersection is on pillar, and matches upper loop
                         LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
                         process_pillar_1 = false;
+#endif
                     }
                     else {
+#ifdef CHECK_INVARIANTS
                         // Second intersection is on pillar, no match, so we must close the loop
                         LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
                         LOGGER_INVARIANT_EQUAL( log, line_l12.m_ends[1], isec_l2_ix.vertex() );
+#endif
                         segments.push_back( Segment( line_l12.m_normals[1],
                                                      line_l12.m_ends[1],
                                                      3u ) );
@@ -1212,20 +1222,26 @@ Tessellator<Tessellation>::stitchPillarsHandleIntersections( const Orientation  
             NextIntersection isec_l2_ix = intersections[isec_l1_ix.intersection()].m_nxt_upwrd_isec_ix;
             if( isec_l2_ix.isIntersection() ) {
                 // Second intersection is on wall, must be identical to upper arc
+#ifdef CHECK_INVARIANTS
                 const Intersection& isec_l2 = intersections[ isec_l2_ix.intersection() ];
                 LOGGER_INVARIANT_EQUAL( log, process_pillar_1, false );
                 LOGGER_INVARIANT_EQUAL( log, cell[side1], line_l12.m_cell_over[ side1 ] );
                 LOGGER_INVARIANT_EQUAL( log, segments.front().vertex(),isec_l2.m_vtx_ix );
+#endif
             }
             else if( segments.front().vertex() == isec_l2_ix.vertex() ) {
+#ifdef CHECK_INVARIANTS
                 // Second intersection is on pillar and closes loop
                 LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
                 process_pillar_1 = false;
+#endif
             }
             else {
+#ifdef CHECK_INVARIANTS
                 // Second intersection is on pillar and doesn't close loop
                 LOGGER_INVARIANT_EQUAL( log, line_l12.m_ends[1], isec_l2_ix.vertex() );
                 LOGGER_INVARIANT_EQUAL( log, process_pillar_1, true );
+#endif
                 segments.push_back( Segment( line_l12.m_normals[1],
                                              line_l12.m_ends[1],
                                              3u ) );

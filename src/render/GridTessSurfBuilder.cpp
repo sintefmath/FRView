@@ -242,7 +242,7 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
             glGetQueryObjectuiv( m_meta_query[i].get(),
                                  GL_QUERY_RESULT,
                                  &polygons_count[i] );
-            if( m_meta_buf_N[i] < polygons_count[i] ) {
+            if( m_meta_buf_N[i] < (GLsizei)(polygons_count[i]) ) {
                 m_meta_buf_N[i] = 1.1f*polygons_count[i];
                 glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_meta_buf[i].get() );
                 glBufferData( GL_TRANSFORM_FEEDBACK_BUFFER,

@@ -324,7 +324,7 @@ GridTessBridge::addPolygon( const Interface interface,
     // compute approximate normal and barycenter
     // Newell's method (GPU gems III)
     glm::vec3 n(0.f);
-    for(int i=0; i<N; i++) {
+    for(uint i=0; i<N; i++) {
         glm::vec3 q = pos[i];
         glm::vec3 r = pos[(i+1)%N];
         n += glm::vec3( (q.y-r.y)*(q.z+r.z),
@@ -334,7 +334,7 @@ GridTessBridge::addPolygon( const Interface interface,
 
     // Check if polygon is convex
     bool convex = true;
-    for( int i=0; i<N && convex; i++ ) {
+    for( uint i=0; i<N && convex; i++ ) {
         glm::vec3 q = pos[i];
         glm::vec3 r = pos[(i+2)%N];
         glm::vec3 b = r - q;
@@ -343,7 +343,7 @@ GridTessBridge::addPolygon( const Interface interface,
         if( glm::dot( pos[(i+1)%N], m ) - d < std::numeric_limits<float>::epsilon() ) {
             convex = false;
         }
-        for( int k=3; k<N && convex; k++) {
+        for( uint k=3; k<N && convex; k++) {
             if( glm::dot( pos[(i+k)%N], m ) - d > -std::numeric_limits<float>::epsilon() ) {
                 convex = false;
             }
@@ -367,7 +367,7 @@ GridTessBridge::addPolygon( const Interface interface,
         if( N > 3) {
             if( N > 4 ) {
                 glm::vec3 b(0.f);
-                for(int i=0; i<N; i++) {
+                for(uint i=0; i<N; i++) {
                     b += pos[i];
                 }
                 b = (1.f/N)*b;
@@ -386,7 +386,7 @@ GridTessBridge::addPolygon( const Interface interface,
                 glm::vec3 v = glm::normalize( glm::cross( n,u ) );
                 // project to plane
                 std::vector<glm::vec2> pos2( N );
-                for( int i=0; i<N; i++ ) {
+                for( uint i=0; i<N; i++ ) {
                     glm::vec3 t = pos[i]-b;
                     pos2[i] = glm::vec2( glm::dot(u, t), glm::dot(v, t) );
                 }
