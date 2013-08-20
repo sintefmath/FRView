@@ -8,6 +8,7 @@
  ******************************************************************************/
 #include <siut2/gl_utils/GLSLtools.hpp>
 #include "utils/Logger.hpp"
+#include "utils/GLSLTools.hpp"
 #include "GridTess.hpp"
 #include "GridField.hpp"
 #include "GridTessSubset.hpp"
@@ -24,14 +25,16 @@ namespace render {
 
 CellSelector::CellSelector( const std::string& vs )
 {
+    Logger log = getLogger( "render.CellSelector.constructor" );
     m_program = glCreateProgram();
-    GLuint v = siut2::gl_utils::compileShader( vs, GL_VERTEX_SHADER, true );
+    GLuint v = utils::compileShader( log, vs, GL_VERTEX_SHADER );
+    //GLuint v = siut2::gl_utils::compileShader( vs, GL_VERTEX_SHADER, true );
     glAttachShader( m_program, v );
     const char* varyings[1] = {
         "selected"
     };
     glTransformFeedbackVaryings( m_program, 1, varyings, GL_INTERLEAVED_ATTRIBS );
-    siut2::gl_utils::linkProgram( m_program );
+    utils::linkProgram( log, m_program );
     glDeleteShader( v );
 }
 
