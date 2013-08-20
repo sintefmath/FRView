@@ -13,7 +13,9 @@
 
 namespace render {
     class GridTess;
-    class GridTessSubset;
+    namespace subset {
+        class Representation;
+    }
     namespace rlgen {
 
 class GridVoxelization : public boost::noncopyable
@@ -37,7 +39,7 @@ public:
     /** Populate the voxel set. */
     void
     build( boost::shared_ptr<const GridTess> tess,
-           boost::shared_ptr<const GridTessSubset> subset,
+           boost::shared_ptr<const subset::Representation> subset,
            const GLfloat* local_from_world );
 
 protected:

@@ -14,7 +14,9 @@
 
 namespace render {
     class GridTess;
-    class GridTessSubset;
+    namespace subset {
+        class Representation;
+    }
 
     namespace  surface {
     

@@ -11,11 +11,11 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <tuple>
-#include "CellSelector.hpp"
 #include "GridTess.hpp"
 #include "GridField.hpp"
 #include "GridTessBridge.hpp"
-#include "GridTessSubset.hpp"
+#include "render/subset/Builder.hpp"
+#include "render/subset/Representation.hpp"
 #include "utils/Logger.hpp"
 
 namespace render {

@@ -14,8 +14,9 @@
 
 namespace render {
     class GridTess;
-    class GridTessSubset;
-
+    namespace subset {
+        class Representation;
+    }
     namespace  surface {
         class GridTessSurf;
 
@@ -30,7 +31,7 @@ public:
     buildSurfaces( boost::shared_ptr<GridTessSurf>            surf_subset,
                    boost::shared_ptr<GridTessSurf>            surf_subset_boundary,
                    boost::shared_ptr<GridTessSurf>            surf_faults,
-                   boost::shared_ptr<const GridTessSubset>    subset,
+                   boost::shared_ptr<const subset::Representation>    subset,
                    boost::shared_ptr<const GridTess>          tess,
                    bool                     flip_faces );
 

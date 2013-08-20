@@ -13,7 +13,7 @@
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
 #include "render/GridTess.hpp"
-#include "render/GridTessSubset.hpp"
+#include "render/subset/Representation.hpp"
 #include "render/rlgen/GridVoxelization.hpp"
 
 static const std::string package = "render.GridVoxelization";
@@ -132,7 +132,7 @@ GridVoxelization::dimension( GLsizei* dim ) const
 
 void
 GridVoxelization::build( boost::shared_ptr<const GridTess> tess,
-                         boost::shared_ptr<const GridTessSubset> subset,
+                         boost::shared_ptr<const subset::Representation> subset,
                          const GLfloat* world_from_local )
 {
     Logger log = getLogger( package + ".build" );

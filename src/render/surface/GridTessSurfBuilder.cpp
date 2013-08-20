@@ -9,7 +9,7 @@
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
 #include "render/GridTess.hpp"
-#include "render/GridTessSubset.hpp"
+#include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
 
@@ -135,7 +135,7 @@ void
 GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
                                     boost::shared_ptr<GridTessSurf> surf_subset_boundary,
                                     boost::shared_ptr<GridTessSurf> surf_faults,
-                                    boost::shared_ptr<const GridTessSubset> subset,
+                                    boost::shared_ptr<const subset::Representation> subset,
                                     boost::shared_ptr<const GridTess> tess,
                                     bool                     flip_faces )
 {

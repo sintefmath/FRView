@@ -17,7 +17,9 @@ namespace render {
     class GridField;
     class CellSelector;
     class GridTessBridge;
-    class GridTessSubset;
+    namespace subset {
+        class Representation;
+    }
 
 /** GPU representation of a polyhedral mesh.
  *

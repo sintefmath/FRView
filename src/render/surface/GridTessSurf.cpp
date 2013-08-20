@@ -8,7 +8,7 @@
  ******************************************************************************/
 #include "utils/Logger.hpp"
 #include "render/GridTess.hpp"
-#include "render/GridTessSubset.hpp"
+#include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 
 namespace render {

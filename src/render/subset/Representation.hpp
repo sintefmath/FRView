@@ -14,9 +14,10 @@
 #include "render/ManagedGL.hpp"
 
 namespace render {
-
+  
 
 class GridTess;
+    namespace subset {
 
 /** GPU representation of a subset of the cells in a \ref GridTess.
  *
@@ -29,12 +30,12 @@ class GridTess;
  * the subset is built by \ref GridSurfBuilder.
  *
  */
-class GridTessSubset : public boost::noncopyable
+class Representation : public boost::noncopyable
 {
 public:
-    GridTessSubset( );
+    Representation( );
 
-    ~GridTessSubset();
+    ~Representation();
 
     /** GL buffer containing the bitmask. */
     GLuint
@@ -60,4 +61,5 @@ private:
     GLTexture           m_subset_texture;
 };
 
+    } // of namespace subset
 } // of namespace render

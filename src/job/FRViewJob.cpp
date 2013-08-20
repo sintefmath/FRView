@@ -23,14 +23,18 @@
 #include "ASyncReader.hpp"
 #include "utils/PerfTimer.hpp"
 #include "render/GridTess.hpp"
-#include "render/GridTessSubset.hpp"
 #include "render/GridField.hpp"
-#include "render/CellSelector.hpp"
 #include "render/ClipPlane.hpp"
 #include "render/GridCubeRenderer.hpp"
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
+#include "render/subset/BuilderSelectAll.hpp"
+#include "render/subset/BuilderSelectByFieldValue.hpp"
+#include "render/subset/BuilderSelectByIndex.hpp"
+#include "render/subset/BuilderSelectInsideHalfplane.hpp"
+#include "render/subset/BuilderSelectOnPlane.hpp"
+#include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
 #include "render/surface/GridTessSurfRenderer.hpp"
@@ -810,12 +814,12 @@ FRViewJob::releasePipeline()
     m_grid_tess_surf_builder = boost::shared_ptr<render::surface::GridTessSurfBuilder>();
     m_grid_field = boost::shared_ptr<render::GridField>();
     m_tess_renderer = boost::shared_ptr<render::surface::GridTessSurfRenderer>();
-    m_all_selector = boost::shared_ptr<render::AllSelector>();
-    m_field_selector = boost::shared_ptr<render::FieldSelector>();
-    m_index_selector = boost::shared_ptr<render::IndexSelector>();
-    m_plane_selector = boost::shared_ptr<render::PlaneSelector>();
-    m_half_plane_selector = boost::shared_ptr<render::HalfPlaneSelector>();
-    m_grid_tess_subset = boost::shared_ptr<render::GridTessSubset>();
+    m_all_selector = boost::shared_ptr<render::subset::BuilderSelectAll>();
+    m_field_selector = boost::shared_ptr<render::subset::BuilderSelectByFieldValue>();
+    m_index_selector = boost::shared_ptr<render::subset::BuilderSelectByIndex>();
+    m_plane_selector = boost::shared_ptr<render::subset::BuilderSelectOnPlane>();
+    m_half_plane_selector = boost::shared_ptr<render::subset::BuilderSelectInsideHalfplane>();
+    m_grid_tess_subset = boost::shared_ptr<render::subset::Representation>();
     m_grid_cube_renderer = boost::shared_ptr<render::GridCubeRenderer>();
     m_well_renderer = boost::shared_ptr<render::wells::WellRenderer>();
     m_coordsys_renderer = boost::shared_ptr<render::CoordSysRenderer>();
@@ -839,12 +843,12 @@ bool FRViewJob::setupPipeline()
         m_grid_tess_surf_builder.reset( new render::surface::GridTessSurfBuilder );
         m_grid_field.reset(  new render::GridField( m_grid_tess ) );
         m_tess_renderer.reset(  new render::surface::GridTessSurfRenderer );
-        m_all_selector.reset( new render::AllSelector );
-        m_field_selector.reset( new render::FieldSelector );
-        m_index_selector.reset( new render::IndexSelector );
-        m_plane_selector.reset( new render::PlaneSelector );
-        m_half_plane_selector.reset( new render::HalfPlaneSelector );
-        m_grid_tess_subset.reset( new render::GridTessSubset );
+        m_all_selector.reset( new render::subset::BuilderSelectAll );
+        m_field_selector.reset( new render::subset::BuilderSelectByFieldValue );
+        m_index_selector.reset( new render::subset::BuilderSelectByIndex );
+        m_plane_selector.reset( new render::subset::BuilderSelectOnPlane );
+        m_half_plane_selector.reset( new render::subset::BuilderSelectInsideHalfplane );
+        m_grid_tess_subset.reset( new render::subset::Representation );
         m_grid_cube_renderer.reset( new render::GridCubeRenderer );
         m_well_renderer.reset( new render::wells::WellRenderer );
         m_coordsys_renderer.reset( new render::CoordSysRenderer );

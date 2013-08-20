@@ -7,13 +7,14 @@
  *
  ******************************************************************************/
 #include "utils/Logger.hpp"
-#include "GridTess.hpp"
-#include "GridTessSubset.hpp"
+#include "render/GridTess.hpp"
+#include "render/subset/Representation.hpp"
 
 namespace render {
+    namespace subset {
 
 
-GridTessSubset::GridTessSubset()
+Representation::Representation()
     : m_cells_total( 0 ),
       m_subset_buffer( "GridTessSubset.m_subset_buffer" ),
       m_subset_texture( "GridTessSubset.m_subset_texture" )
@@ -30,12 +31,12 @@ GridTessSubset::GridTessSubset()
     glBindTexture( GL_TEXTURE_BUFFER, 0 );
 }
 
-GridTessSubset::~GridTessSubset()
+Representation::~Representation()
 {
 }
 
 void
-GridTessSubset::populateBuffer( boost::shared_ptr<const GridTess> tess,
+Representation::populateBuffer( boost::shared_ptr<const GridTess> tess,
                                 GLuint transform_feedback_index )
 {
     if( tess->cellCount() == 0 ) {
@@ -62,5 +63,6 @@ GridTessSubset::populateBuffer( boost::shared_ptr<const GridTess> tess,
     glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, 0 );
 }
 
+    } // of namespace subset
 } // of namespace render
 
