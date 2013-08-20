@@ -31,21 +31,23 @@ namespace render {
     class ClipPlane;
     class GridTess;
     class GridTessSubset;
-    class GridTessSurf;
-    class GridTessSurfBuilder;
     class GridField;
     class GridCubeRenderer;
-    class GridTessSurfRenderer;
     class AllSelector;
     class FieldSelector;
     class IndexSelector;
     class PlaneSelector;
     class HalfPlaneSelector;
     class TextRenderer;
+    class CoordSysRenderer;
     namespace wells {
         class WellRenderer;
     }
-    class CoordSysRenderer;
+    namespace surface {
+        class GridTessSurf;
+        class GridTessSurfBuilder;
+        class GridTessSurfRenderer;
+    }
     namespace rlgen {
         class GridVoxelization;
         class VoxelSurface;
@@ -140,12 +142,12 @@ private:
     boost::shared_ptr<render::ClipPlane>              m_clip_plane;
     boost::shared_ptr<render::GridTess>               m_grid_tess;
     boost::shared_ptr<render::GridTessSubset>         m_grid_tess_subset;
-    boost::shared_ptr<render::GridTessSurf>           m_faults_surface;
-    boost::shared_ptr<render::GridTessSurf>           m_subset_surface;
-    boost::shared_ptr<render::GridTessSurf>           m_boundary_surface;
-    boost::shared_ptr<render::GridTessSurfBuilder>    m_grid_tess_surf_builder;
+    boost::shared_ptr<render::surface::GridTessSurf>           m_faults_surface;
+    boost::shared_ptr<render::surface::GridTessSurf>           m_subset_surface;
+    boost::shared_ptr<render::surface::GridTessSurf>           m_boundary_surface;
+    boost::shared_ptr<render::surface::GridTessSurfBuilder>    m_grid_tess_surf_builder;
     boost::shared_ptr<render::GridField>              m_grid_field;
-    boost::shared_ptr<render::GridTessSurfRenderer>   m_tess_renderer;
+    boost::shared_ptr<render::surface::GridTessSurfRenderer>   m_tess_renderer;
     boost::shared_ptr<render::AllSelector>            m_all_selector;
     boost::shared_ptr<render::FieldSelector>          m_field_selector;
     boost::shared_ptr<render::IndexSelector>          m_index_selector;

@@ -16,6 +16,8 @@ namespace render {
     class GridTess;
     class GridTessSubset;
 
+    namespace  surface {
+    
 
 /** Contains indices for a surface of a subset of a corner-point grid tessellation. */
 class GridTessSurf : public boost::noncopyable
@@ -99,4 +101,5 @@ protected:
     GLTransformFeedback m_indices_xfb;
 };
 
+    } // of namespace surface
 } // of namespace render

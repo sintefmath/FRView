@@ -15,8 +15,9 @@
 
 namespace render {
     class GridTess;
-    class GridTessSurf;
     class GridField;
+    namespace  surface {
+        class GridTessSurf;
 
 /** Corner-point grid renderer
  *
@@ -169,4 +170,5 @@ private:
 
 };
 
+    } // of namespace surface
 } // of namespace render

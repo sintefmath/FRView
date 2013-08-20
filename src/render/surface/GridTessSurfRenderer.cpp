@@ -10,27 +10,27 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
-#include "GridTess.hpp"
-#include "GridTessSurf.hpp"
-#include "GridField.hpp"
-#include "GridTessSurfRenderer.hpp"
-
-namespace resources {
-    extern const std::string screen_common_vs;
-    extern const std::string screen_colorize_fs;
-    extern const std::string screen_weighted_sum_merge_fs;
-    extern const std::string surface_common_vs;
-    extern const std::string surface_common_gs;
-    extern const std::string surface_frag_list_fs;
-    extern const std::string surface_twopass_fs;
-    extern const std::string surface_singlepass_fs;
-    extern const std::string surface_crappy_fs;
-    extern const std::string surface_common_fs;
-    extern const std::string geo_edge_vs;
-    extern const std::string geo_edge_fs;
-}
+#include "render/GridTess.hpp"
+#include "render/GridField.hpp"
+#include "render/surface/GridTessSurf.hpp"
+#include "render/surface/GridTessSurfRenderer.hpp"
 
 namespace render {
+    namespace  surface {
+        namespace glsl {
+            extern const std::string GridTessSurfRenderer_common_vs;
+            extern const std::string GridTessSurfRenderer_common_gs;
+            extern const std::string GridTessSurfRenderer_frag_list_fs;
+            extern const std::string GridTessSurfRenderer_twopass_fs;
+            extern const std::string GridTessSurfRenderer_singlepass_fs;
+            extern const std::string GridTessSurfRenderer_crappy_fs;
+            extern const std::string GridTessSurfRenderer_common_fs;
+            extern const std::string GridTessSurfRenderer_screen_common_vs;
+            extern const std::string GridTessSurfRenderer_screen_colorize_fs;
+            extern const std::string GridTessSurfRenderer_screen_weighted_sum_merge_fs;
+            extern const std::string GridTessSurfRenderer_geo_edge_vs;
+            extern const std::string GridTessSurfRenderer_geo_edge_fs;
+        }
 
 GridTessSurfRenderer::GridTessSurfRenderer()
     : m_quality( ~0u ),
@@ -69,74 +69,74 @@ GridTessSurfRenderer::GridTessSurfRenderer()
         m_pass_data[i].m_program = 0;
     }
 
-    GLuint geo_edge_vs = utils::compileShader( log, resources::geo_edge_vs, GL_VERTEX_SHADER );
-    GLuint geo_edge_fs = utils::compileShader( log, resources::geo_edge_fs, GL_FRAGMENT_SHADER );
+    GLuint geo_edge_vs = utils::compileShader( log, glsl::GridTessSurfRenderer_geo_edge_vs, GL_VERTEX_SHADER );
+    GLuint geo_edge_fs = utils::compileShader( log, glsl::GridTessSurfRenderer_geo_edge_fs, GL_FRAGMENT_SHADER );
 
-    GLuint screen_common_vs = utils::compileShader( log, resources::screen_common_vs, GL_VERTEX_SHADER );
-    GLuint avg_alpha_fs = utils::compileShader( log, resources::screen_colorize_fs, GL_FRAGMENT_SHADER );
+    GLuint screen_common_vs = utils::compileShader( log, glsl::GridTessSurfRenderer_screen_common_vs, GL_VERTEX_SHADER );
+    GLuint avg_alpha_fs = utils::compileShader( log, glsl::GridTessSurfRenderer_screen_colorize_fs, GL_FRAGMENT_SHADER );
 
-    GLuint screen_weighted_sum_fs = utils::compileShader( log, resources::screen_weighted_sum_merge_fs, GL_FRAGMENT_SHADER );
+    GLuint screen_weighted_sum_fs = utils::compileShader( log, glsl::GridTessSurfRenderer_screen_weighted_sum_merge_fs, GL_FRAGMENT_SHADER );
 
-    GLuint surface_common_vs = utils::compileShader( log, resources::surface_common_vs, GL_VERTEX_SHADER );
-    GLuint surface_common_gs = utils::compileShader( log, resources::surface_common_gs, GL_GEOMETRY_SHADER );
-    GLuint surface_common_paint_gs = utils::compileShader( log, "#define DO_PAINT\n" + resources::surface_common_gs, GL_GEOMETRY_SHADER );
+    GLuint common_vs = utils::compileShader( log, glsl::GridTessSurfRenderer_common_vs, GL_VERTEX_SHADER );
+    GLuint common_gs = utils::compileShader( log, glsl::GridTessSurfRenderer_common_gs, GL_GEOMETRY_SHADER );
+    GLuint common_paint_gs = utils::compileShader( log, "#define DO_PAINT\n" + glsl::GridTessSurfRenderer_common_gs, GL_GEOMETRY_SHADER );
 
 
-    GLuint surface_twopass_fs = utils::compileShader( log, resources::surface_common_fs +
-                                               resources::surface_twopass_fs,
+    GLuint twopass_fs = utils::compileShader( log, glsl::GridTessSurfRenderer_common_fs +
+                                               glsl::GridTessSurfRenderer_twopass_fs,
                                                GL_FRAGMENT_SHADER );
-    GLuint surface_twopass_paint_fs = utils::compileShader( log, "#define DO_PAINT\n" +
-                                                     resources::surface_common_fs +
-                                                     resources::surface_twopass_fs,
+    GLuint twopass_paint_fs = utils::compileShader( log, "#define DO_PAINT\n" +
+                                                     glsl::GridTessSurfRenderer_common_fs +
+                                                     glsl::GridTessSurfRenderer_twopass_fs,
                                                      GL_FRAGMENT_SHADER );
-    GLuint surface_singlepass_fs = utils::compileShader( log, resources::surface_common_fs +
-                                                  resources::surface_singlepass_fs,
+    GLuint singlepass_fs = utils::compileShader( log, glsl::GridTessSurfRenderer_common_fs +
+                                                  glsl::GridTessSurfRenderer_singlepass_fs,
                                                   GL_FRAGMENT_SHADER );
-    GLuint surface_singlepass_paint_fs = utils::compileShader( log, "#define DO_PAINT\n" +
-                                                        resources::surface_common_fs +
-                                                        resources::surface_singlepass_fs,
+    GLuint singlepass_paint_fs = utils::compileShader( log, "#define DO_PAINT\n" +
+                                                        glsl::GridTessSurfRenderer_common_fs +
+                                                        glsl::GridTessSurfRenderer_singlepass_fs,
                                                         GL_FRAGMENT_SHADER );
 
-    GLuint surface_crappy_fs = utils::compileShader( log, resources::surface_crappy_fs, GL_FRAGMENT_SHADER );
-    //GLuint surface_frag_list_fs = utils::compileShader( log, resources::surface_frag_list_fs, GL_FRAGMENT_SHADER );
-    //GLuint surface_frag_list_paint_fs = utils::compileShader( log, "#define DO_PAINT\n" + resources::surface_frag_list_fs, GL_FRAGMENT_SHADER );
+    GLuint crappy_fs = utils::compileShader( log, glsl::GridTessSurfRenderer_crappy_fs, GL_FRAGMENT_SHADER );
+    //GLuint GridTessSurfRenderer_frag_list_fs = utils::compileShader( log, glsl::GridTessSurfRenderer_frag_list_fs, GL_FRAGMENT_SHADER );
+    //GLuint GridTessSurfRenderer_frag_list_paint_fs = utils::compileShader( log, "#define DO_PAINT\n" + glsl::GridTessSurfRenderer_frag_list_fs, GL_FRAGMENT_SHADER );
 
-    //GLuint surface_fraglist_fs =
+    //GLuint GridTessSurfRenderer_fraglist_fs =
 
     m_pass_data[ PASS_EDGE ].m_program = glCreateProgram();
     glAttachShader( m_pass_data[ PASS_EDGE ].m_program, geo_edge_vs );
     glAttachShader( m_pass_data[ PASS_EDGE ].m_program, geo_edge_fs );
 
     m_pass_data[ PASS_SURFACE_ONEPASS ].m_program = glCreateProgram();
-    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS ].m_program, surface_common_vs );
-    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS ].m_program, surface_common_gs );
-    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS ].m_program, surface_singlepass_fs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS ].m_program, common_vs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS ].m_program, common_gs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS ].m_program, singlepass_fs );
 
     m_pass_data[ PASS_SURFACE_ONEPASS_PAINT ].m_program = glCreateProgram();
-    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS_PAINT ].m_program, surface_common_vs );
-    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS_PAINT ].m_program, surface_common_paint_gs );
-    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS_PAINT ].m_program, surface_singlepass_paint_fs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS_PAINT ].m_program, common_vs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS_PAINT ].m_program, common_paint_gs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_ONEPASS_PAINT ].m_program, singlepass_paint_fs );
 
     m_pass_data[ PASS_SURFACE_TWOPASS ].m_program = glCreateProgram();
-    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS ].m_program, surface_common_vs );
-    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS ].m_program, surface_common_gs );
-    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS ].m_program, surface_twopass_fs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS ].m_program, common_vs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS ].m_program, common_gs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS ].m_program, twopass_fs );
 
     m_pass_data[ PASS_SURFACE_TWOPASS_PAINT ].m_program = glCreateProgram();
-    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS_PAINT ].m_program, surface_common_vs );
-    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS_PAINT ].m_program, surface_common_paint_gs );
-    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS_PAINT ].m_program, surface_twopass_paint_fs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS_PAINT ].m_program, common_vs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS_PAINT ].m_program, common_paint_gs );
+    glAttachShader( m_pass_data[ PASS_SURFACE_TWOPASS_PAINT ].m_program, twopass_paint_fs );
 
     // if 420
     //m_pass_data[ PASS_SURFACE_FRAG_LIST ].m_program = glCreateProgram();
-    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST ].m_program, surface_common_vs );
-    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST ].m_program, surface_common_paint_gs );
-    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST ].m_program, surface_frag_list_fs );
+    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST ].m_program, GridTessSurfRenderer_common_vs );
+    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST ].m_program, GridTessSurfRenderer_common_paint_gs );
+    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST ].m_program, GridTessSurfRenderer_frag_list_fs );
 
     //m_pass_data[ PASS_SURFACE_FRAG_LIST_PAINT ].m_program = glCreateProgram();
-    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST_PAINT ].m_program, surface_common_vs );
-    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST_PAINT ].m_program, surface_common_paint_gs );
-    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST_PAINT ].m_program, surface_frag_list_paint_fs );
+    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST_PAINT ].m_program, GridTessSurfRenderer_common_vs );
+    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST_PAINT ].m_program, GridTessSurfRenderer_common_paint_gs );
+    //glAttachShader( m_pass_data[ PASS_SURFACE_FRAG_LIST_PAINT ].m_program, GridTessSurfRenderer_frag_list_paint_fs );
 
     for( unsigned int i=0; i<PASS_N; i++ ) {
         if( m_pass_data[ i ].m_program == 0 ) {
@@ -168,8 +168,8 @@ GridTessSurfRenderer::GridTessSurfRenderer()
     m_deferred_loc_log_map = glGetUniformLocation( m_deferred_prog, "log_map" );
 
     m_surface_crappy_prog = glCreateProgram();
-    glAttachShader( m_surface_crappy_prog, surface_common_vs );
-    glAttachShader( m_surface_crappy_prog, surface_crappy_fs );
+    glAttachShader( m_surface_crappy_prog, common_vs );
+    glAttachShader( m_surface_crappy_prog, crappy_fs );
     utils::linkProgram( log, m_surface_crappy_prog );
     m_surface_crappy_loc_mvp = glGetUniformLocation( m_surface_crappy_prog, "MVP" );
     m_surface_crappy_loc_color = glGetUniformLocation( m_surface_crappy_prog, "color" );
@@ -179,11 +179,11 @@ GridTessSurfRenderer::GridTessSurfRenderer()
     glDeleteShader( geo_edge_fs );
     glDeleteShader( screen_common_vs );
     glDeleteShader( avg_alpha_fs );
-    glDeleteShader( surface_common_vs );
-    glDeleteShader( surface_common_gs );
-    glDeleteShader( surface_twopass_fs );
-    glDeleteShader( surface_singlepass_fs );
-    glDeleteShader( surface_crappy_fs );
+    glDeleteShader( common_vs );
+    glDeleteShader( common_gs );
+    glDeleteShader( twopass_fs );
+    glDeleteShader( singlepass_fs );
+    glDeleteShader( crappy_fs );
 }
 
 GridTessSurfRenderer::~GridTessSurfRenderer()
@@ -604,4 +604,5 @@ GridTessSurfRenderer::drawCrappy(const GLfloat*                  modelview,
     }
 }
 
+    } // of namespace surface
 } // of namespace render

@@ -8,19 +8,22 @@
  ******************************************************************************/
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
-#include "GridTess.hpp"
-#include "GridTessSubset.hpp"
-#include "GridTessSurf.hpp"
-#include "GridTessSurfBuilder.hpp"
+#include "render/GridTess.hpp"
+#include "render/GridTessSubset.hpp"
+#include "render/surface/GridTessSurf.hpp"
+#include "render/surface/GridTessSurfBuilder.hpp"
 
 namespace resources {
-    extern const std::string triangulate_poly_vs;
-    extern const std::string triangulate_poly_gs;
-    extern const std::string extract_faces_vs;
-    extern const std::string extract_faces_gs;
 }
 
 namespace render {
+    namespace  surface {
+        namespace glsl {
+            extern const std::string GridTessSurfBuilder_triangulate_vs;
+            extern const std::string GridTessSurfBuilder_triangulate_gs;
+            extern const std::string GridTessSurfBuilder_extract_vs;
+            extern const std::string GridTessSurfBuilder_extract_gs;
+        }
 
 GridTessSurfBuilder::GridTessSurfBuilder()
     : m_meta_prog( "GridTessSurfBuilder.m_meta_prog"),
@@ -32,10 +35,10 @@ GridTessSurfBuilder::GridTessSurfBuilder()
     // -------------------------------------------------------------------------
     // create polygon extract shader
     // -------------------------------------------------------------------------
-    GLuint faces_vs = utils::compileShader( log, resources::extract_faces_vs,
+    GLuint faces_vs = utils::compileShader( log, glsl::GridTessSurfBuilder_extract_vs,
                                      GL_VERTEX_SHADER );
 
-    GLuint faces_gs = utils::compileShader( log, resources::extract_faces_gs,
+    GLuint faces_gs = utils::compileShader( log, glsl::GridTessSurfBuilder_extract_gs,
                                      GL_GEOMETRY_SHADER );
 
 
@@ -113,11 +116,11 @@ GridTessSurfBuilder::rebuildTriangulationProgram( GLsizei max_vertices )
     std::stringstream o;
     o << "#define MAX_OUT " << max_out << "\n";
     GLuint poly_vs = utils::compileShader( log,
-                                           resources::triangulate_poly_vs,
+                                           glsl::GridTessSurfBuilder_triangulate_vs,
                                            GL_VERTEX_SHADER );
     GLuint poly_subset_gs = utils::compileShader( log,
                                                   o.str() +
-                                                  resources::triangulate_poly_gs,
+                                                  glsl::GridTessSurfBuilder_triangulate_gs,
                                                   GL_GEOMETRY_SHADER );
     glAttachShader( m_triangulate_prog.get(), poly_vs );
     glAttachShader( m_triangulate_prog.get(), poly_subset_gs );
@@ -286,4 +289,5 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
     glBindVertexArray( 0 );
 }
 
+    } // of namespace surface
 } // of namespace render

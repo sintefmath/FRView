@@ -7,11 +7,11 @@
 #include "utils/Logger.hpp"
 #include "render/GridCubeRenderer.hpp"
 #include "render/ClipPlane.hpp"
-#include "render/GridTessSurfRenderer.hpp"
 #include "render/GridField.hpp"
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
+#include "render/surface/GridTessSurfRenderer.hpp"
 #include "render/rlgen/GridVoxelization.hpp"          // move to renderlist
 #include "render/rlgen/VoxelSurface.hpp"  // move to renderlist
 
@@ -100,7 +100,7 @@ FRViewJob::render( const float*  projection,
                                      glm::value_ptr( m_local_to_world ) );
         }
 
-        std::vector<render::GridTessSurfRenderer::RenderItem> items;
+        std::vector<render::surface::GridTessSurfRenderer::RenderItem> items;
         if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS )  {
             const glm::vec4& fc = m_appearance.faultsFillColor();
             const glm::vec4& oc = m_appearance.faultsOutlineColor();

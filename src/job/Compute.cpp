@@ -6,12 +6,12 @@
 #include "render/GridTess.hpp"
 #include "utils/Logger.hpp"
 #include "render/GridTessSubset.hpp"
-#include "render/GridTessSurf.hpp"
-#include "render/GridTessSurfBuilder.hpp"
-#include "render/GridTessSurfRenderer.hpp"
 #include "render/GridField.hpp"
 #include "render/CellSelector.hpp"
 #include "render/ClipPlane.hpp"
+#include "render/surface/GridTessSurf.hpp"
+#include "render/surface/GridTessSurfBuilder.hpp"
+#include "render/surface/GridTessSurfRenderer.hpp"
 
 void
 FRViewJob::doCompute()
@@ -95,15 +95,15 @@ FRViewJob::doCompute()
             m_subset_surface->setTriangleCount( 0 );
             m_boundary_surface->setTriangleCount( 0 );
             m_faults_surface->setTriangleCount( 0 );
-            boost::shared_ptr<render::GridTessSurf> subset_surf;
+            boost::shared_ptr<render::surface::GridTessSurf> subset_surf;
             if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_SUBSET ) {
                 subset_surf = m_subset_surface;
             }
-            boost::shared_ptr<render::GridTessSurf> boundary_surf;
+            boost::shared_ptr<render::surface::GridTessSurf> boundary_surf;
             if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_BOUNDARY ) {
                 boundary_surf = m_boundary_surface;
             }
-            boost::shared_ptr<render::GridTessSurf> faults_surf;
+            boost::shared_ptr<render::surface::GridTessSurf> faults_surf;
             if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS ) {
                 faults_surf = m_faults_surface;
             }

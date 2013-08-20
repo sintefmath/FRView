@@ -145,6 +145,7 @@ FILE( GLOB frview_core_SRC "src/models/*.cpp"
                            "src/render/*.cpp"
                            "src/render/wells/*.cpp"
                            "src/render/rlgen/*.cpp"
+                           "src/render/surface/*.cpp"
                            "src/cornerpoint/*.cpp"
                            "src/eclipse/*.cpp"
                            "src/job/*.cpp"
@@ -154,6 +155,7 @@ FILE( GLOB frview_core_HDR "src/models/*.hpp"
                            "src/render/*.hpp"
                            "src/render/wells/*.hpp"
                            "src/render/rlgen/*.hpp"
+                           "src/render/surface/*.hpp"
                            "src/cornerpoint/*.hpp"
                            "src/eclipse/*.hpp"
                            "src/job/*.hpp"
@@ -164,6 +166,7 @@ SET_SOURCE_FILES_PROPERTIES( ${frview_HDR} PROPERTIES HEADER_FILE_ONLY TRUE )
 WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "resources" "shaders/*.glsl" )
 WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "render::wells::glsl" "src/render/wells/*.glsl" )
 WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "render::rlgen::glsl" "src/render/rlgen/*.glsl" )
+WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "render::surface::glsl" "src/render/surface/*.glsl" )
 
 SOURCE_GROUP( "GLSL" FILES ${frview_core_SHADERS} )
 SET_SOURCE_FILES_PROPERTIES( ${frview_core_SHADERS} PROPERTIES HEADER_FILE_ONLY TRUE )

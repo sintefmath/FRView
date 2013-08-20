@@ -7,11 +7,12 @@
  *
  ******************************************************************************/
 #include "utils/Logger.hpp"
-#include "GridTess.hpp"
-#include "GridTessSubset.hpp"
-#include "GridTessSurf.hpp"
+#include "render/GridTess.hpp"
+#include "render/GridTessSubset.hpp"
+#include "render/surface/GridTessSurf.hpp"
 
 namespace render {
+    namespace  surface {
 
 GridTessSurf::GridTessSurf()
     : m_count( 0u ),
@@ -156,4 +157,5 @@ GridTessSurf::populateTriangleBuffer( const GridTess*  tess,
 */
 }
 
+    } // of namespace surface
 } // of namespace render

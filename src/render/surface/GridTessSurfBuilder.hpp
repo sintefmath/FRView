@@ -14,8 +14,10 @@
 
 namespace render {
     class GridTess;
-    class GridTessSurf;
     class GridTessSubset;
+
+    namespace  surface {
+        class GridTessSurf;
 
 class GridTessSurfBuilder : public boost::noncopyable
 {
@@ -55,4 +57,6 @@ protected:
     //GLuint  m_meta_counters;
 };
 
+
+    } // of namespace surface
 } // of namespace render

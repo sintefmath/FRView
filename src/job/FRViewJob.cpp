@@ -24,9 +24,6 @@
 #include "utils/PerfTimer.hpp"
 #include "render/GridTess.hpp"
 #include "render/GridTessSubset.hpp"
-#include "render/GridTessSurf.hpp"
-#include "render/GridTessSurfBuilder.hpp"
-#include "render/GridTessSurfRenderer.hpp"
 #include "render/GridField.hpp"
 #include "render/CellSelector.hpp"
 #include "render/ClipPlane.hpp"
@@ -34,6 +31,9 @@
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
+#include "render/surface/GridTessSurf.hpp"
+#include "render/surface/GridTessSurfBuilder.hpp"
+#include "render/surface/GridTessSurfRenderer.hpp"
 #include "render/rlgen/GridVoxelization.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
 
@@ -804,12 +804,12 @@ FRViewJob::releasePipeline()
     m_well_labels = boost::shared_ptr<render::TextRenderer>();
     m_clip_plane = boost::shared_ptr<render::ClipPlane>();
     m_grid_tess = boost::shared_ptr<render::GridTess>();
-    m_faults_surface = boost::shared_ptr<render::GridTessSurf>();
-    m_subset_surface = boost::shared_ptr<render::GridTessSurf>();
-    m_boundary_surface = boost::shared_ptr<render::GridTessSurf>();
-    m_grid_tess_surf_builder = boost::shared_ptr<render::GridTessSurfBuilder>();
+    m_faults_surface = boost::shared_ptr<render::surface::GridTessSurf>();
+    m_subset_surface = boost::shared_ptr<render::surface::GridTessSurf>();
+    m_boundary_surface = boost::shared_ptr<render::surface::GridTessSurf>();
+    m_grid_tess_surf_builder = boost::shared_ptr<render::surface::GridTessSurfBuilder>();
     m_grid_field = boost::shared_ptr<render::GridField>();
-    m_tess_renderer = boost::shared_ptr<render::GridTessSurfRenderer>();
+    m_tess_renderer = boost::shared_ptr<render::surface::GridTessSurfRenderer>();
     m_all_selector = boost::shared_ptr<render::AllSelector>();
     m_field_selector = boost::shared_ptr<render::FieldSelector>();
     m_index_selector = boost::shared_ptr<render::IndexSelector>();
@@ -833,12 +833,12 @@ bool FRViewJob::setupPipeline()
         m_well_labels.reset( new render::TextRenderer() );
         m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
         m_grid_tess.reset( new render::GridTess );
-        m_faults_surface.reset( new render::GridTessSurf );
-        m_subset_surface.reset( new render::GridTessSurf );
-        m_boundary_surface.reset( new render::GridTessSurf );
-        m_grid_tess_surf_builder.reset( new render::GridTessSurfBuilder );
+        m_faults_surface.reset( new render::surface::GridTessSurf );
+        m_subset_surface.reset( new render::surface::GridTessSurf );
+        m_boundary_surface.reset( new render::surface::GridTessSurf );
+        m_grid_tess_surf_builder.reset( new render::surface::GridTessSurfBuilder );
         m_grid_field.reset(  new render::GridField( m_grid_tess ) );
-        m_tess_renderer.reset(  new render::GridTessSurfRenderer );
+        m_tess_renderer.reset(  new render::surface::GridTessSurfRenderer );
         m_all_selector.reset( new render::AllSelector );
         m_field_selector.reset( new render::FieldSelector );
         m_index_selector.reset( new render::IndexSelector );
