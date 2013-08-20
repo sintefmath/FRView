@@ -12,21 +12,24 @@
 
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
-#include "GridTess.hpp"
-#include "GridTessSubset.hpp"
-#include "GridVoxelization.hpp"
+#include "render/GridTess.hpp"
+#include "render/GridTessSubset.hpp"
+#include "render/rlgen/GridVoxelization.hpp"
 
 static const std::string package = "render.GridVoxelization";
 
-namespace resources {
-    extern const std::string grid_voxelizer_compact_vs;
-    extern const std::string grid_voxelizer_compact_gs;
-    extern const std::string grid_voxelizer_vs;
-    extern const std::string grid_voxelizer_fs;
-    extern const std::string grid_voxelizer_gs;
-}
+
 
 namespace render {
+    namespace rlgen {
+        namespace glsl {
+            extern const std::string GridVoxelization_compact_vs;
+            extern const std::string GridVoxelization_compact_gs;
+            extern const std::string GridVoxelization_splat_vs;
+            extern const std::string GridVoxelization_splat_fs;
+            extern const std::string GridVoxelization_splat_gs;
+        }
+
 
 GridVoxelization::GridVoxelization()
     : m_resolution(32)
@@ -73,15 +76,15 @@ GridVoxelization::GridVoxelization()
 
     m_voxelizer_program = glCreateProgram();
 
-    GLuint vs = utils::compileShader( log, resources::grid_voxelizer_vs, GL_VERTEX_SHADER );
+    GLuint vs = utils::compileShader( log, glsl::GridVoxelization_splat_vs, GL_VERTEX_SHADER );
     glAttachShader( m_voxelizer_program, vs );
     glDeleteShader( vs );
 
-    GLuint gs = utils::compileShader( log, resources::grid_voxelizer_gs, GL_GEOMETRY_SHADER );
+    GLuint gs = utils::compileShader( log, glsl::GridVoxelization_splat_gs, GL_GEOMETRY_SHADER );
     glAttachShader( m_voxelizer_program, gs );
     glDeleteShader( gs );
 
-    GLuint fs = utils::compileShader( log, resources::grid_voxelizer_fs, GL_FRAGMENT_SHADER );
+    GLuint fs = utils::compileShader( log, glsl::GridVoxelization_splat_fs, GL_FRAGMENT_SHADER );
     glAttachShader( m_voxelizer_program, fs );
     glDeleteShader( fs );
 
@@ -98,10 +101,10 @@ GridVoxelization::GridVoxelization()
     };
 
     m_compact_program = glCreateProgram();
-    sh = utils::compileShader( log, resources::grid_voxelizer_compact_vs, GL_VERTEX_SHADER );
+    sh = utils::compileShader( log, glsl::GridVoxelization_compact_vs, GL_VERTEX_SHADER );
     glAttachShader( m_compact_program, sh );
     glDeleteShader( sh );
-    sh = utils::compileShader( log, resources::grid_voxelizer_compact_gs, GL_GEOMETRY_SHADER );
+    sh = utils::compileShader( log, glsl::GridVoxelization_compact_gs, GL_GEOMETRY_SHADER );
     glAttachShader( m_compact_program, sh );
     glDeleteShader( sh );
 
@@ -197,4 +200,5 @@ GridVoxelization::build( boost::shared_ptr<const GridTess> tess,
     glBindVertexArray( 0 );
 }
 
+    } // of namespace rlgen
 } // of namespace render

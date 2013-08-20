@@ -14,6 +14,7 @@
 namespace render {
     class GridTess;
     class GridTessSubset;
+    namespace rlgen {
 
 class GridVoxelization : public boost::noncopyable
 {
@@ -57,4 +58,5 @@ protected:
     GLint       m_compact_local_to_world_loc;
 };
 
+    } // of namespace rlgen
 } // of namespace render

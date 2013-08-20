@@ -42,12 +42,14 @@ namespace render {
     class PlaneSelector;
     class HalfPlaneSelector;
     class TextRenderer;
-    namespace  wells {
+    namespace wells {
         class WellRenderer;
     }
     class CoordSysRenderer;
-    class GridVoxelization;
-    class VoxelSurface;
+    namespace rlgen {
+        class GridVoxelization;
+        class VoxelSurface;
+    }
 } // of namespace render
 
 class FRViewJob
@@ -151,9 +153,9 @@ private:
     boost::shared_ptr<render::HalfPlaneSelector>      m_half_plane_selector;
     boost::shared_ptr<render::GridCubeRenderer>       m_grid_cube_renderer;
     boost::shared_ptr<render::wells::WellRenderer>    m_well_renderer;
-    boost::shared_ptr<render::CoordSysRenderer>       m_coordsys_renderer;
-    boost::shared_ptr<render::GridVoxelization>       m_grid_voxelizer;
-    boost::shared_ptr<render::VoxelSurface>           m_voxel_surface;
+    boost::shared_ptr<render::CoordSysRenderer>         m_coordsys_renderer;
+    boost::shared_ptr<render::rlgen::GridVoxelization>  m_grid_voxelizer;
+    boost::shared_ptr<render::rlgen::VoxelSurface>      m_voxel_surface;
     /** @} */
 
 

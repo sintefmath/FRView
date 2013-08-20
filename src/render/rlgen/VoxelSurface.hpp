@@ -6,6 +6,8 @@
 namespace render {
     class GridVoxelization;
     class GridField;
+    
+    namespace rlgen {
 
 class VoxelSurface
 {
@@ -37,4 +39,5 @@ protected:
     std::vector<GLfloat>    m_surface_host;
 };
 
+    } // of namespace rlgen
 } // of namespace render

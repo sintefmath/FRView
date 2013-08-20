@@ -34,8 +34,8 @@
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
-#include "render/GridVoxelization.hpp"
-#include "render/VoxelSurface.hpp"
+#include "render/rlgen/GridVoxelization.hpp"
+#include "render/rlgen/VoxelSurface.hpp"
 
 using std::string;
 using std::stringstream;
@@ -819,8 +819,8 @@ FRViewJob::releasePipeline()
     m_grid_cube_renderer = boost::shared_ptr<render::GridCubeRenderer>();
     m_well_renderer = boost::shared_ptr<render::wells::WellRenderer>();
     m_coordsys_renderer = boost::shared_ptr<render::CoordSysRenderer>();
-    m_grid_voxelizer = boost::shared_ptr<render::GridVoxelization>();
-    m_voxel_surface = boost::shared_ptr<render::VoxelSurface>();
+    m_grid_voxelizer = boost::shared_ptr<render::rlgen::GridVoxelization>();
+    m_voxel_surface = boost::shared_ptr<render::rlgen::VoxelSurface>();
     m_has_pipeline = false;
 }
 
@@ -848,8 +848,8 @@ bool FRViewJob::setupPipeline()
         m_grid_cube_renderer.reset( new render::GridCubeRenderer );
         m_well_renderer.reset( new render::wells::WellRenderer );
         m_coordsys_renderer.reset( new render::CoordSysRenderer );
-        m_grid_voxelizer.reset( new render::GridVoxelization );
-        m_voxel_surface.reset( new render::VoxelSurface );
+        m_grid_voxelizer.reset( new render::rlgen::GridVoxelization );
+        m_voxel_surface.reset( new render::rlgen::VoxelSurface );
         m_has_pipeline = true;
     }
     catch( std::runtime_error& e ) {

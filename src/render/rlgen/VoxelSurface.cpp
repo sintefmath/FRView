@@ -2,15 +2,17 @@
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
 #include "GridVoxelization.hpp"
-#include "GridField.hpp"
-#include "VoxelSurface.hpp"
+#include "render/GridField.hpp"
+#include "render/rlgen/VoxelSurface.hpp"
 
-namespace resources {
-    extern const std::string voxel_surface_extractor_vs;
-    extern const std::string voxel_surface_extractor_fetch;
-}
 
 namespace render {
+    namespace rlgen {
+
+        namespace glsl {
+            extern const std::string VoxelSurface_hpmc_vs;
+            extern const std::string VoxelSurface_hpmc_fetch;
+        } // of namespace glsl
 
 VoxelSurface::VoxelSurface()
 {
@@ -92,7 +94,7 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
                          voxel_dim[2]-1 );
         HPMCsetGridExtent( m_hpmc_hp, 1.f, 1.f, 1.f );
         HPMCsetFieldCustom( m_hpmc_hp,
-                            resources::voxel_surface_extractor_fetch.c_str(),
+                            glsl::VoxelSurface_hpmc_fetch.c_str(),
                             0,
                             GL_FALSE );
 
@@ -140,7 +142,7 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
         }
         
         GLuint vs = utils::compileShader( log,
-                                          resources::voxel_surface_extractor_vs +
+                                          glsl::VoxelSurface_hpmc_vs +
                                           traversal_code,
                                           GL_VERTEX_SHADER );
         free( traversal_code );
@@ -236,4 +238,5 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
 
 }
 
+    } // of namespace rlgen
 } // of namespace render

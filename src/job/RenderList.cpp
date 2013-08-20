@@ -18,8 +18,8 @@
 #include "job/FRViewJob.hpp"
 #include "render/GridTess.hpp"
 #include "render/ClipPlane.hpp"
-#include "render/GridVoxelization.hpp"
-#include "render/VoxelSurface.hpp"
+#include "render/rlgen/GridVoxelization.hpp"
+#include "render/rlgen/VoxelSurface.hpp"
 
 namespace resources {
     extern const std::string gles_solid_vs;
