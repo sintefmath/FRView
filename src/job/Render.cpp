@@ -10,7 +10,7 @@
 #include "render/GridTessSurfRenderer.hpp"
 #include "render/GridField.hpp"
 #include "render/TextRenderer.hpp"
-#include "render/WellRenderer.hpp"
+#include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
 #include "render/GridVoxelization.hpp"          // move to renderlist
 #include "render/VoxelSurface.hpp"  // move to renderlist

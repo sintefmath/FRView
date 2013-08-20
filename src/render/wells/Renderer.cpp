@@ -15,16 +15,20 @@
 #include <glm/gtx/string_cast.hpp>
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
-#include "WellRenderer.hpp"
+#include "render/wells/Renderer.hpp"
 
-namespace resources {
-    extern const std::string well_tube_vs;
-    extern const std::string well_tube_cs;
-    extern const std::string well_tube_es;
-    extern const std::string well_tube_fs;
-}
+
 
 namespace render {
+    namespace wells {
+
+    namespace glsl {
+        extern const std::string well_tube_vs;
+        extern const std::string well_tube_cs;
+        extern const std::string well_tube_es;
+        extern const std::string well_tube_fs;
+    }
+    
     static const std::string package = "render.WellRenderer";
 
 WellRenderer::WellRenderer()
@@ -40,10 +44,10 @@ WellRenderer::WellRenderer()
     glGenBuffers( 1, &m_indices_buf );
 
 
-    GLuint well_vs = utils::compileShader( log, resources::well_tube_vs, GL_VERTEX_SHADER );
-    GLuint well_cs = utils::compileShader( log, resources::well_tube_cs, GL_TESS_CONTROL_SHADER );
-    GLuint well_es = utils::compileShader( log, resources::well_tube_es, GL_TESS_EVALUATION_SHADER );
-    GLuint well_fs = utils::compileShader( log, resources::well_tube_fs, GL_FRAGMENT_SHADER );
+    GLuint well_vs = utils::compileShader( log, glsl::well_tube_vs, GL_VERTEX_SHADER );
+    GLuint well_cs = utils::compileShader( log, glsl::well_tube_cs, GL_TESS_CONTROL_SHADER );
+    GLuint well_es = utils::compileShader( log, glsl::well_tube_es, GL_TESS_EVALUATION_SHADER );
+    GLuint well_fs = utils::compileShader( log, glsl::well_tube_fs, GL_FRAGMENT_SHADER );
 
     m_well_prog = glCreateProgram();
     glAttachShader( m_well_prog, well_vs );
@@ -269,5 +273,5 @@ WellRenderer::render( GLsizei           width,
 
 }
 
-
+    } // of namespace wells
 } // of namespace render

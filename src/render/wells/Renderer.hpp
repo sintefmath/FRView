@@ -12,6 +12,7 @@
 #include <boost/utility.hpp>
 
 namespace render {
+    namespace wells {
 
 class WellRenderer : public boost::noncopyable
 {
@@ -46,4 +47,5 @@ protected:
     std::vector<GLuint>     m_indices;
 };
 
-}
+    } // of namespace wells
+} // of namespace render

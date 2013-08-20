@@ -14,16 +14,15 @@ OPTION( CHECK_INVARIANTS "Check invariants throughout the code" OFF )
 OPTION( EXTRACT_EDGE_GEOMETRY "Extract edge geometry" ON )
 
 IF( EXTEND_CMAKE_MODULE_PATH )
-  SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
-    "../tinia/cmake/Modules"
-    "./cmake/Modules"
-    "~/cmake/Modules"
-    "$ENV{HOMEPATH}/cmake/Modules"
-    "."
-    )
+  SET( CMAKE_MODULE_PATH
+       "${CMAKE_MODULE_PATH}"
+       "${CMAKE_SOURCE_DIR}/cmake/Modules"
+       "../tinia/cmake/Modules"
+       "~/cmake/Modules"
+       "$ENV{HOMEPATH}/cmake/Modules" )
 ENDIF( EXTEND_CMAKE_MODULE_PATH )
 
-INCLUDE( txt2cpp )
+INCLUDE( WrapResources )
 
 # Versioning
 SET( svn_revision $ENV{SVN_REVISION} )
@@ -115,16 +114,6 @@ FILE( GLOB frview_EXAMPLE_DATA "data/*.gtxt" )
 SOURCE_GROUP( "Example data" FILES ${frview_EXAMPLE_DATA} )
 SET_SOURCE_FILES_PROPERTIES( ${frview_EXAMPLE_DATA} PROPERTIES HEADER_FILE_ONLY TRUE )
 
-# --- shader files -------------------------------------------------------------
-FILE( GLOB frview_core_SHADERS "shaders/*glsl" )
-SOURCE_GROUP( "GLSL" FILES ${frview_core_SHADERS} )
-SET_SOURCE_FILES_PROPERTIES( ${frview_core_SHADERS} PROPERTIES HEADER_FILE_ONLY TRUE )
-FOREACH( file ${frview_core_SHADERS} )
-    GET_FILENAME_COMPONENT( symbol ${file} NAME_WE)
-    ADD_TEXT_FILE( ${symbol} "resources::${symbol}" ${file} )
-    LIST( APPEND SHADER_LIBS ${symbol} )
-ENDFOREACH()
-
 # --- javscript scriptlets -----------------------------------------------------
 FILE( GLOB frview_core_JS "js/*.js" )
 SOURCE_GROUP( "JS" FILES ${frview_core_JS} )
@@ -135,10 +124,26 @@ FOREACH( file ${frview_core_JS} )
     LIST( APPEND JS_LIBS ${symbol} )
 ENDFOREACH()
 
+# --- shader files -------------------------------------------------------------
+
 # --- Compile and link code that is common for all eclipse viz apps ------------
+
+MACRO( WRAP_SHADERS objects sources namespace path )
+    FILE( GLOB files ${path} )
+    FOREACH( file ${files} )
+        GET_FILENAME_COMPONENT( symbol ${file} NAME_WE)
+        SET( full "${namespace}::${symbol}" )
+        STRING( REGEX REPLACE "::" "_" foo ${full} )
+        ADD_TEXT_FILE( ${foo} ${full} ${file} )
+        LIST( APPEND ${sources} ${file} )
+        LIST( APPEND ${objects} ${foo} )
+    ENDFOREACH()
+ENDMACRO( WRAP_SHADERS )
+
 
 FILE( GLOB frview_core_SRC "src/models/*.cpp"
                            "src/render/*.cpp"
+                           "src/render/wells/*.cpp"
                            "src/cornerpoint/*.cpp"
                            "src/eclipse/*.cpp"
                            "src/job/*.cpp"
@@ -146,13 +151,22 @@ FILE( GLOB frview_core_SRC "src/models/*.cpp"
                            "src/dataset/*.cpp" )
 FILE( GLOB frview_core_HDR "src/models/*.hpp"
                            "src/render/*.hpp"
+                           "src/render/wells/*.hpp"
                            "src/cornerpoint/*.hpp"
                            "src/eclipse/*.hpp"
                            "src/job/*.hpp"
                            "src/utils/*.hpp"
                            "src/dataset/*.hpp" )
-
 SET_SOURCE_FILES_PROPERTIES( ${frview_HDR} PROPERTIES HEADER_FILE_ONLY TRUE )
+
+WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "resources" "shaders/*.glsl" )
+WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "render::wells::glsl" "src/render/wells/*.glsl" )
+
+SOURCE_GROUP( "GLSL" FILES ${frview_core_SHADERS} )
+SET_SOURCE_FILES_PROPERTIES( ${frview_core_SHADERS} PROPERTIES HEADER_FILE_ONLY TRUE )
+
+
+
 
 ADD_LIBRARY( frview_core
              ${frview_core_SHADERS}         # Add deps to make them appear in solution

@@ -11,7 +11,7 @@
 #include "render/GridField.hpp"
 #include "render/GridTessBridge.hpp"
 #include "render/TextRenderer.hpp"
-#include "render/WellRenderer.hpp"
+#include "render/wells/Renderer.hpp"
 
 
 

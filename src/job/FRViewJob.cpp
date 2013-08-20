@@ -32,7 +32,7 @@
 #include "render/ClipPlane.hpp"
 #include "render/GridCubeRenderer.hpp"
 #include "render/TextRenderer.hpp"
-#include "render/WellRenderer.hpp"
+#include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
 #include "render/GridVoxelization.hpp"
 #include "render/VoxelSurface.hpp"
@@ -817,7 +817,7 @@ FRViewJob::releasePipeline()
     m_half_plane_selector = boost::shared_ptr<render::HalfPlaneSelector>();
     m_grid_tess_subset = boost::shared_ptr<render::GridTessSubset>();
     m_grid_cube_renderer = boost::shared_ptr<render::GridCubeRenderer>();
-    m_well_renderer = boost::shared_ptr<render::WellRenderer>();
+    m_well_renderer = boost::shared_ptr<render::wells::WellRenderer>();
     m_coordsys_renderer = boost::shared_ptr<render::CoordSysRenderer>();
     m_grid_voxelizer = boost::shared_ptr<render::GridVoxelization>();
     m_voxel_surface = boost::shared_ptr<render::VoxelSurface>();
@@ -846,7 +846,7 @@ bool FRViewJob::setupPipeline()
         m_half_plane_selector.reset( new render::HalfPlaneSelector );
         m_grid_tess_subset.reset( new render::GridTessSubset );
         m_grid_cube_renderer.reset( new render::GridCubeRenderer );
-        m_well_renderer.reset( new render::WellRenderer );
+        m_well_renderer.reset( new render::wells::WellRenderer );
         m_coordsys_renderer.reset( new render::CoordSysRenderer );
         m_grid_voxelizer.reset( new render::GridVoxelization );
         m_voxel_surface.reset( new render::VoxelSurface );
