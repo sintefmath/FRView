@@ -624,9 +624,18 @@ parseEGrid( unsigned int&               nx,
             }
 
             if( it != blocks.end() && it->m_keyword == KEYWORD_ACTNUM ) {
-                reader.blockContent( actnum, *it++ );
-                if( actnum.size() != nx*ny*nz ) {
-                    throw std::runtime_error( "ACTNUM of illegal size" );
+                if( it->m_count == 0 ) {
+                    LOGGER_WARN( log, "Encountered ACTNUM with no entries, assuming all blocks are active." );
+                    actnum.resize( nx*ny*nz );
+                    for(size_t i=0; i<actnum.size(); i++ ) {
+                        actnum[i] = (i+1);
+                    }
+                }
+                else {
+                    reader.blockContent( actnum, *it++ );
+                    if( actnum.size() != nx*ny*nz ) {
+                        throw std::runtime_error( "ACTNUM of illegal size" );
+                    }
                 }
             }
             else {
