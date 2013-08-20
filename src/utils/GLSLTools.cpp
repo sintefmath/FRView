@@ -3,6 +3,45 @@
 
 namespace utils {
 
+
+void
+checkFBO( Logger& log )
+{
+    GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
+    if( status == GL_FRAMEBUFFER_COMPLETE ) {
+        return;
+    }
+    else {
+        std::string status_str;
+        switch( status ) {
+        case GL_FRAMEBUFFER_UNDEFINED:
+            status_str = "GL_FRAMEBUFFER_UNDEFINED";
+            break;
+        case GL_FRAMEBUFFER_UNSUPPORTED:
+            status_str = "GL_FRAMEBUFFER_UNSUPPORTED";
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+            status_str = "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+            status_str = "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+            status_str = "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER";
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+            status_str = "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER";
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+            status_str = "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
+            break;
+        default: status_str = "<unknown status>"; break;
+        }
+        LOGGER_ERROR( log, "Incomplete framebuffer: " << status_str );
+        throw std::runtime_error( "GL incomplete framebuffer, see log" );
+    }
+}
+
 void
 dumpShaderSource( Logger& log, GLuint shader )
 {
@@ -41,13 +80,13 @@ dumpShaderSource( Logger& log, GLuint shader )
         LOGGER_DEBUG( log, "Shader " << shader << " has no infolog." );
     }
     else {
-        LOGGER_DEBUG( log, "Infolog of shader " << shader << " [" << type_str << "]:" );
+        LOGGER_WARN( log, "Infolog of shader " << shader << " [" << type_str << "]:" );
         GLchar* infolog = new GLchar[ infolog_len ];
         glGetShaderInfoLog( shader, infolog_len, NULL, infolog );
         std::stringstream stream( infolog );
         std::string t;
         while( getline( stream, t ) ) {
-            LOGGER_DEBUG( log, t );
+            LOGGER_WARN( log, t );
         }
         delete[] infolog;
     }
@@ -79,13 +118,13 @@ dumpProgramSources( Logger& log, GLuint program )
         LOGGER_DEBUG( log, "Program " << program << " has no infolog." );
     }
     else {
-        LOGGER_DEBUG( log, "Infolog of program " << program << ':' );
+        LOGGER_WARN( log, "Infolog of program " << program << ':' );
         GLchar* infolog = new GLchar[ infolog_len ];
         glGetProgramInfoLog( program, infolog_len, NULL, infolog );
         std::stringstream stream( infolog );
         std::string t;
         while( getline( stream, t ) ) {
-            LOGGER_DEBUG( log, t );
+            LOGGER_WARN( log, t );
         }
         delete[] infolog;
     }

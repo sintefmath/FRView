@@ -10,7 +10,6 @@
 #include <GL/glew.h>
 #include "ClipPlane.hpp"
 #include <glm/gtc/type_ptr.hpp>
-#include <siut2/gl_utils/GLSLtools.hpp>
 
 namespace render {
 

@@ -8,15 +8,13 @@
  ******************************************************************************/
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <siut2/gl_utils/GLSLtools.hpp>
+#include "utils/GLSLTools.hpp"
 #include "GridCubeRenderer.hpp"
 #include "TextRenderer.hpp"
 
-using siut2::gl_utils::compileShader;
-using siut2::gl_utils::linkProgram;
 
 
-static const std::string package = "GridCubeRenderer";
+static const std::string package = "render.GridCubeRenderer";
 
 namespace resources {
     extern const std::string grid_cube_v;
@@ -27,6 +25,7 @@ namespace render {
 
 GridCubeRenderer::GridCubeRenderer()
 {
+    Logger log = getLogger( package + ".constructor" );
     static const GLfloat cube_pos[12*12] = {
         -0.1,  1.1, -0.1, 0,    1.1,  1.1, -0.1, 0,    1.1, -0.1, -0.1, 0,
          1.1, -0.1, -0.1, 0,   -0.1, -0.1, -0.1, 0,   -0.1,  1.1, -0.1, 0,
@@ -52,12 +51,12 @@ GridCubeRenderer::GridCubeRenderer()
     glEnableVertexAttribArray( 0 );
     glBindVertexArray( 0 );
 
-    GLuint grid_v = compileShader( resources::grid_cube_v, GL_VERTEX_SHADER );
-    GLuint grid_f = compileShader( resources::grid_cube_f, GL_FRAGMENT_SHADER );
+    GLuint grid_v = utils::compileShader( log, resources::grid_cube_v, GL_VERTEX_SHADER );
+    GLuint grid_f = utils::compileShader( log, resources::grid_cube_f, GL_FRAGMENT_SHADER );
     m_grid_prog = glCreateProgram();
     glAttachShader( m_grid_prog, grid_v );
     glAttachShader( m_grid_prog, grid_f );
-    linkProgram( m_grid_prog );
+    utils::linkProgram( log, m_grid_prog );
     glDeleteShader( grid_v );
     glDeleteShader( grid_f );
 }

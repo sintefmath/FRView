@@ -6,8 +6,7 @@
  *  Copyright (C) 2009 by SINTEF.  All rights reserved.
  *
  ******************************************************************************/
-#include <siut2/gl_utils/GLSLtools.hpp>
-
+#include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
 #include "GridTess.hpp"
 #include "GridTessSubset.hpp"
@@ -28,16 +27,16 @@ GridTessSurfBuilder::GridTessSurfBuilder()
       m_triangulate_count( 0 ),
       m_triangulate_prog( "GridTessSurfBuilder.m_triangulate_prog" )
 {
-    using siut2::gl_utils::compileShader;
+    Logger log = getLogger( "render.GridTessSurfBuilder.constructor" );
 
     // -------------------------------------------------------------------------
     // create polygon extract shader
     // -------------------------------------------------------------------------
-    GLuint faces_vs = compileShader( resources::extract_faces_vs,
-                                     GL_VERTEX_SHADER, true );
+    GLuint faces_vs = utils::compileShader( log, resources::extract_faces_vs,
+                                     GL_VERTEX_SHADER );
 
-    GLuint faces_gs = compileShader( resources::extract_faces_gs,
-                                     GL_GEOMETRY_SHADER, true );
+    GLuint faces_gs = utils::compileShader( log, resources::extract_faces_gs,
+                                     GL_GEOMETRY_SHADER );
 
 
     static const char* faces_feedback[] = { "meta_subset",
@@ -46,7 +45,7 @@ GridTessSurfBuilder::GridTessSurfBuilder()
     glAttachShader( m_meta_prog.get(), faces_vs );
     glAttachShader( m_meta_prog.get(), faces_gs );
     glTransformFeedbackVaryings( m_meta_prog.get(), 3, faces_feedback, GL_SEPARATE_ATTRIBS );
-    siut2::gl_utils::linkProgram( m_meta_prog.get() );
+    utils::linkProgram( log, m_meta_prog.get() );
     m_meta_loc_flip = glGetUniformLocation( m_meta_prog.get(), "flip_faces" );
     glDeleteShader( faces_vs );
     glDeleteShader( faces_gs );
@@ -100,6 +99,8 @@ GridTessSurfBuilder::~GridTessSurfBuilder()
 void
 GridTessSurfBuilder::rebuildTriangulationProgram( GLsizei max_vertices )
 {
+    Logger log = getLogger( "render.GridTessSurfBuilder.rebuildTriangulationProgram" );
+
     m_triangulate_count = max_vertices;
     m_triangulate_prog.reset();
 
@@ -111,14 +112,17 @@ GridTessSurfBuilder::rebuildTriangulationProgram( GLsizei max_vertices )
     GLsizei max_out = std::max( (GLsizei)3, max_vertices )-2;
     std::stringstream o;
     o << "#define MAX_OUT " << max_out << "\n";
-    GLuint poly_vs = siut2::gl_utils::compileShader( resources::triangulate_poly_vs, GL_VERTEX_SHADER, true );
-    GLuint poly_subset_gs = siut2::gl_utils::compileShader( o.str() +
-                                                            resources::triangulate_poly_gs,
-                                                            GL_GEOMETRY_SHADER, true );
+    GLuint poly_vs = utils::compileShader( log,
+                                           resources::triangulate_poly_vs,
+                                           GL_VERTEX_SHADER );
+    GLuint poly_subset_gs = utils::compileShader( log,
+                                                  o.str() +
+                                                  resources::triangulate_poly_gs,
+                                                  GL_GEOMETRY_SHADER );
     glAttachShader( m_triangulate_prog.get(), poly_vs );
     glAttachShader( m_triangulate_prog.get(), poly_subset_gs );
     glTransformFeedbackVaryings( m_triangulate_prog.get(), 2, triangle_feedback, GL_SEPARATE_ATTRIBS );
-    siut2::gl_utils::linkProgram( m_triangulate_prog.get() );
+    utils::linkProgram( log, m_triangulate_prog.get() );
     glDeleteShader( poly_vs );
     glDeleteShader( poly_subset_gs );
 }

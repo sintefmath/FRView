@@ -6,6 +6,9 @@
 
 namespace utils {
 
+void
+checkFBO( Logger& log );
+
 
 GLuint
 compileShader( Logger& log, const std::string& source, const GLenum type );

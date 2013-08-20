@@ -6,7 +6,6 @@
  *  Copyright (C) 2009 by SINTEF.  All rights reserved.
  *
  ******************************************************************************/
-#include <siut2/gl_utils/GLSLtools.hpp>
 #include "utils/Logger.hpp"
 #include "utils/GLSLTools.hpp"
 #include "GridTess.hpp"
@@ -28,7 +27,6 @@ CellSelector::CellSelector( const std::string& vs )
     Logger log = getLogger( "render.CellSelector.constructor" );
     m_program = glCreateProgram();
     GLuint v = utils::compileShader( log, vs, GL_VERTEX_SHADER );
-    //GLuint v = siut2::gl_utils::compileShader( vs, GL_VERTEX_SHADER, true );
     glAttachShader( m_program, v );
     const char* varyings[1] = {
         "selected"

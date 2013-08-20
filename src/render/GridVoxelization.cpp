@@ -10,12 +10,13 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-#include <siut2/gl_utils/GLSLtools.hpp>
+#include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
 #include "GridTess.hpp"
 #include "GridTessSubset.hpp"
 #include "GridVoxelization.hpp"
 
+static const std::string package = "render.GridVoxelization";
 
 namespace resources {
     extern const std::string grid_voxelizer_compact_vs;
@@ -30,6 +31,8 @@ namespace render {
 GridVoxelization::GridVoxelization()
     : m_resolution(32)
 {
+    Logger log = getLogger( package + ".constructor" );
+    
     glGenTextures( 1, &m_voxels_tex );
     glBindTexture( GL_TEXTURE_3D, m_voxels_tex );
     glTexImage3D( GL_TEXTURE_3D, 0, GL_R32UI,
@@ -70,22 +73,19 @@ GridVoxelization::GridVoxelization()
 
     m_voxelizer_program = glCreateProgram();
 
-    GLuint vs = siut2::gl_utils::compileShader( resources::grid_voxelizer_vs,
-                                                GL_VERTEX_SHADER, true );
+    GLuint vs = utils::compileShader( log, resources::grid_voxelizer_vs, GL_VERTEX_SHADER );
     glAttachShader( m_voxelizer_program, vs );
     glDeleteShader( vs );
 
-    GLuint gs = siut2::gl_utils::compileShader( resources::grid_voxelizer_gs,
-                                                GL_GEOMETRY_SHADER, true );
+    GLuint gs = utils::compileShader( log, resources::grid_voxelizer_gs, GL_GEOMETRY_SHADER );
     glAttachShader( m_voxelizer_program, gs );
     glDeleteShader( gs );
 
-    GLuint fs = siut2::gl_utils::compileShader( resources::grid_voxelizer_fs,
-                                                GL_FRAGMENT_SHADER, true );
+    GLuint fs = utils::compileShader( log, resources::grid_voxelizer_fs, GL_FRAGMENT_SHADER );
     glAttachShader( m_voxelizer_program, fs );
     glDeleteShader( fs );
 
-    siut2::gl_utils::linkProgram( m_voxelizer_program );
+    utils::linkProgram( log, m_voxelizer_program );
 
     m_voxelizer_slice_loc = glGetUniformLocation( m_voxelizer_program, "slice" );
 
@@ -98,19 +98,17 @@ GridVoxelization::GridVoxelization()
     };
 
     m_compact_program = glCreateProgram();
-    sh = siut2::gl_utils::compileShader( resources::grid_voxelizer_compact_vs,
-                                         GL_VERTEX_SHADER, true );
+    sh = utils::compileShader( log, resources::grid_voxelizer_compact_vs, GL_VERTEX_SHADER );
     glAttachShader( m_compact_program, sh );
     glDeleteShader( sh );
-    sh = siut2::gl_utils::compileShader( resources::grid_voxelizer_compact_gs,
-                                         GL_GEOMETRY_SHADER, true );
+    sh = utils::compileShader( log, resources::grid_voxelizer_compact_gs, GL_GEOMETRY_SHADER );
     glAttachShader( m_compact_program, sh );
     glDeleteShader( sh );
 
     glTransformFeedbackVaryings( m_compact_program,
                                  3, compact_feedback,
                                  GL_INTERLEAVED_ATTRIBS );
-    siut2::gl_utils::linkProgram( m_compact_program );
+    utils::linkProgram( log, m_compact_program );
     m_compact_local_to_world_loc = glGetUniformLocation( m_compact_program, "local_to_world" );
 }
 
@@ -134,7 +132,7 @@ GridVoxelization::build( boost::shared_ptr<const GridTess> tess,
                          boost::shared_ptr<const GridTessSubset> subset,
                          const GLfloat* world_from_local )
 {
-    Logger log = getLogger( "GridVoxelization.build" );
+    Logger log = getLogger( package + ".build" );
 
     // transform to unit cube and discard unselected cells
     if( m_compacted_alloc < tess->cellCount() ) {
@@ -189,7 +187,7 @@ GridVoxelization::build( boost::shared_ptr<const GridTess> tess,
                                 m_voxels_tex,
                                 0,
                                 i );
-        CHECK_FBO;
+        utils::checkFBO( log );
         glClear( GL_COLOR_BUFFER_BIT );
         if( (0 < i) && (i+1<m_resolution) ) {
             glUniform2f( m_voxelizer_slice_loc, (i-1.f)/(m_resolution-2.f), (i+0.f)/(m_resolution-2.f) );

@@ -19,8 +19,6 @@ IF( EXTEND_CMAKE_MODULE_PATH )
     "./cmake/Modules"
     "~/cmake/Modules"
     "$ENV{HOMEPATH}/cmake/Modules"
-    "../siut/cmakemacros"
-    "../siut"
     "."
     )
 ENDIF( EXTEND_CMAKE_MODULE_PATH )
@@ -60,7 +58,6 @@ FIND_PACKAGE( Tinia REQUIRED COMPONENTS Server Desktop )
 FIND_PACKAGE( OpenGL REQUIRED)
 FIND_LIBRARY( GLEW  NAMES GLEW glew32 PATHS ${LIB_PATHS} )
 FIND_PACKAGE( GLM REQUIRED )
-FIND_PACKAGE( SIUT2 REQUIRED )
 FIND_LIBRARY( LOG4CXX_LOG4CXX_LIBRARY log4cxx
     /usr/lib
     /usr/local/lib
@@ -109,7 +106,6 @@ INCLUDE_DIRECTORIES(
     "./src"
     ${TINIA_INCLUDE_DIR}
     ${GLM_INCLUDE_DIR}
-    ${SIUT2_INCLUDE_DIR}
     ${HPMC_INCLUDE_DIR}
 )
 

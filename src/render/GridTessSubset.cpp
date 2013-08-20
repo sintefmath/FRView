@@ -9,7 +9,6 @@
 #include "utils/Logger.hpp"
 #include "GridTess.hpp"
 #include "GridTessSubset.hpp"
-#include <siut2/gl_utils/GLSLtools.hpp>
 
 namespace render {
 

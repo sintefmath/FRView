@@ -13,7 +13,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
-#include <siut2/gl_utils/GLSLtools.hpp>
+#include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
 #include "WellRenderer.hpp"
 
@@ -25,9 +25,7 @@ namespace resources {
 }
 
 namespace render {
-    static const std::string package = "WellRenderer";
-    using siut2::gl_utils::compileShader;
-    using siut2::gl_utils::linkProgram;
+    static const std::string package = "render.WellRenderer";
 
 WellRenderer::WellRenderer()
     : m_do_upload( false ),
@@ -35,22 +33,24 @@ WellRenderer::WellRenderer()
       m_attribs_buf( 0u ),
       m_indices_buf( 0u )
 {
+    Logger log = getLogger( package + ".constructor" );
+    
     glGenVertexArrays( 1, &m_attribs_vao );
     glGenBuffers( 1, &m_attribs_buf );
     glGenBuffers( 1, &m_indices_buf );
 
 
-    GLuint well_vs = compileShader( resources::well_tube_vs, GL_VERTEX_SHADER );
-    GLuint well_cs = compileShader( resources::well_tube_cs, GL_TESS_CONTROL_SHADER );
-    GLuint well_es = compileShader( resources::well_tube_es, GL_TESS_EVALUATION_SHADER );
-    GLuint well_fs = compileShader( resources::well_tube_fs, GL_FRAGMENT_SHADER );
+    GLuint well_vs = utils::compileShader( log, resources::well_tube_vs, GL_VERTEX_SHADER );
+    GLuint well_cs = utils::compileShader( log, resources::well_tube_cs, GL_TESS_CONTROL_SHADER );
+    GLuint well_es = utils::compileShader( log, resources::well_tube_es, GL_TESS_EVALUATION_SHADER );
+    GLuint well_fs = utils::compileShader( log, resources::well_tube_fs, GL_FRAGMENT_SHADER );
 
     m_well_prog = glCreateProgram();
     glAttachShader( m_well_prog, well_vs );
     glAttachShader( m_well_prog, well_cs );
     glAttachShader( m_well_prog, well_es );
     glAttachShader( m_well_prog, well_fs );
-    linkProgram( m_well_prog );
+    utils::linkProgram( log, m_well_prog );
 
     glDeleteShader( well_vs );
     glDeleteShader( well_cs );

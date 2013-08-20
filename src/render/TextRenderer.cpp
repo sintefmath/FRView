@@ -6,8 +6,10 @@
  *  Copyright (C) 2009 by SINTEF.  All rights reserved.
  *
  ******************************************************************************/
-#include <siut2/gl_utils/GLSLtools.hpp>
+#include "utils/GLSLTools.hpp"
 #include "TextRenderer.hpp"
+
+static const std::string package = "render.TextRenderer";
 
 namespace resources {
     extern const std::string text_vs;
@@ -15,11 +17,11 @@ namespace resources {
 }
 
 namespace render {
-    using siut2::gl_utils::compileShader;
-    using siut2::gl_utils::linkProgram;
 
 TextRenderer::TextRenderer()
 {
+    Logger log = getLogger( package + ".constructor" );
+    
     glGenTextures( 1, &m_tex_8x12 );
     glBindTexture( GL_TEXTURE_2D, m_tex_8x12 );
     glTexImage2D( GL_TEXTURE_2D, 0,
@@ -34,13 +36,13 @@ TextRenderer::TextRenderer()
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
     glBindTexture( GL_TEXTURE_2D, 0 );
 
-    GLuint text_vs = compileShader( resources::text_vs, GL_VERTEX_SHADER );
-    GLuint text_fs = compileShader( resources::text_fs, GL_FRAGMENT_SHADER );
+    GLuint text_vs = utils::compileShader( log, resources::text_vs, GL_VERTEX_SHADER );
+    GLuint text_fs = utils::compileShader( log, resources::text_fs, GL_FRAGMENT_SHADER );
 
     m_text_prog = glCreateProgram();
     glAttachShader( m_text_prog, text_vs );
     glAttachShader( m_text_prog, text_fs );
-    linkProgram( m_text_prog );
+    utils::linkProgram( log, m_text_prog );
 
     glDeleteShader( text_vs );
     glDeleteShader( text_fs );

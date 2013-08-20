@@ -1,4 +1,4 @@
-#include <siut2/gl_utils/GLSLtools.hpp>
+#include "utils/GLSLTools.hpp"
 #include "CoordSysRenderer.hpp"
 
 namespace resources {
@@ -83,6 +83,7 @@ static GLfloat coordsys_vbo[20*3*6] = {
 
 CoordSysRenderer::CoordSysRenderer()
 {
+    Logger log = getLogger( "render.CoordSysRenderer" );
     GLfloat pos_x[3] = {1.1f, 0.f, 0.f };
     GLfloat pos_y[3] = {0.f, 1.1f, 0.f };
     GLfloat pos_z[3] = {0.f, 0.f, 1.1f };
@@ -106,13 +107,13 @@ CoordSysRenderer::CoordSysRenderer()
     glBindBuffer( GL_ARRAY_BUFFER, 0);
     glBindVertexArray( 0 );
 
-    GLuint vs = siut2::gl_utils::compileShader( resources::coordsys_vs, GL_VERTEX_SHADER, true );
-    GLuint fs = siut2::gl_utils::compileShader( resources::coordsys_fs, GL_FRAGMENT_SHADER, true );
+    GLuint vs = utils::compileShader( log, resources::coordsys_vs, GL_VERTEX_SHADER );
+    GLuint fs = utils::compileShader( log, resources::coordsys_fs, GL_FRAGMENT_SHADER );
 
     m_coordsys_program = glCreateProgram();
     glAttachShader( m_coordsys_program, vs );
     glAttachShader( m_coordsys_program, fs );
-    siut2::gl_utils::linkProgram( m_coordsys_program );
+    utils::linkProgram( log, m_coordsys_program );
     glDeleteShader( vs );
     glDeleteShader( fs );
 }

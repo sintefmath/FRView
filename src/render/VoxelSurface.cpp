@@ -1,5 +1,5 @@
 #include <iostream>
-#include <siut2/gl_utils/GLSLtools.hpp>
+#include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
 #include "GridVoxelization.hpp"
 #include "GridField.hpp"
@@ -139,9 +139,10 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
             return;
         }
         
-        GLuint vs = siut2::gl_utils::compileShader( resources::voxel_surface_extractor_vs +
-                                                    traversal_code,
-                                                    GL_VERTEX_SHADER, true );
+        GLuint vs = utils::compileShader( log,
+                                          resources::voxel_surface_extractor_vs +
+                                          traversal_code,
+                                          GL_VERTEX_SHADER );
         free( traversal_code );
         glAttachShader( m_extraction_program, vs );
         glDeleteShader( vs );
@@ -149,7 +150,7 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
             "position"
         };
         glTransformFeedbackVaryings( m_extraction_program, 1, varyings, GL_INTERLEAVED_ATTRIBS );
-        siut2::gl_utils::linkProgram( m_extraction_program );
+        utils::linkProgram( log, m_extraction_program );
         glUseProgram( m_extraction_program );
         m_extraction_loc_scale = glGetUniformLocation( m_extraction_program, "scale" );
         m_extraction_loc_shift = glGetUniformLocation( m_extraction_program, "shift" );
