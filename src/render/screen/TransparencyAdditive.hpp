@@ -1,6 +1,7 @@
 #pragma once
 #include <GL/glew.h>
 #include "render/ManagedGL.hpp"
+#include "render/surface/Renderer.hpp"
 #include "render/screen/Transparency.hpp"
 
 namespace render {
@@ -24,6 +25,9 @@ public:
             boost::shared_ptr<render::surface::GridTessSurfRenderer>    surface_renderer,
             const std::vector<render::surface::GridTessSurfRenderer::RenderItem>&      items );  
 protected:
+    surface::Renderer   m_surface_renderer;
+    GLint               m_surface_renderer_solid_pass;
+
     GLFramebuffer       m_fbo_solid;
     GLFramebuffer       m_fbo_weighted_sum_transparent;
     

@@ -6,6 +6,11 @@
 
 
 namespace render {
+    namespace  surface {
+        namespace glsl {
+            extern const std::string GridTessSurfRenderer_twopass_fs;
+        }
+    }
     namespace screen {
         namespace glsl {
             extern const std::string TransparencyAdditive_vs;
@@ -15,7 +20,11 @@ namespace render {
 
 
 TransparencyAdditive::TransparencyAdditive( const GLsizei width, const GLsizei height )
+    : m_surface_renderer( surface::glsl::GridTessSurfRenderer_twopass_fs )
 {
+    m_surface_renderer_solid_pass = glGetUniformLocation( m_surface_renderer.program().get(),
+                                                          "solid_pass" );
+
     static const GLfloat quad[ 4*4 ] = {
          1.f, -1.f, 0.f, 1.f,
          1.f,  1.f, 0.f, 1.f,
@@ -175,8 +184,14 @@ TransparencyAdditive::render( GLuint                              fbo,
     glDepthFunc( GL_LESS );
     glDepthMask( GL_TRUE );
     glDisable( GL_BLEND );
-    surface_renderer->drawTwoPass( modelview, projection, glm::value_ptr( MVP ), nm3, width, height,
-          tess, field, items, true );
+    glProgramUniform1i( m_surface_renderer.program().get(),
+                        m_surface_renderer_solid_pass,
+                        GL_TRUE );
+    m_surface_renderer.draw( modelview,
+                             projection,
+                             m_width,
+                             m_height,
+                             tess, field, items );
     // Render transparent geometry (we share depth buffer with solid pass,
     // i.e., no need to copy that)
     glBindFramebuffer( GL_DRAW_FRAMEBUFFER, m_fbo_weighted_sum_transparent.get() );
@@ -185,8 +200,15 @@ TransparencyAdditive::render( GLuint                              fbo,
     glEnable( GL_BLEND );
     glBlendFunc( GL_ONE, GL_ONE );  // alpha * color done in geometry shader
 
-    surface_renderer->drawTwoPass( modelview, projection, glm::value_ptr( MVP ), nm3, width, height,
-          tess, field, items, false );
+    glProgramUniform1i( m_surface_renderer.program().get(),
+                        m_surface_renderer_solid_pass,
+                        GL_FALSE );
+    m_surface_renderer.draw( modelview,
+                             projection,
+                             m_width,
+                             m_height,
+                             tess, field, items );
+
     glDepthMask( GL_TRUE );
     glDisable( GL_BLEND );
 

@@ -6,6 +6,11 @@
 
 
 namespace render {
+    namespace  surface {
+        namespace glsl {
+            extern const std::string GridTessSurfRenderer_twopass_fs;
+        }
+    }
     namespace screen {
         namespace glsl {
             extern const std::string TransparencyWeightedAverage_vs;
@@ -15,7 +20,8 @@ namespace render {
 
 TransparencyWeightedAverage::TransparencyWeightedAverage( const GLsizei width,
                                                           const GLsizei height )
-    : m_fbo_solid( package + ".m_fbo_solid" ),
+    : m_surface_renderer( surface::glsl::GridTessSurfRenderer_twopass_fs ),
+      m_fbo_solid( package + ".m_fbo_solid" ),
       m_fbo_weighted_average_transparent( package + ".wgt_avg_transparent" ),
       m_solid_color_tex( package + ".m_solid_color" ),
       m_transparent_color_tex( package + ".m_transparent_color" ),
@@ -25,6 +31,9 @@ TransparencyWeightedAverage::TransparencyWeightedAverage( const GLsizei width,
       m_fsq_buf( package + ".m_fsq_buf" ),
       m_merge_passes( package + ".m_merge_passes" )
 {
+    m_surface_renderer_solid_pass = glGetUniformLocation( m_surface_renderer.program().get(),
+                                                          "solid_pass" );
+    
     static const GLfloat quad[ 4*4 ] = {
          1.f, -1.f, 0.f, 1.f,
          1.f,  1.f, 0.f, 1.f,
@@ -175,22 +184,6 @@ TransparencyWeightedAverage::render( GLuint                              fbo,
     }
     
     glViewport( 0, 0, m_width, m_height );
-    
-    glm::mat4 M(modelview[0], modelview[1], modelview[ 2], modelview[3],
-                modelview[4], modelview[5], modelview[ 6], modelview[7],
-                modelview[8], modelview[9], modelview[10], modelview[11],
-                modelview[12], modelview[13], modelview[14], modelview[15] );
-    glm::mat4 P(projection[0], projection[1], projection[ 2], projection[3],
-                projection[4], projection[5], projection[ 6], projection[7],
-                projection[8], projection[9], projection[10], projection[11],
-                projection[12], projection[13], projection[14], projection[15] );
-    glm::mat4 MVP = P*M;
-
-    glm::mat4 NM = glm::transpose( glm::inverse( M ) );
-    const GLfloat* nm4 = glm::value_ptr( NM );
-    const GLfloat nm3[9] = { nm4[0], nm4[1], nm4[2],
-                             nm4[4], nm4[5], nm4[6],
-                             nm4[8], nm4[9], nm4[10] };
 
     // Weighted average forumla, Bavoil & Myers, 'Order Independent
     // transparency with dual depth peeling', NVIDIA whitepaper.
@@ -205,24 +198,31 @@ TransparencyWeightedAverage::render( GLuint                              fbo,
     glDepthFunc( GL_LESS );
     glDepthMask( GL_TRUE );
     glDisable( GL_BLEND );
-    surface_renderer->drawTwoPass( modelview,
-                                   projection,
-                                   glm::value_ptr( MVP ),
-                                   nm3,
-                                   m_width, m_height,
-                                   tess, field, items, true );
+
+    glProgramUniform1i( m_surface_renderer.program().get(),
+                        m_surface_renderer_solid_pass,
+                        GL_TRUE );
+    m_surface_renderer.draw( modelview,
+                             projection,
+                             m_width,
+                             m_height,
+                             tess, field, items );
+    
     glBindFramebuffer( GL_DRAW_FRAMEBUFFER, m_fbo_weighted_average_transparent.get() );
     glClearColor( 0.f, 0.f, 0.f, 0.f );
     glClear( GL_COLOR_BUFFER_BIT );
     glDepthMask( GL_FALSE );
     glEnable( GL_BLEND );
     glBlendFunc( GL_ONE, GL_ONE );  // alpha * color done in geometry shader
-    surface_renderer->drawTwoPass( modelview,
-                                   projection,
-                                   glm::value_ptr( MVP ),
-                                   nm3,
-                                   m_width, m_height,
-                                   tess, field, items, false );
+
+    glProgramUniform1i( m_surface_renderer.program().get(),
+                        m_surface_renderer_solid_pass,
+                        GL_FALSE );
+    m_surface_renderer.draw( modelview,
+                             projection,
+                             m_width,
+                             m_height,
+                             tess, field, items );
 
     glDepthMask( GL_TRUE );
     glDisable( GL_BLEND );

@@ -4,9 +4,18 @@
 
 
 namespace render {
+    namespace  surface {
+        namespace glsl {
+            extern const std::string GridTessSurfRenderer_singlepass_fs;
+        }
+    }
     namespace screen {
 
 
+TransparencyNone::TransparencyNone()
+    : m_surface_renderer( surface::glsl::GridTessSurfRenderer_singlepass_fs )
+{}
+    
 TransparencyNone::~TransparencyNone()
 {
 }
@@ -54,13 +63,17 @@ TransparencyNone::render( GLuint                              fbo,
     glDepthMask( GL_TRUE );
     glDisable( GL_BLEND );
     
-    surface_renderer->draw/*SinglePass*/( modelview,
+    m_surface_renderer.draw( modelview, projection,
+                             m_width, m_height,
+                             tess, field, items );
+    /*
+    surface_renderer->drawSinglePass( modelview,
                             projection,
                             glm::value_ptr( MVP ),
                             nm3,
                             m_width, m_height,
                             tess, field, items );
-
+*/
     
 }
 

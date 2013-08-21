@@ -1,5 +1,6 @@
 #pragma once
 #include <GL/glew.h>
+#include "render/surface/Renderer.hpp"
 #include "render/screen/Transparency.hpp"
 
 namespace render {
@@ -8,6 +9,7 @@ namespace render {
 class TransparencyNone : public Transparency
 {
 public:
+    TransparencyNone();
    
     ~TransparencyNone();
 
@@ -22,7 +24,7 @@ public:
             boost::shared_ptr<render::surface::GridTessSurfRenderer>    surface_renderer,
             const std::vector<render::surface::GridTessSurfRenderer::RenderItem>&      items );    
 protected:
-    
+    surface::Renderer   m_surface_renderer;
 };
     
     
