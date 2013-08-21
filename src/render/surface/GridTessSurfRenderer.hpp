@@ -10,6 +10,7 @@
 #include <memory>
 #include <GL/glew.h>
 #include <boost/utility.hpp>
+#include <boost/shared_ptr.hpp>
 #include <vector>
 #include "render/ManagedGL.hpp"
 
@@ -63,7 +64,29 @@ public:
                  const std::vector<RenderItem>&  render_items,
                  const unsigned int              quality );
 
-
+    void
+    draw( const GLfloat*                            modelview,
+          const GLfloat*                            projection,
+          const GLfloat*                            modelview_projection,
+          const GLfloat*                            normal_transform,
+          const GLsizei                             width,
+          const GLsizei                             height,
+          const boost::shared_ptr<const GridTess>   tess,
+          const boost::shared_ptr<const GridField>  field,
+          const std::vector<RenderItem>&            render_items );
+    
+    void
+    drawTwoPass( const GLfloat*                  modelview,
+          const GLfloat*                  projection,
+          const GLfloat*                  modelview_projection,
+          const GLfloat*                  normal_transform,
+          const GLsizei                   width,
+          const GLsizei                   height,
+          boost::shared_ptr<const GridTess>                 tess,
+          boost::shared_ptr<const GridField>                field,
+          const std::vector<RenderItem>&  render_items,
+          const bool                      solid_pass );
+    
 
 private:
     unsigned int    m_quality;
@@ -156,17 +179,6 @@ private:
           boost::shared_ptr<const GridField>                field,
           const std::vector<RenderItem>&  render_items );
 
-    void
-    drawTwoPass( const GLfloat*                  modelview,
-          const GLfloat*                  projection,
-          const GLfloat*                  modelview_projection,
-          const GLfloat*                  normal_transform,
-          const GLsizei                   width,
-          const GLsizei                   height,
-          boost::shared_ptr<const GridTess>                 tess,
-          boost::shared_ptr<const GridField>                field,
-          const std::vector<RenderItem>&  render_items,
-          const bool                      solid_pass );
 
 };
 

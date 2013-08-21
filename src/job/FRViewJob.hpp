@@ -55,6 +55,9 @@ namespace render {
         class GridVoxelization;
         class VoxelSurface;
     }
+    namespace screen {
+        class Transparency;
+    }
 } // of namespace render
 
 class FRViewJob
@@ -161,6 +164,8 @@ private:
     boost::shared_ptr<render::CoordSysRenderer>         m_coordsys_renderer;
     boost::shared_ptr<render::rlgen::GridVoxelization>  m_grid_voxelizer;
     boost::shared_ptr<render::rlgen::VoxelSurface>      m_voxel_surface;
+
+    boost::shared_ptr<render::screen::Transparency>     m_screen_manager;
     /** @} */
 
 

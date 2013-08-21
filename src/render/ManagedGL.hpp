@@ -142,6 +142,30 @@ protected:
 };
 
 
+class GLFramebuffer
+{
+public:
+    GLFramebuffer( const std::string& name = "" )
+    {
+        glGenFramebuffers( 1, &m_gl_name );
+        if( !name.empty() ) {
+            Logger log = getLogger( "GLFramebuffer" );
+            LOGGER_DEBUG( log, "fbo " << m_gl_name << ": " << name );
+        }
+    }
+    
+    ~GLFramebuffer()
+    {
+        glDeleteFramebuffers( 1, &m_gl_name );
+    }
+
+    GLuint
+    get() const { return m_gl_name; }
+    
+protected:
+    GLuint  m_gl_name;
+    
+};
 
 class GLVertexArrayObject
 {

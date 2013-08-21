@@ -581,6 +581,31 @@ GridTessSurfRenderer::drawSinglePass(const GLfloat*                  modelview,
 }
 
 void
+GridTessSurfRenderer::draw(const GLfloat*                  modelview,
+                           const GLfloat*                  projection,
+                           const GLfloat*                  modelview_projection,
+                           const GLfloat*                  normal_transform,
+                           const GLsizei                   width,
+                           const GLsizei                   height,
+                           const boost::shared_ptr<const GridTess> tess,
+                           const boost::shared_ptr<const GridField> field,
+                           const std::vector<RenderItem>&  render_items )
+{
+    glBindVertexArray( tess->vertexPositonsAsVertexArrayObject() );
+
+    glUseProgram( m_surface_crappy_prog );
+    glUniformMatrix4fv( m_surface_crappy_loc_mvp, 1, GL_FALSE, modelview_projection );
+
+    for( size_t i = 0; i<render_items.size(); i++) {
+        const RenderItem& item = render_items[i];
+        glUniform3fv( glGetUniformLocation( m_surface_crappy_prog, "solid_color" ), 1, item.m_face_color );
+        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, item.m_surf->triangleCornerpointIndexBuffer() );
+        glDrawElements( GL_TRIANGLES, 3*item.m_surf->triangleCount(), GL_UNSIGNED_INT, NULL );
+    }
+}
+
+
+void
 GridTessSurfRenderer::drawCrappy(const GLfloat*                  modelview,
                                   const GLfloat*                  projection,
                                   const GLfloat*                  modelview_projection,

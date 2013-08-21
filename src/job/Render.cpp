@@ -14,6 +14,9 @@
 #include "render/surface/GridTessSurfRenderer.hpp"
 #include "render/rlgen/GridVoxelization.hpp"          // move to renderlist
 #include "render/rlgen/VoxelSurface.hpp"  // move to renderlist
+#include "render/screen/TransparencyNone.hpp"
+#include "render/screen/TransparencyAdditive.hpp"
+#include "render/screen/TransparencyWeightedAverage.hpp"
 
 void
 FRViewJob::render( const float*  projection,
@@ -156,7 +159,7 @@ FRViewJob::render( const float*  projection,
             items.back().m_face_color[3] = fc.a;
         }
 
-        m_tess_renderer->renderCells( fbo,
+        /*m_tess_renderer->renderCells( fbo,
                                       width,
                                       height,
                                       glm::value_ptr( mv*m_local_to_world ),
@@ -164,9 +167,47 @@ FRViewJob::render( const float*  projection,
                                       m_grid_tess,
                                       m_grid_field,
                                       items,
-                                      m_appearance.renderQuality() );
+                                      m_appearance.renderQuality() );*/
 
 
+        switch ( m_appearance.renderQuality() ) {
+        case 0:
+            if( (!m_screen_manager) ||
+                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyNone)) )
+            {
+                m_screen_manager.reset( new render::screen::TransparencyNone );
+                LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
+            }
+            break;
+        case 1:
+            if( (!m_screen_manager) ||
+                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyAdditive)) )
+            {
+                m_screen_manager.reset( new render::screen::TransparencyAdditive );
+                LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
+            }
+            break;
+        case 2:
+        case 3:
+        default:
+            if( (!m_screen_manager) ||
+                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyWeightedAverage)) )
+            {
+                m_screen_manager.reset( new render::screen::TransparencyWeightedAverage( width, height ) );
+                LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
+            }
+            break;
+        }
+        m_screen_manager->render( fbo,
+                                  width,
+                                  height,
+                                  glm::value_ptr( mv*m_local_to_world ),
+                                  projection,
+                                  m_grid_tess,
+                                  m_grid_field,
+                                  m_tess_renderer,
+                                  items);
+        
         if( m_appearance.renderWells() ) {
 
             m_well_labels->render( width,
