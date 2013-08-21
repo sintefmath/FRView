@@ -95,15 +95,27 @@ FRViewJob::render( const float*  projection,
 
 
         glBindFramebuffer( GL_FRAMEBUFFER, fbo );
+        std::vector<render::RenderItem> items;
+        
         if( m_appearance.renderWells() ) {
+            items.resize( items.size() + 1 );
+            items.back().m_renderer = render::RenderItem::RENDERER_WELL;
+            items.back().m_well = m_wells;
+            
+            
+            /*
+            
             m_well_renderer->render( width,
                                      height,
                                      projection,
                                      modelview,
-                                     glm::value_ptr( m_local_to_world ) );
+                                     glm::value_ptr( m_local_to_world ),
+                                     m_wells );*/
+            
         }
 
-        std::vector<render::RenderItem> items;
+        
+        
         if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS )  {
             const glm::vec4& fc = m_appearance.faultsFillColor();
             const glm::vec4& oc = m_appearance.faultsOutlineColor();

@@ -30,6 +30,8 @@ Representation::clear()
 {
     m_attribs.clear();
     m_indices.clear();
+
+    m_well_heads.clear();
 }
 
 void
@@ -118,6 +120,18 @@ Representation::addSegments( const std::vector<float>& positions,
     m_do_upload = true;
 
 }
+
+void
+Representation::addWellHead( const std::string& well_name,
+                             const float*       well_head_position)
+{
+    m_well_heads.add( well_name,
+                      TextRenderer::FONT_8X12,
+                      well_head_position,
+                      10.f,
+                      TextRenderer::ANCHOR_S );    
+}
+
 
 void
 Representation::upload()

@@ -12,7 +12,7 @@
 #include "render/GridTessBridge.hpp"
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
-
+#include "render/wells/Representation.hpp"
 
 
 void
@@ -105,21 +105,17 @@ FRViewJob::fetchData()
             m_load_color_field = false;
             m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
 
+            m_wells->clear();
             if( m_appearance.renderWells() ) {
-
-                m_well_labels->clear();
-                m_well_renderer->clear();
                 std::vector<float> colors;
                 std::vector<float> positions;
                 for( unsigned int w=0; w<m_project->wellCount(); w++ ) {
                     if( !m_project->wellDefined( m_report_step_index, w ) ) {
                         continue;
                     }
-                    m_well_labels->add( m_project->wellName(w),
-                                        render::TextRenderer::FONT_8X12,
-                                        m_project->wellHeadPosition( m_report_step_index, w ),
-                                        10.f,
-                                        render::TextRenderer::ANCHOR_S );
+                    m_wells->addWellHead( m_project->wellName(w),
+                                          m_project->wellHeadPosition( m_report_step_index, w ) );
+
                     positions.clear();
                     colors.clear();
                     const unsigned int bN = m_project->wellBranchCount( m_report_step_index, w );
@@ -136,7 +132,7 @@ FRViewJob::fetchData()
                             colors.push_back( ((i & 0x2) == 0) ? 1.f : 0.5f );
                             colors.push_back( ((i & 0x4) == 0) ? 1.f : 0.5f );
                         }
-                        m_well_renderer->addSegments( positions, colors );
+                        m_wells->addSegments( positions, colors );
                     }
                 }
             }

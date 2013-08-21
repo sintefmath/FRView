@@ -12,6 +12,7 @@
 #include <vector>
 #include <boost/utility.hpp>
 #include "render/ManagedGL.hpp"
+#include "render/TextRenderer.hpp"
 
 namespace render {
     namespace wells {
@@ -25,9 +26,17 @@ public:
     clear();
 
     void
+    addWellHead( const std::string& well_name,
+                 const float*       well_head_position);
+    
+    
+    void
     addSegments( const std::vector<float>& positions,
                  const std::vector<float>& colors );
 
+    bool
+    empty() const { return m_indices.empty(); }
+    
     /**
      * Sideeffects:
      * - VertexArrayObject binding
@@ -35,6 +44,18 @@ public:
      */
     void
     upload();
+
+    TextRenderer&
+    wellHeads() { return m_well_heads; }
+
+    GLVertexArrayObject&
+    attribs() { return m_attribs_vao; }
+
+    GLBuffer&
+    indices() { return m_indices_buf; }
+
+    GLsizei
+    indexCount() { return m_indices.size(); }    
     
 protected:
     bool                    m_do_upload;
@@ -54,7 +75,7 @@ protected:
     GLBuffer                m_indices_buf;
     std::vector<GLuint>     m_indices;
     
-    
+    TextRenderer            m_well_heads;
 };
     
     } // of namespace wells

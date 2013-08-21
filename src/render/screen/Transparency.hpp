@@ -3,6 +3,7 @@
 #include <boost/utility.hpp>
 #include <boost/shared_ptr.hpp>
 #include <render/RenderItem.hpp>
+#include <render/wells/Renderer.hpp>
 
 namespace render {
     class GridTess;
@@ -33,6 +34,15 @@ protected:
     GLsizei     m_width;
     GLsizei     m_height;
     
+    wells::WellRenderer     m_well_renderer;
+
+    void
+    renderMiscellaneous( const GLsizei                       width,
+                         const GLsizei                       height,
+                         const GLfloat*                      modelview,
+                         const GLfloat*                      projection,
+                         const std::vector<RenderItem>&      items );
+
 };
     
     
