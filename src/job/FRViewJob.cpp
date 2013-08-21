@@ -27,6 +27,7 @@
 #include "render/ClipPlane.hpp"
 #include "render/GridCubeRenderer.hpp"
 #include "render/TextRenderer.hpp"
+#include "render/wells/Representation.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
 #include "render/subset/BuilderSelectAll.hpp"
@@ -48,7 +49,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     : tinia::jobcontroller::OpenGLJob(),
       m_file( m_model, *this ),
       m_under_the_hood( m_model, *this ),
-      m_appearance( m_model ),
+      m_appearance( m_model, m_load_color_field ),
       m_visibility_mask( models::Appearance::VISIBILITY_MASK_NONE ),
       m_theme( 0 ),
       m_grid_stats( m_model, *this ),
@@ -820,6 +821,7 @@ FRViewJob::releasePipeline()
     m_grid_tess_subset = boost::shared_ptr<render::subset::Representation>();
     m_grid_cube_renderer = boost::shared_ptr<render::GridCubeRenderer>();
     m_well_renderer = boost::shared_ptr<render::wells::WellRenderer>();
+    m_wells = boost::shared_ptr<render::wells::Representation>();
     m_coordsys_renderer = boost::shared_ptr<render::CoordSysRenderer>();
     m_grid_voxelizer = boost::shared_ptr<render::rlgen::GridVoxelization>();
     m_voxel_surface = boost::shared_ptr<render::rlgen::VoxelSurface>();
@@ -848,6 +850,7 @@ bool FRViewJob::setupPipeline()
         m_grid_tess_subset.reset( new render::subset::Representation );
         m_grid_cube_renderer.reset( new render::GridCubeRenderer );
         m_well_renderer.reset( new render::wells::WellRenderer );
+        m_wells.reset( new render::wells::Representation );
         m_coordsys_renderer.reset( new render::CoordSysRenderer );
         m_grid_voxelizer.reset( new render::rlgen::GridVoxelization );
         m_voxel_surface.reset( new render::rlgen::VoxelSurface );

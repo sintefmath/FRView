@@ -44,6 +44,7 @@ namespace render {
     class TextRenderer;
     class CoordSysRenderer;
     namespace wells {
+        class Representation;
         class WellRenderer;
     }
     namespace surface {
@@ -142,28 +143,28 @@ private:
 
     /** @{ */
     /** True if all GPU objects has been built. */
-    bool                                            m_has_pipeline;
-    boost::shared_ptr<render::TextRenderer>           m_well_labels;
-    boost::shared_ptr<render::ClipPlane>              m_clip_plane;
-    boost::shared_ptr<render::GridTess>               m_grid_tess;
-    boost::shared_ptr<render::subset::Representation>         m_grid_tess_subset;
-    boost::shared_ptr<render::surface::GridTessSurf>           m_faults_surface;
-    boost::shared_ptr<render::surface::GridTessSurf>           m_subset_surface;
-    boost::shared_ptr<render::surface::GridTessSurf>           m_boundary_surface;
-    boost::shared_ptr<render::surface::GridTessSurfBuilder>    m_grid_tess_surf_builder;
-    boost::shared_ptr<render::GridField>              m_grid_field;
-    boost::shared_ptr<render::subset::BuilderSelectAll>            m_all_selector;
-    boost::shared_ptr<render::subset::BuilderSelectByFieldValue>          m_field_selector;
-    boost::shared_ptr<render::subset::BuilderSelectByIndex>          m_index_selector;
-    boost::shared_ptr<render::subset::BuilderSelectOnPlane>          m_plane_selector;
-    boost::shared_ptr<render::subset::BuilderSelectInsideHalfplane>      m_half_plane_selector;
-    boost::shared_ptr<render::GridCubeRenderer>       m_grid_cube_renderer;
-    boost::shared_ptr<render::wells::WellRenderer>    m_well_renderer;
-    boost::shared_ptr<render::CoordSysRenderer>         m_coordsys_renderer;
-    boost::shared_ptr<render::rlgen::GridVoxelization>  m_grid_voxelizer;
-    boost::shared_ptr<render::rlgen::VoxelSurface>      m_voxel_surface;
-
-    boost::shared_ptr<render::screen::Transparency>     m_screen_manager;
+    bool                                                            m_has_pipeline;
+    boost::shared_ptr<render::TextRenderer>                         m_well_labels;
+    boost::shared_ptr<render::ClipPlane>                            m_clip_plane;
+    boost::shared_ptr<render::GridTess>                             m_grid_tess;
+    boost::shared_ptr<render::subset::Representation>               m_grid_tess_subset;
+    boost::shared_ptr<render::surface::GridTessSurf>                m_faults_surface;
+    boost::shared_ptr<render::surface::GridTessSurf>                m_subset_surface;
+    boost::shared_ptr<render::surface::GridTessSurf>                m_boundary_surface;
+    boost::shared_ptr<render::surface::GridTessSurfBuilder>         m_grid_tess_surf_builder;
+    boost::shared_ptr<render::GridField>                            m_grid_field;
+    boost::shared_ptr<render::subset::BuilderSelectAll>             m_all_selector;
+    boost::shared_ptr<render::subset::BuilderSelectByFieldValue>    m_field_selector;
+    boost::shared_ptr<render::subset::BuilderSelectByIndex>         m_index_selector;
+    boost::shared_ptr<render::subset::BuilderSelectOnPlane>         m_plane_selector;
+    boost::shared_ptr<render::subset::BuilderSelectInsideHalfplane> m_half_plane_selector;
+    boost::shared_ptr<render::GridCubeRenderer>                     m_grid_cube_renderer;
+    boost::shared_ptr<render::wells::Representation>                m_wells;
+    boost::shared_ptr<render::wells::WellRenderer>                  m_well_renderer;
+    boost::shared_ptr<render::CoordSysRenderer>                     m_coordsys_renderer;
+    boost::shared_ptr<render::rlgen::GridVoxelization>              m_grid_voxelizer;
+    boost::shared_ptr<render::rlgen::VoxelSurface>                  m_voxel_surface;
+    boost::shared_ptr<render::screen::Transparency>                 m_screen_manager;
     /** @} */
 
 

@@ -105,37 +105,39 @@ FRViewJob::fetchData()
             m_load_color_field = false;
             m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
 
-            // -- Update wells
-            m_well_labels->clear();
-            m_well_renderer->clear();
-            std::vector<float> colors;
-            std::vector<float> positions;
-            for( unsigned int w=0; w<m_project->wellCount(); w++ ) {
-                if( !m_project->wellDefined( m_report_step_index, w ) ) {
-                    continue;
-                }
-                m_well_labels->add( m_project->wellName(w),
-                                    render::TextRenderer::FONT_8X12,
-                                    m_project->wellHeadPosition( m_report_step_index, w ),
-                                    10.f,
-                                    render::TextRenderer::ANCHOR_S );
-                positions.clear();
-                colors.clear();
-                const unsigned int bN = m_project->wellBranchCount( m_report_step_index, w );
-                for( unsigned int b=0; b<bN; b++ ) {
-                    const std::vector<float>& p = m_project->wellBranchPositions( m_report_step_index, w, b );
-                    if( p.empty() ) {
+            if( m_appearance.renderWells() ) {
+
+                m_well_labels->clear();
+                m_well_renderer->clear();
+                std::vector<float> colors;
+                std::vector<float> positions;
+                for( unsigned int w=0; w<m_project->wellCount(); w++ ) {
+                    if( !m_project->wellDefined( m_report_step_index, w ) ) {
                         continue;
                     }
-                    for( size_t i=0; i<p.size(); i+=3 ) {
-                        positions.push_back( p[i+0] );
-                        positions.push_back( p[i+1] );
-                        positions.push_back( p[i+2] );
-                        colors.push_back( ((i & 0x1) == 0) ? 1.f : 0.5f );
-                        colors.push_back( ((i & 0x2) == 0) ? 1.f : 0.5f );
-                        colors.push_back( ((i & 0x4) == 0) ? 1.f : 0.5f );
+                    m_well_labels->add( m_project->wellName(w),
+                                        render::TextRenderer::FONT_8X12,
+                                        m_project->wellHeadPosition( m_report_step_index, w ),
+                                        10.f,
+                                        render::TextRenderer::ANCHOR_S );
+                    positions.clear();
+                    colors.clear();
+                    const unsigned int bN = m_project->wellBranchCount( m_report_step_index, w );
+                    for( unsigned int b=0; b<bN; b++ ) {
+                        const std::vector<float>& p = m_project->wellBranchPositions( m_report_step_index, w, b );
+                        if( p.empty() ) {
+                            continue;
+                        }
+                        for( size_t i=0; i<p.size(); i+=3 ) {
+                            positions.push_back( p[i+0] );
+                            positions.push_back( p[i+1] );
+                            positions.push_back( p[i+2] );
+                            colors.push_back( ((i & 0x1) == 0) ? 1.f : 0.5f );
+                            colors.push_back( ((i & 0x2) == 0) ? 1.f : 0.5f );
+                            colors.push_back( ((i & 0x4) == 0) ? 1.f : 0.5f );
+                        }
+                        m_well_renderer->addSegments( positions, colors );
                     }
-                    m_well_renderer->addSegments( positions, colors );
                 }
             }
 
