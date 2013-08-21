@@ -30,7 +30,7 @@ TransparencyNone::render( GLuint                              fbo,
                       boost::shared_ptr<const GridTess>   tess,
                       boost::shared_ptr<const GridField>  field,
                       boost::shared_ptr<render::surface::GridTessSurfRenderer>    surface_renderer,
-                      const std::vector<render::surface::GridTessSurfRenderer::RenderItem>&      items )
+                      const std::vector<RenderItem>&      items )
 {
     if( (m_width != width) || (m_height != height) ) {
         m_width = width;

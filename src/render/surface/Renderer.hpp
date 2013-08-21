@@ -2,6 +2,7 @@
 #include <GL/glew.h>
 #include <boost/utility.hpp>
 #include <boost/shared_ptr.hpp>
+#include "render/RenderItem.hpp"
 #include "render/ManagedGL.hpp"
 #include "GridTessSurfRenderer.hpp"
 
@@ -23,7 +24,7 @@ public:
           const GLsizei                                         height,
           const boost::shared_ptr<const GridTess>               tess,
           const boost::shared_ptr<const GridField>              field,
-          const std::vector<GridTessSurfRenderer::RenderItem>&  render_items );
+          const std::vector<RenderItem>&  render_items );
 
     GLProgram&
     program() { return m_main; }

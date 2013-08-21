@@ -12,6 +12,7 @@
 #include <boost/utility.hpp>
 #include <boost/shared_ptr.hpp>
 #include <vector>
+#include "render/RenderItem.hpp"
 #include "render/ManagedGL.hpp"
 
 namespace render {
@@ -30,6 +31,7 @@ namespace render {
 class GridTessSurfRenderer : public boost::noncopyable
 {
 public:
+/*
     struct RenderItem {
         boost::shared_ptr<const GridTessSurf> m_surf;
         bool                m_field;
@@ -40,7 +42,7 @@ public:
         float               m_edge_color[4];
         float               m_face_color[4];
     };
-
+*/
     GridTessSurfRenderer();
 
     ~GridTessSurfRenderer();

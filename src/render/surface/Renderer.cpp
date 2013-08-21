@@ -52,7 +52,7 @@ Renderer::draw( const GLfloat*                                        modelview,
                 const GLsizei                                         height,
                 const boost::shared_ptr<const GridTess>               tess,
                 const boost::shared_ptr<const GridField>              field,
-                const std::vector<GridTessSurfRenderer::RenderItem>&  render_items )
+                const std::vector<RenderItem>&  render_items )
 {
 
     
@@ -97,7 +97,10 @@ Renderer::draw( const GLfloat*                                        modelview,
     glBindVertexArray( tess->vertexPositonsAsVertexArrayObject() );
    
     for( size_t i = 0; i<render_items.size(); i++) {
-        const GridTessSurfRenderer::RenderItem& item = render_items[i];
+        const RenderItem& item = render_items[i];
+        if( item.m_renderer != RenderItem::RENDERER_SURFACE ) {
+            continue;
+        }
 
         if( item.m_edge_color[3] > 0.f ) {
             glDisable( GL_POLYGON_OFFSET_FILL );

@@ -23,7 +23,7 @@ public:
             boost::shared_ptr<const GridTess>   tess,
             boost::shared_ptr<const GridField>  field,
             boost::shared_ptr<render::surface::GridTessSurfRenderer>    surface_renderer,
-            const std::vector<render::surface::GridTessSurfRenderer::RenderItem>&      items );  
+            const std::vector<RenderItem>&      items );  
 protected:
     surface::Renderer   m_surface_renderer;
     GLint               m_surface_renderer_solid_pass;

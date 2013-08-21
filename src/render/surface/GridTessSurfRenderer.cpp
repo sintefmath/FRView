@@ -12,6 +12,7 @@
 #include "utils/Logger.hpp"
 #include "render/GridTess.hpp"
 #include "render/GridField.hpp"
+#include "render/RenderItem.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfRenderer.hpp"
 
