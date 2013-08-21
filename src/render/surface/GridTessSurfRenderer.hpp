@@ -45,24 +45,6 @@ public:
 
     ~GridTessSurfRenderer();
 
-    /**
-      *
-      *
-      * Quality:
-      * - 0 No transparency
-      * - 1 Weigthed sum
-      * - 2 Weighted sum with weighted alpha
-      */
-    void
-    renderCells( GLuint                          fbo,
-                 const GLsizei                   width,
-                 const GLsizei                   height,
-                 const GLfloat*                  modelview,
-                 const GLfloat*                  projection,
-                 boost::shared_ptr<const GridTess>                 tess,
-                 boost::shared_ptr<const GridField>                field,
-                 const std::vector<RenderItem>&  render_items,
-                 const unsigned int              quality );
 
     void
     draw( const GLfloat*                            modelview,
@@ -100,22 +82,6 @@ public:
     
 
 private:
-    unsigned int    m_quality;
-    GLsizei         m_width;
-    GLsizei         m_height;
-    GLuint          m_fbo_solid;
-    GLuint          m_fbo_weighted_average_transparent;
-    GLuint          m_fbo_weighted_sum_transparent;
-
-    GLuint      m_depth_tex;
-    GLuint      m_solid_color_tex;
-    GLuint      m_transparent_color_tex;
-    GLuint      m_transparent_complexity_tex;
-
-
-    GLuint      m_gpgpu_quad_vertex_array;
-    GLuint      m_gpgpu_quad_buffer;
-
 
     enum Pass {
         PASS_EDGE,
@@ -139,22 +105,10 @@ private:
     };
     PassData    m_pass_data[ PASS_N ];
 
-    struct {
-        GLuint      m_program;
-    }           m_pass_weighted_sum_merge;
-
 
     GLuint      m_surface_crappy_prog;
     GLint       m_surface_crappy_loc_mvp;
     GLint       m_surface_crappy_loc_color;
-
-
-    GLuint      m_deferred_prog;
-    GLint       m_deferred_loc_use_field;
-    GLint       m_deferred_loc_fill_opacities;
-    GLint       m_deferred_loc_edge_opacities;
-    GLint       m_deferred_loc_log_map;
-    GLint       m_deferred_loc_linear_map;
 
     struct {
         GLuint      m_prog;
@@ -162,9 +116,6 @@ private:
         GLint       m_loc_color;
     }           m_geo_edge;
 
-
-    void
-    resizeBuffers();
 
 
     void

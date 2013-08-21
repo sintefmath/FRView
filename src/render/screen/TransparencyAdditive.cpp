@@ -6,23 +6,11 @@
 
 
 namespace render {
-    namespace  surface {
-        namespace glsl {
-            //extern const std::string GridTessSurfRenderer_common_vs;
-            //extern const std::string GridTessSurfRenderer_common_gs;
-            //extern const std::string GridTessSurfRenderer_frag_list_fs;
-            //extern const std::string GridTessSurfRenderer_twopass_fs;
-            //extern const std::string GridTessSurfRenderer_singlepass_fs;
-            //extern const std::string GridTessSurfRenderer_crappy_fs;
-            //extern const std::string GridTessSurfRenderer_common_fs;
-            extern const std::string GridTessSurfRenderer_screen_common_vs;
-            //extern const std::string GridTessSurfRenderer_screen_colorize_fs;
-            extern const std::string GridTessSurfRenderer_screen_weighted_sum_merge_fs;
-            //extern const std::string GridTessSurfRenderer_geo_edge_vs;
-            //extern const std::string GridTessSurfRenderer_geo_edge_fs;
-        }
-    }
     namespace screen {
+        namespace glsl {
+            extern const std::string TransparencyAdditive_vs;
+            extern const std::string TransparencyAdditive_fs;
+        }
         static const std::string package = "render.screen.TransparencyAdditive";
 
 
@@ -55,8 +43,8 @@ TransparencyAdditive::buildShaders()
 {
     Logger log = getLogger( package + ".buildShaders" );
 
-    GLuint vs = utils::compileShader( log, surface::glsl::GridTessSurfRenderer_screen_common_vs, GL_VERTEX_SHADER );
-    GLuint fs = utils::compileShader( log, surface::glsl::GridTessSurfRenderer_screen_weighted_sum_merge_fs, GL_FRAGMENT_SHADER );
+    GLuint vs = utils::compileShader( log, glsl::TransparencyAdditive_vs, GL_VERTEX_SHADER );
+    GLuint fs = utils::compileShader( log, glsl::TransparencyAdditive_fs, GL_FRAGMENT_SHADER );
     
     glAttachShader( m_pass_weighted_sum_merge_m_program.get(), vs );
     glAttachShader( m_pass_weighted_sum_merge_m_program.get(), fs );
