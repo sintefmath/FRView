@@ -6,13 +6,10 @@
 
 
 namespace render {
-    namespace  surface {
+
+namespace screen {
         namespace glsl {
-            extern const std::string GridTessSurfRenderer_twopass_fs;
-        }
-    }
-    namespace screen {
-        namespace glsl {
+            extern const std::string TransparencyWeightedAverage_geo_fs;
             extern const std::string TransparencyWeightedAverage_vs;
             extern const std::string TransparencyWeightedAverage_fs;
         }
@@ -20,7 +17,7 @@ namespace render {
 
 TransparencyWeightedAverage::TransparencyWeightedAverage( const GLsizei width,
                                                           const GLsizei height )
-    : m_surface_renderer( surface::glsl::GridTessSurfRenderer_twopass_fs ),
+    : m_surface_renderer( glsl::TransparencyWeightedAverage_geo_fs ),
       m_fbo_solid( package + ".m_fbo_solid" ),
       m_fbo_weighted_average_transparent( package + ".wgt_avg_transparent" ),
       m_solid_color_tex( package + ".m_solid_color" ),
@@ -176,7 +173,6 @@ TransparencyWeightedAverage::render( GLuint                              fbo,
                       const GLfloat*                      projection,
                       boost::shared_ptr<const GridTess>   tess,
                       boost::shared_ptr<const GridField>  field,
-                      boost::shared_ptr<render::surface::GridTessSurfRenderer>    surface_renderer,
                       const std::vector<RenderItem>&      items )
 {
     if( (m_width != width) || (m_height != height) ) {

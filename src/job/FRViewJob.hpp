@@ -49,7 +49,6 @@ namespace render {
     namespace surface {
         class GridTessSurf;
         class GridTessSurfBuilder;
-        class GridTessSurfRenderer;
     }
     namespace rlgen {
         class GridVoxelization;
@@ -153,7 +152,6 @@ private:
     boost::shared_ptr<render::surface::GridTessSurf>           m_boundary_surface;
     boost::shared_ptr<render::surface::GridTessSurfBuilder>    m_grid_tess_surf_builder;
     boost::shared_ptr<render::GridField>              m_grid_field;
-    boost::shared_ptr<render::surface::GridTessSurfRenderer>   m_tess_renderer;
     boost::shared_ptr<render::subset::BuilderSelectAll>            m_all_selector;
     boost::shared_ptr<render::subset::BuilderSelectByFieldValue>          m_field_selector;
     boost::shared_ptr<render::subset::BuilderSelectByIndex>          m_index_selector;

@@ -15,7 +15,6 @@
 #include "render/ClipPlane.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
-#include "render/surface/GridTessSurfRenderer.hpp"
 
 void
 FRViewJob::doCompute()

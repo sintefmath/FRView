@@ -10,9 +10,9 @@
 namespace render {
     namespace surface {
         namespace glsl {
-            extern const std::string GridTessSurfRenderer_common_vs;
-            extern const std::string GridTessSurfRenderer_common_gs;
-            extern const std::string GridTessSurfRenderer_common_fs;
+            extern const std::string Renderer_vs;
+            extern const std::string Renderer_gs;
+            extern const std::string Renderer_fs;
         }
         static const std::string package = "render.surface.Renderer";
 
@@ -24,11 +24,12 @@ Renderer::Renderer( const std::string& fragment_source )
 
     // move DO_PAINT into uniform
     
-    GLint vs = utils::compileShader( log, glsl::GridTessSurfRenderer_common_vs, GL_VERTEX_SHADER );
-    GLint gs = utils::compileShader( log, "#define DO_PAINT\n" + glsl::GridTessSurfRenderer_common_gs, GL_GEOMETRY_SHADER );
+    GLint vs = utils::compileShader( log, glsl::Renderer_vs, GL_VERTEX_SHADER );
+    GLint gs = utils::compileShader( log, "#define DO_PAINT\n" +
+                                     glsl::Renderer_gs, GL_GEOMETRY_SHADER );
     GLint fs = utils::compileShader( log,
                                      "#define DO_PAINT\n" +
-                                     glsl::GridTessSurfRenderer_common_fs +
+                                     glsl::Renderer_fs +
                                      fragment_source, GL_FRAGMENT_SHADER );
 
     glAttachShader( m_main.get(), vs );

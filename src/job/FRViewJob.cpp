@@ -37,7 +37,6 @@
 #include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
-#include "render/surface/GridTessSurfRenderer.hpp"
 #include "render/rlgen/GridVoxelization.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
 
@@ -813,7 +812,6 @@ FRViewJob::releasePipeline()
     m_boundary_surface = boost::shared_ptr<render::surface::GridTessSurf>();
     m_grid_tess_surf_builder = boost::shared_ptr<render::surface::GridTessSurfBuilder>();
     m_grid_field = boost::shared_ptr<render::GridField>();
-    m_tess_renderer = boost::shared_ptr<render::surface::GridTessSurfRenderer>();
     m_all_selector = boost::shared_ptr<render::subset::BuilderSelectAll>();
     m_field_selector = boost::shared_ptr<render::subset::BuilderSelectByFieldValue>();
     m_index_selector = boost::shared_ptr<render::subset::BuilderSelectByIndex>();
@@ -842,7 +840,6 @@ bool FRViewJob::setupPipeline()
         m_boundary_surface.reset( new render::surface::GridTessSurf );
         m_grid_tess_surf_builder.reset( new render::surface::GridTessSurfBuilder );
         m_grid_field.reset(  new render::GridField( m_grid_tess ) );
-        m_tess_renderer.reset(  new render::surface::GridTessSurfRenderer );
         m_all_selector.reset( new render::subset::BuilderSelectAll );
         m_field_selector.reset( new render::subset::BuilderSelectByFieldValue );
         m_index_selector.reset( new render::subset::BuilderSelectByIndex );

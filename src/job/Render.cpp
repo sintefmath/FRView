@@ -11,7 +11,6 @@
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
-#include "render/surface/GridTessSurfRenderer.hpp"
 #include "render/rlgen/GridVoxelization.hpp"          // move to renderlist
 #include "render/rlgen/VoxelSurface.hpp"  // move to renderlist
 #include "render/screen/TransparencyNone.hpp"
@@ -200,7 +199,6 @@ FRViewJob::render( const float*  projection,
                                   projection,
                                   m_grid_tess,
                                   m_grid_field,
-                                  m_tess_renderer,
                                   items);
         
         if( m_appearance.renderWells() ) {

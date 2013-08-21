@@ -2,7 +2,7 @@
 #include <GL/glew.h>
 #include <boost/utility.hpp>
 #include <boost/shared_ptr.hpp>
-#include "render/surface/GridTessSurfRenderer.hpp"
+#include <render/RenderItem.hpp>
 
 namespace render {
     class GridTess;
@@ -26,7 +26,6 @@ public:
             const GLfloat*                      projection,
             boost::shared_ptr<const GridTess>   tess,
             boost::shared_ptr<const GridField>  field,
-            boost::shared_ptr<render::surface::GridTessSurfRenderer>    surface_renderer,
             const std::vector<RenderItem>&      items ) = 0;
     
     

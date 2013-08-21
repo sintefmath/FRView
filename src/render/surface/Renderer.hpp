@@ -4,7 +4,6 @@
 #include <boost/shared_ptr.hpp>
 #include "render/RenderItem.hpp"
 #include "render/ManagedGL.hpp"
-#include "GridTessSurfRenderer.hpp"
 
 namespace render {
     class GridTess;
