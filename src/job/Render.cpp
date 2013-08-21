@@ -183,7 +183,7 @@ FRViewJob::render( const float*  projection,
             if( (!m_screen_manager) ||
                     (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyAdditive)) )
             {
-                m_screen_manager.reset( new render::screen::TransparencyAdditive );
+                m_screen_manager.reset( new render::screen::TransparencyAdditive( width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;

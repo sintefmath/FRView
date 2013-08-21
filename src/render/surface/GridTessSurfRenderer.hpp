@@ -74,6 +74,17 @@ public:
           const boost::shared_ptr<const GridTess>   tess,
           const boost::shared_ptr<const GridField>  field,
           const std::vector<RenderItem>&            render_items );
+
+    void
+    drawSinglePass( const GLfloat*                  modelview,
+          const GLfloat*                  projection,
+          const GLfloat*                  modelview_projection,
+          const GLfloat*                  normal_transform,
+          const GLsizei                   width,
+          const GLsizei                   height,
+          boost::shared_ptr<const GridTess>                 tess,
+          boost::shared_ptr<const GridField>                field,
+          const std::vector<RenderItem>&  render_items );
     
     void
     drawTwoPass( const GLfloat*                  modelview,
@@ -168,16 +179,7 @@ private:
                 const std::vector<RenderItem>&  render_items );
 
 
-    void
-    drawSinglePass( const GLfloat*                  modelview,
-          const GLfloat*                  projection,
-          const GLfloat*                  modelview_projection,
-          const GLfloat*                  normal_transform,
-          const GLsizei                   width,
-          const GLsizei                   height,
-          boost::shared_ptr<const GridTess>                 tess,
-          boost::shared_ptr<const GridField>                field,
-          const std::vector<RenderItem>&  render_items );
+
 
 
 };

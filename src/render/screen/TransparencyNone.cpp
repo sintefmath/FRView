@@ -54,7 +54,7 @@ TransparencyNone::render( GLuint                              fbo,
     glDepthMask( GL_TRUE );
     glDisable( GL_BLEND );
     
-    surface_renderer->draw( modelview,
+    surface_renderer->draw/*SinglePass*/( modelview,
                             projection,
                             glm::value_ptr( MVP ),
                             nm3,
