@@ -11,9 +11,12 @@
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
-#include "render/surface/GridTessSurfRenderer.hpp"
 #include "render/rlgen/GridVoxelization.hpp"          // move to renderlist
 #include "render/rlgen/VoxelSurface.hpp"  // move to renderlist
+#include "render/screen/TransparencyNone.hpp"
+#include "render/screen/TransparencyAdditive.hpp"
+#include "render/screen/TransparencyWeightedAverage.hpp"
+#include "render/RenderItem.hpp"
 
 void
 FRViewJob::render( const float*  projection,
@@ -92,19 +95,21 @@ FRViewJob::render( const float*  projection,
 
 
         glBindFramebuffer( GL_FRAMEBUFFER, fbo );
+        std::vector<render::RenderItem> items;
+        
         if( m_appearance.renderWells() ) {
-            m_well_renderer->render( width,
-                                     height,
-                                     projection,
-                                     modelview,
-                                     glm::value_ptr( m_local_to_world ) );
+            items.resize( items.size() + 1 );
+            items.back().m_renderer = render::RenderItem::RENDERER_WELL;
+            items.back().m_well = m_wells;
         }
 
-        std::vector<render::surface::GridTessSurfRenderer::RenderItem> items;
+        
+        
         if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS )  {
             const glm::vec4& fc = m_appearance.faultsFillColor();
             const glm::vec4& oc = m_appearance.faultsOutlineColor();
             items.resize( items.size() + 1 );
+            items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
             items.back().m_surf = m_faults_surface;
             items.back().m_field = false;
             items.back().m_line_thickness = m_appearance.lineThickness();
@@ -121,6 +126,7 @@ FRViewJob::render( const float*  projection,
             const glm::vec4& fc = m_appearance.subsetFillColor();
             const glm::vec4& oc = m_appearance.subsetOutlineColor();
             items.resize( items.size() + 1 );
+            items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
             items.back().m_surf = m_subset_surface;
             items.back().m_field = m_has_color_field;
             items.back().m_field_log_map = log_map;
@@ -140,6 +146,7 @@ FRViewJob::render( const float*  projection,
             const glm::vec4& fc = m_appearance.boundaryFillColor();
             const glm::vec4& oc = m_appearance.boundaryOutlineColor();
             items.resize( items.size() + 1 );
+            items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
             items.back().m_surf = m_boundary_surface;
             items.back().m_field = m_has_color_field;
             items.back().m_field_log_map = log_map;
@@ -156,24 +163,46 @@ FRViewJob::render( const float*  projection,
             items.back().m_face_color[3] = fc.a;
         }
 
-        m_tess_renderer->renderCells( fbo,
-                                      width,
-                                      height,
-                                      glm::value_ptr( mv*m_local_to_world ),
-                                      projection,
-                                      m_grid_tess,
-                                      m_grid_field,
-                                      items,
-                                      m_appearance.renderQuality() );
 
 
-        if( m_appearance.renderWells() ) {
-
-            m_well_labels->render( width,
-                                   height,
-                                   glm::value_ptr( p*mv*m_local_to_world ) );
-
+        switch ( m_appearance.renderQuality() ) {
+        case 0:
+            if( (!m_screen_manager) ||
+                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyNone)) )
+            {
+                m_screen_manager.reset( new render::screen::TransparencyNone );
+                LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
+            }
+            break;
+        case 1:
+            if( (!m_screen_manager) ||
+                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyAdditive)) )
+            {
+                m_screen_manager.reset( new render::screen::TransparencyAdditive( width, height ) );
+                LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
+            }
+            break;
+        case 2:
+        case 3:
+        default:
+            if( (!m_screen_manager) ||
+                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyWeightedAverage)) )
+            {
+                m_screen_manager.reset( new render::screen::TransparencyWeightedAverage( width, height ) );
+                LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
+            }
+            break;
         }
+        m_screen_manager->render( fbo,
+                                  width,
+                                  height,
+                                  glm::value_ptr( m_local_to_world ),
+                                  glm::value_ptr( mv ),
+                                  projection,
+                                  m_grid_tess,
+                                  m_grid_field,
+                                  items);
+        
 
         glViewport( 0, 0, 0.1*width, 0.1*height );
         m_coordsys_renderer->render( glm::value_ptr( mv ), 0.1*width, 0.1*height);

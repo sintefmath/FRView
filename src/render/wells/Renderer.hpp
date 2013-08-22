@@ -10,9 +10,12 @@
 #include <GL/glew.h>
 #include <vector>
 #include <boost/utility.hpp>
+#include <boost/shared_ptr.hpp>
+#include "render/ManagedGL.hpp"
 
 namespace render {
     namespace wells {
+        class Representation;
 
 class WellRenderer : public boost::noncopyable
 {
@@ -23,28 +26,16 @@ public:
     ~WellRenderer();
 
     void
-    clear();
-
-    void
-    addSegments( const std::vector<float>& positions,
-                 const std::vector<float>& colors );
-
-    void
-    render( GLsizei           width,
-            GLsizei           height,
-            const GLfloat*    projection,
-            const GLfloat*    camera_from_world,
-            const GLfloat*    world_from_model );
+    render( GLsizei                             width,
+            GLsizei                             height,
+            const GLfloat*                      projection,
+            const GLfloat*                      camera_from_world,
+            const GLfloat*                      world_from_model,
+            boost::shared_ptr<Representation>   wells );
 
 
 protected:
-    GLuint                  m_well_prog;
-    bool                    m_do_upload;
-    GLuint                  m_attribs_vao;
-    GLuint                  m_attribs_buf;
-    GLuint                  m_indices_buf;
-    std::vector<GLfloat>    m_attribs;
-    std::vector<GLuint>     m_indices;
+    GLProgram   m_well_prog;
 };
 
     } // of namespace wells

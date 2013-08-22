@@ -67,8 +67,10 @@ Appearance::setDarkTheme()
 }
 
 
-Appearance::Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model )
+Appearance::Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model,
+                        bool& reload )
     : m_model( model ),
+      m_reload( reload ),
       m_render_quality( 3 ),
       m_render_grid( false ),
       m_render_wells( false ),
@@ -178,6 +180,7 @@ Appearance::stateElementModified( tinia::model::StateElement * stateElement )
     }
     else if( key == render_wells_key ) {
         stateElement->getValue( m_render_wells );
+        m_reload = true;
     }
     else if( key == line_thickness_key ) {
         int val;

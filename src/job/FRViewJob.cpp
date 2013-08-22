@@ -27,6 +27,7 @@
 #include "render/ClipPlane.hpp"
 #include "render/GridCubeRenderer.hpp"
 #include "render/TextRenderer.hpp"
+#include "render/wells/Representation.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
 #include "render/subset/BuilderSelectAll.hpp"
@@ -37,7 +38,6 @@
 #include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
-#include "render/surface/GridTessSurfRenderer.hpp"
 #include "render/rlgen/GridVoxelization.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
 
@@ -49,7 +49,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     : tinia::jobcontroller::OpenGLJob(),
       m_file( m_model, *this ),
       m_under_the_hood( m_model, *this ),
-      m_appearance( m_model ),
+      m_appearance( m_model, m_load_color_field ),
       m_visibility_mask( models::Appearance::VISIBILITY_MASK_NONE ),
       m_theme( 0 ),
       m_grid_stats( m_model, *this ),
@@ -805,7 +805,6 @@ FRViewJob::releasePipeline()
     if( !m_has_context ) {
         return;
     }
-    m_well_labels = boost::shared_ptr<render::TextRenderer>();
     m_clip_plane = boost::shared_ptr<render::ClipPlane>();
     m_grid_tess = boost::shared_ptr<render::GridTess>();
     m_faults_surface = boost::shared_ptr<render::surface::GridTessSurf>();
@@ -813,7 +812,6 @@ FRViewJob::releasePipeline()
     m_boundary_surface = boost::shared_ptr<render::surface::GridTessSurf>();
     m_grid_tess_surf_builder = boost::shared_ptr<render::surface::GridTessSurfBuilder>();
     m_grid_field = boost::shared_ptr<render::GridField>();
-    m_tess_renderer = boost::shared_ptr<render::surface::GridTessSurfRenderer>();
     m_all_selector = boost::shared_ptr<render::subset::BuilderSelectAll>();
     m_field_selector = boost::shared_ptr<render::subset::BuilderSelectByFieldValue>();
     m_index_selector = boost::shared_ptr<render::subset::BuilderSelectByIndex>();
@@ -821,7 +819,7 @@ FRViewJob::releasePipeline()
     m_half_plane_selector = boost::shared_ptr<render::subset::BuilderSelectInsideHalfplane>();
     m_grid_tess_subset = boost::shared_ptr<render::subset::Representation>();
     m_grid_cube_renderer = boost::shared_ptr<render::GridCubeRenderer>();
-    m_well_renderer = boost::shared_ptr<render::wells::WellRenderer>();
+    m_wells = boost::shared_ptr<render::wells::Representation>();
     m_coordsys_renderer = boost::shared_ptr<render::CoordSysRenderer>();
     m_grid_voxelizer = boost::shared_ptr<render::rlgen::GridVoxelization>();
     m_voxel_surface = boost::shared_ptr<render::rlgen::VoxelSurface>();
@@ -834,7 +832,6 @@ bool FRViewJob::setupPipeline()
         return false;
     }
     try {
-        m_well_labels.reset( new render::TextRenderer() );
         m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
         m_grid_tess.reset( new render::GridTess );
         m_faults_surface.reset( new render::surface::GridTessSurf );
@@ -842,7 +839,6 @@ bool FRViewJob::setupPipeline()
         m_boundary_surface.reset( new render::surface::GridTessSurf );
         m_grid_tess_surf_builder.reset( new render::surface::GridTessSurfBuilder );
         m_grid_field.reset(  new render::GridField( m_grid_tess ) );
-        m_tess_renderer.reset(  new render::surface::GridTessSurfRenderer );
         m_all_selector.reset( new render::subset::BuilderSelectAll );
         m_field_selector.reset( new render::subset::BuilderSelectByFieldValue );
         m_index_selector.reset( new render::subset::BuilderSelectByIndex );
@@ -850,7 +846,7 @@ bool FRViewJob::setupPipeline()
         m_half_plane_selector.reset( new render::subset::BuilderSelectInsideHalfplane );
         m_grid_tess_subset.reset( new render::subset::Representation );
         m_grid_cube_renderer.reset( new render::GridCubeRenderer );
-        m_well_renderer.reset( new render::wells::WellRenderer );
+        m_wells.reset( new render::wells::Representation );
         m_coordsys_renderer.reset( new render::CoordSysRenderer );
         m_grid_voxelizer.reset( new render::rlgen::GridVoxelization );
         m_voxel_surface.reset( new render::rlgen::VoxelSurface );
