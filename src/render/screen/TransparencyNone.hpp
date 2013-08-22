@@ -17,6 +17,7 @@ public:
     render( GLuint                              fbo,
             const GLsizei                       width,
             const GLsizei                       height,
+            const GLfloat*                      local_to_world,
             const GLfloat*                      modelview,
             const GLfloat*                      projection,
             boost::shared_ptr<const GridTess>   tess,

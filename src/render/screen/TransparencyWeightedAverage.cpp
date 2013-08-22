@@ -167,17 +167,19 @@ TransparencyWeightedAverage::resize( const GLsizei width, const GLsizei height )
 
 void
 TransparencyWeightedAverage::render( GLuint                              fbo,
-                      const GLsizei                       width,
-                      const GLsizei                       height,
-                      const GLfloat*                      modelview,
-                      const GLfloat*                      projection,
-                      boost::shared_ptr<const GridTess>   tess,
-                      boost::shared_ptr<const GridField>  field,
-                      const std::vector<RenderItem>&      items )
+                                     const GLsizei                       width,
+                                     const GLsizei                       height,
+                                     const GLfloat*                      local_to_world,
+                                     const GLfloat*                      modelview,
+                                     const GLfloat*                      projection,
+                                     boost::shared_ptr<const GridTess>   tess,
+                                     boost::shared_ptr<const GridField>  field,
+                                     const std::vector<RenderItem>&      items )
 {
     if( (m_width != width) || (m_height != height) ) {
         resize( width, height );
     }
+    glm::mat4 M = glm::make_mat4( modelview ) * glm::make_mat4( local_to_world );
     
     glViewport( 0, 0, m_width, m_height );
 
@@ -198,11 +200,14 @@ TransparencyWeightedAverage::render( GLuint                              fbo,
     glProgramUniform1i( m_surface_renderer.program().get(),
                         m_surface_renderer_solid_pass,
                         GL_TRUE );
-    m_surface_renderer.draw( modelview,
+    m_surface_renderer.draw( glm::value_ptr( M ),
                              projection,
                              m_width,
                              m_height,
                              tess, field, items );
+    renderMiscellaneous( width, height,
+                         local_to_world, modelview, projection,
+                         items );
     
     glBindFramebuffer( GL_DRAW_FRAMEBUFFER, m_fbo_weighted_average_transparent.get() );
     glClearColor( 0.f, 0.f, 0.f, 0.f );
@@ -214,7 +219,7 @@ TransparencyWeightedAverage::render( GLuint                              fbo,
     glProgramUniform1i( m_surface_renderer.program().get(),
                         m_surface_renderer_solid_pass,
                         GL_FALSE );
-    m_surface_renderer.draw( modelview,
+    m_surface_renderer.draw( glm::value_ptr( M ),
                              projection,
                              m_width,
                              m_height,

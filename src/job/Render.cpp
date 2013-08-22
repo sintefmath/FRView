@@ -101,17 +101,6 @@ FRViewJob::render( const float*  projection,
             items.resize( items.size() + 1 );
             items.back().m_renderer = render::RenderItem::RENDERER_WELL;
             items.back().m_well = m_wells;
-            
-            
-            /*
-            
-            m_well_renderer->render( width,
-                                     height,
-                                     projection,
-                                     modelview,
-                                     glm::value_ptr( m_local_to_world ),
-                                     m_wells );*/
-            
         }
 
         
@@ -207,19 +196,13 @@ FRViewJob::render( const float*  projection,
         m_screen_manager->render( fbo,
                                   width,
                                   height,
-                                  glm::value_ptr( mv*m_local_to_world ),
+                                  glm::value_ptr( m_local_to_world ),
+                                  glm::value_ptr( mv ),
                                   projection,
                                   m_grid_tess,
                                   m_grid_field,
                                   items);
         
-        if( m_appearance.renderWells() ) {
-
-            m_well_labels->render( width,
-                                   height,
-                                   glm::value_ptr( p*mv*m_local_to_world ) );
-
-        }
 
         glViewport( 0, 0, 0.1*width, 0.1*height );
         m_coordsys_renderer->render( glm::value_ptr( mv ), 0.1*width, 0.1*height);

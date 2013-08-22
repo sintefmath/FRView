@@ -805,7 +805,6 @@ FRViewJob::releasePipeline()
     if( !m_has_context ) {
         return;
     }
-    m_well_labels = boost::shared_ptr<render::TextRenderer>();
     m_clip_plane = boost::shared_ptr<render::ClipPlane>();
     m_grid_tess = boost::shared_ptr<render::GridTess>();
     m_faults_surface = boost::shared_ptr<render::surface::GridTessSurf>();
@@ -820,7 +819,6 @@ FRViewJob::releasePipeline()
     m_half_plane_selector = boost::shared_ptr<render::subset::BuilderSelectInsideHalfplane>();
     m_grid_tess_subset = boost::shared_ptr<render::subset::Representation>();
     m_grid_cube_renderer = boost::shared_ptr<render::GridCubeRenderer>();
-    m_well_renderer = boost::shared_ptr<render::wells::WellRenderer>();
     m_wells = boost::shared_ptr<render::wells::Representation>();
     m_coordsys_renderer = boost::shared_ptr<render::CoordSysRenderer>();
     m_grid_voxelizer = boost::shared_ptr<render::rlgen::GridVoxelization>();
@@ -834,7 +832,6 @@ bool FRViewJob::setupPipeline()
         return false;
     }
     try {
-        m_well_labels.reset( new render::TextRenderer() );
         m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
         m_grid_tess.reset( new render::GridTess );
         m_faults_surface.reset( new render::surface::GridTessSurf );
@@ -849,7 +846,6 @@ bool FRViewJob::setupPipeline()
         m_half_plane_selector.reset( new render::subset::BuilderSelectInsideHalfplane );
         m_grid_tess_subset.reset( new render::subset::Representation );
         m_grid_cube_renderer.reset( new render::GridCubeRenderer );
-        m_well_renderer.reset( new render::wells::WellRenderer );
         m_wells.reset( new render::wells::Representation );
         m_coordsys_renderer.reset( new render::CoordSysRenderer );
         m_grid_voxelizer.reset( new render::rlgen::GridVoxelization );
