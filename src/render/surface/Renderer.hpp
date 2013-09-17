@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include <GL/glew.h>
 #include <boost/utility.hpp>
 #include <boost/shared_ptr.hpp>
