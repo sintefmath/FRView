@@ -8,6 +8,7 @@
  ******************************************************************************/
 #pragma once
 #include <string>
+#include <vector>
 
 class GridTess;
 class GridField;
