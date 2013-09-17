@@ -1,5 +1,6 @@
 #include <iomanip>
 #include "utils/GLSLTools.hpp"
+#include <sstream>
 
 namespace utils {
 
