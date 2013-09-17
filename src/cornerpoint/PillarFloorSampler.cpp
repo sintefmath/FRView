@@ -81,6 +81,6 @@ PillarFloorSampler<Tessellation>::normal( const Real u, const Real v, const Real
 }
 
 template class PillarFloorSampler< render::GridTessBridge >;
-template PillarFloorSampler< render::GridTessBridge >::PillarFloorSampler<float>( const float*, const float*, const float*, const float*);
+template PillarFloorSampler< render::GridTessBridge >::PillarFloorSampler( const float*, const float*, const float*, const float*);
 
 } // of namespace cornerpoint
