@@ -238,6 +238,10 @@ private:
     void
     refresh( int rx, int ry, int rz );
 
+    // Used for sorting
+    static bool compareReportStep(const ReportStep& a, const ReportStep& b) {
+	return a.m_seqnum < b.m_seqnum;
+    }
 };
 
 } // of namespace dataset
