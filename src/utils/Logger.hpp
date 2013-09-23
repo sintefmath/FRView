@@ -55,15 +55,15 @@ static inline Logger getLogger(const std::string name)
 
 #ifdef DEBUG
 // Detailed logging only enabled for debug builds
-#define LOGGER_TRACE(a,b)   std::cout << "TRACE(a): " << b << std::endl;
-#define LOGGER_INFO(a,b)    std::cout << "INFO(a): " << b << std::endl;
-#define LOGGER_DEBUG(a,b)   std::cout << "DEBUG(a): " << b << std::endl;
+#define LOGGER_TRACE(a,b)   std::cout << "TRACE(" << a << "): " << b << std::endl;
+#define LOGGER_INFO(a,b)    std::cout << "INFO(" << a << "): " << b << std::endl;
+#define LOGGER_DEBUG(a,b)   std::cout << "DEBUG("<< a << "): " << b << std::endl;
 #endif
 
 // Warnings and up are always logged
-#define LOGGER_WARN(a,b)    std::cerr << "WARN(a): " << b << std::endl;
-#define LOGGER_ERROR(a,b)   std::cerr << "ERROR(a): " << b << std::endl;
-#define LOGGER_FATAL(a,b)   std::cerr << "FATAL(a): " << b << std::endl;
+#define LOGGER_WARN(a,b)    std::cerr << "WARN(" << a << "): " << b << std::endl;
+#define LOGGER_ERROR(a,b)   std::cerr << "ERROR(" << a << "): " << b << std::endl;
+#define LOGGER_FATAL(a,b)   std::cerr << "FATAL(" << a << "): " << b << std::endl;
 #endif // ifdef FRVIEW_HAS_LOG4CXX
 
 // Check invariants are logger agnostic
