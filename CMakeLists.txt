@@ -17,7 +17,6 @@ IF( EXTEND_CMAKE_MODULE_PATH )
   SET( CMAKE_MODULE_PATH
        "${CMAKE_MODULE_PATH}"
        "${CMAKE_SOURCE_DIR}/cmake/Modules"
-       "../tinia/cmake/Modules"
        "~/cmake/Modules"
        "$ENV{HOMEPATH}/cmake/Modules" )
 ENDIF( EXTEND_CMAKE_MODULE_PATH )
