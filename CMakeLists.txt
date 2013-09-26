@@ -53,7 +53,7 @@ include ( CPack )
 set( BUILDDIR "build" )
 set( CMAKE_CXX_FLAGS "-std=c++0x -Wall ${CMAKE_CXX_FLAGS}" )
 
-FIND_PACKAGE( Tinia REQUIRED COMPONENTS Server Desktop )
+FIND_PACKAGE( Tinia 0.2.5 REQUIRED COMPONENTS Server Desktop )
 FIND_PACKAGE( OpenGL REQUIRED)
 FIND_LIBRARY( GLEW  NAMES GLEW glew32 PATHS ${LIB_PATHS} )
 FIND_PACKAGE( GLM REQUIRED )
@@ -112,7 +112,7 @@ ENDIF( UNIX )
 
 INCLUDE_DIRECTORIES(
     "./src"
-    ${TINIA_INCLUDE_DIR}
+    ${TINIA_INCLUDE_DIRS}
     ${GLM_INCLUDE_DIR}
     ${HPMC_INCLUDE_DIR}
 )
@@ -228,6 +228,7 @@ IF( DESKTOP_JOB )
                            ${Boost_LIBRARIES}
                            ${LOG4CXX_LIBRARIES}
     )
+  INSTALL(TARGETS frview_desktop_job RUNTIME DESTINATION bin/)
 ENDIF( DESKTOP_JOB )
 
 # --- Compile and linke cloud job ----------------------------------------------
@@ -250,6 +251,11 @@ IF( CLOUD_JOB )
                            ${Boost_LIBRARIES}
                            ${LOG4CXX_LIBRARIES}
                            ${LIBXML2_LIBRARIES} )
+    INSTALL(TARGETS 
+      frview_cloud_job 
+      RUNTIME 
+      DESTINATION ${TINIA_APPS_DIR})
+
 ENDIF( CLOUD_JOB )
 
 
