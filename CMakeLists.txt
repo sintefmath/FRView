@@ -219,6 +219,7 @@ IF( DESKTOP_JOB )
                            ${Boost_LIBRARIES}
                            ${LOG4CXX_LIBRARIES}
     )
+  INSTALL(TARGETS frview_desktop_job RUNTIME DESTINATION bin/)
 ENDIF( DESKTOP_JOB )
 
 # --- Compile and linke cloud job ----------------------------------------------
@@ -241,6 +242,11 @@ IF( CLOUD_JOB )
                            ${Boost_LIBRARIES}
                            ${LOG4CXX_LIBRARIES}
                            ${LIBXML2_LIBRARIES} )
+    INSTALL(TARGETS 
+      frview_cloud_job 
+      RUNTIME 
+      DESTINATION ${TINIA_APPS_DIR})
+
 ENDIF( CLOUD_JOB )
 
 
