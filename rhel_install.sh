@@ -12,8 +12,8 @@ INSTALL_DIR=`readlink -f $1`
 #yum groupinstall "Development Tools"
 #yum install qt-devel git cmake libXmu-devel libXi-devel freeglut-devel boost-devel libxml2-devel apr-devel httpd-devel
 
-mkdir install_tmp
-cd install_tmp
+mkdir extra_code
+cd extra_code
 
 # Download GLEW:
 wget  -O glew.tgz  'http://downloads.sourceforge.net/project/glew/glew/1.10.0/glew-1.10.0.tgz?r=http%3A%2F%2Fglew.sourceforge.net%2F&ts=1380204337&use_mirror=kent'
@@ -31,7 +31,6 @@ cp -r glm/glm ${INSTALL_DIR}/include
 # Download Tinia
 git clone https://github.com/sintefmath/tinia.git
 cd tinia
-git checkout kjetilly_rhel_fixing
 mkdir build
 cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} -DCMAKE_PREFIX_PATH=${INSTALL_DIR}
@@ -42,7 +41,7 @@ cd ..
 # Download HPMC
 git clone https://github.com/sintefmath/hpmc.git
 cd hpmc
-git checkout kjetilly_rhel_maintenance_fix
+git checkout v1.0-maintenance
 mkdir build
 cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} -DCMAKE_PREFIX_PATH=${INSTALL_DIR}
@@ -53,7 +52,6 @@ cd ..
 # Compile frview
 mkdir frview_build
 cd frview_build
-
 cmake ../.. -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} -DCMAKE_PREFIX_PATH=${INSTALL_DIR}
 make -j9 install
 cd ..
