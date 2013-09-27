@@ -6,7 +6,6 @@
  *  Copyright (C) 2012 by SINTEF.  All rights reserved.
  *
  ******************************************************************************/
-#include <atomic>
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "cornerpoint/Tessellator.hpp"

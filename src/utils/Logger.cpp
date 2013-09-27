@@ -8,14 +8,16 @@
  ******************************************************************************/
 #include <string>
 #include <vector>
+#ifdef FRVIEW_HAS_LOG4CXX
 #include <log4cxx/logger.h>
 #include <log4cxx/helpers/properties.h>
 #include <log4cxx/basicconfigurator.h>
 #include <log4cxx/propertyconfigurator.h>
 #include <log4cxx/helpers/exception.h>
+#endif
 #include "Logger.hpp"
 
-
+#ifdef FRVIEW_HAS_LOG4CXX
 using std::string;
 using std::vector;
 
@@ -31,7 +33,6 @@ enum LogLevel {
 void
 initializeLoggingFramework( int* argc, char** argv )
 {
-
     log4cxx::helpers::Properties props;
     props.setProperty( LOG4CXX_STR( "log4j.appender.A1" ), LOG4CXX_STR( "org.apache.log4j.ConsoleAppender" ) );
     props.setProperty( LOG4CXX_STR( "log4j.appender.A1.layout" ), LOG4CXX_STR( "org.apache.log4j.PatternLayout" ) );
@@ -115,3 +116,10 @@ initializeLoggingFramework( int* argc, char** argv )
         log4cxx::PropertyConfigurator::configure( logconfig );
     }
 }
+#else
+void
+initializeLoggingFramework( int*, char**) {
+    // With standard std::cout-logging this doesn't need
+    // to do anything.
+}
+#endif

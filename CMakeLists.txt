@@ -1,5 +1,5 @@
 PROJECT( FRView )
-CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )
+CMAKE_MINIMUM_REQUIRED( VERSION 2.6 )
 
 OPTION( EXTEND_CMAKE_MODULE_PATH "Extend the CMAKE_MODULE_PATH variable with user directories?"  ON )
 OPTION( DESKTOP_JOB "Build desktop job" ON )
@@ -17,7 +17,6 @@ IF( EXTEND_CMAKE_MODULE_PATH )
   SET( CMAKE_MODULE_PATH
        "${CMAKE_MODULE_PATH}"
        "${CMAKE_SOURCE_DIR}/cmake/Modules"
-       "../tinia/cmake/Modules"
        "~/cmake/Modules"
        "$ENV{HOMEPATH}/cmake/Modules" )
 ENDIF( EXTEND_CMAKE_MODULE_PATH )
@@ -69,6 +68,15 @@ FIND_LIBRARY( HPMC_LIBRARY hpmc ../hpmc ../hpmc_trunk )
 FIND_PATH(LOG4CXX_INCLUDE_DIR log4cxx/logger.h)
 SET(LOG4CXX_LIBRARIES ${LOG4CXX_LOG4CXX_LIBRARY})
 
+IF(LOG4CXX_LIBRARIES AND LOG4CXX_INCLUDE_DIR)
+       SET(LOG4CXX_FOUND TRUE)
+       ADD_DEFINITIONS(-DFRVIEW_HAS_LOG4CXX)
+ELSE()
+       MESSAGE("Could not find LOG4CXX, defaulting to std::cout-logging")
+       SET(LOG4CXX_FOUND FALSE)
+       SET(LOG4CXX_INCLUDE_DIR "")
+       SET(LOG4CXX_LIBRARIES "")
+ENDIF()
 
 IF( UNIX )
 #        SET( CMAKE_CXX_FLAGS "-Wall -fprofile-arcs -ftest-coverage -pg -g2 -DDEBUG -DUNIX -std=gnu++0x ${CMAKE_CXX_FLAGS}" )

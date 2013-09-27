@@ -707,6 +707,18 @@ Tessellator<Tessellation>::uniquePillarVertices( vector<Index>&      adjacent_ce
     }
 }
 
+namespace {
+    template<typename Tessellation>
+    struct StitchTopBottomHelper {
+	typedef typename Tessellation::Index Index;
+        Index m_index;
+        Index m_cell_below;
+        Index m_cell_above;
+        bool         m_fault;
+        bool         m_emit_00_01_10;
+        bool         m_emit_11_10_01;
+    };
+}
 
 
 template<typename Tessellation>
@@ -736,20 +748,12 @@ Tessellator<Tessellation>::stitchTopBottom( const Index* const   ci0j0_active_ce
                                                        const Index* const   cell_map,
                                                        const Index          stride )
 {
-    struct StitchTopBottomHelper {
-        Index m_index;
-        Index m_cell_below;
-        Index m_cell_above;
-        bool         m_fault;
-        bool         m_emit_00_01_10;
-        bool         m_emit_11_10_01;
-    };
 
     Logger log = getLogger( package + ".stitchTopBottom" );
 
 
 
-    vector<StitchTopBottomHelper> helper;
+    vector<StitchTopBottomHelper<Tessellation> > helper;
     helper.reserve( 2*ci0j0_active_cell_count );
 
     Index last_top_00 = IllegalIndex;
@@ -1370,6 +1374,19 @@ Tessellator<Tessellation>::stitchPillarsNoIntersections( const Orientation      
 }
 
 
+namespace {
+    // Helper struct for wall lines on one side of the wall
+    template<typename Tessellation>
+    struct SidedWallLine {
+	typedef typename Tessellation::Index Index;
+        Index  m_ends[2];
+        Index  m_cell_under;
+        Index  m_cell_over;
+        Index  m_twin_under;
+        Index  m_twin_over;
+        Index  m_maps_to_merged_ix;
+    };
+}
 
 
 template<typename Tessellation>
@@ -1392,15 +1409,7 @@ Tessellator<Tessellation>::extractWallLines( vector<WallLine>&     wall_lines,
                                                         const Index           stride,
                                                         const Index           adjacent_stride )
 {
-    // Helper struct for wall lines on one side of the wall
-    struct SidedWallLine {
-        Index  m_ends[2];
-        Index  m_cell_under;
-        Index  m_cell_over;
-        Index  m_twin_under;
-        Index  m_twin_over;
-        Index  m_maps_to_merged_ix;
-    };
+
     Logger log = getLogger( package + ".extractWallLines" );
 
     // Convert to arrays so we can use loops.
@@ -1429,9 +1438,9 @@ Tessellator<Tessellation>::extractWallLines( vector<WallLine>&     wall_lines,
 
 
     // Step 1: Extract all wall lines on each side of the wall.
-    vector<SidedWallLine> sided_wall_lines[2];
+    vector<SidedWallLine<Tessellation> > sided_wall_lines[2];
     for( Index side=0; side<2; side++) {
-        vector<SidedWallLine>& current_lines = sided_wall_lines[side];
+        vector<SidedWallLine<Tessellation> >& current_lines = sided_wall_lines[side];
 
         current_lines.reserve( 2*active_cell_count[ side ] );
 
@@ -1460,7 +1469,7 @@ Tessellator<Tessellation>::extractWallLines( vector<WallLine>&     wall_lines,
                 {
                     // Create edge
                     current_lines.resize( current_lines.size() + 1 );
-                    SidedWallLine& current_line = current_lines.back();
+                    SidedWallLine<Tessellation>& current_line = current_lines.back();
                     current_line.m_ends[0] = b0;
                     current_line.m_ends[1] = b1;
                     current_line.m_cell_under = IllegalIndex;
@@ -1478,7 +1487,7 @@ Tessellator<Tessellation>::extractWallLines( vector<WallLine>&     wall_lines,
                     // Either first edge in column or bottom edge didn't match
                     // previous top edge; create a new edge
                     current_lines.resize( current_lines.size() + 1 );
-                    SidedWallLine& top_line = current_lines.back();
+                    SidedWallLine<Tessellation>& top_line = current_lines.back();
                     top_line.m_ends[0]    = b0;
                     top_line.m_ends[1]    = b1;
                     top_line.m_cell_under = IllegalIndex;
@@ -1488,7 +1497,7 @@ Tessellator<Tessellation>::extractWallLines( vector<WallLine>&     wall_lines,
                 }
                 else {
                     // Edge matched previous edge, recycle edge.
-                    SidedWallLine& bottom_line = current_lines.back();
+                    SidedWallLine<Tessellation>& bottom_line = current_lines.back();
                     bottom_line.m_cell_over = cell_ix;
                     bottom_line.m_twin_over = twin_ix;
                 }
@@ -1496,7 +1505,7 @@ Tessellator<Tessellation>::extractWallLines( vector<WallLine>&     wall_lines,
 
                 // Top edge, always created
                 current_lines.resize( current_lines.size() + 1 );
-                SidedWallLine& top_line = current_lines.back();
+                SidedWallLine<Tessellation>& top_line = current_lines.back();
                 top_line.m_ends[0]    = t0;
                 top_line.m_ends[1]    = t1;
                 top_line.m_cell_under = cell_ix;
@@ -1525,7 +1534,7 @@ Tessellator<Tessellation>::extractWallLines( vector<WallLine>&     wall_lines,
         Index smallest_side = IllegalIndex;
         for(Index side=0; side<2; side++) {
             const Index ii = i[side];
-            const vector<SidedWallLine>& swls = sided_wall_lines[side];
+            const vector<SidedWallLine<Tessellation> >& swls = sided_wall_lines[side];
             if( ii < swls.size() ) {
                 const Index p0 = swls[ii].m_ends[0];
                 const Index p1 = swls[ii].m_ends[1];
@@ -1546,7 +1555,7 @@ Tessellator<Tessellation>::extractWallLines( vector<WallLine>&     wall_lines,
             LOGGER_INVARIANT( log, smallest_p1 == IllegalIndex );
             break;
         }
-        SidedWallLine& sl = sided_wall_lines[ smallest_side ][ i[smallest_side] ];
+        SidedWallLine<Tessellation>& sl = sided_wall_lines[ smallest_side ][ i[smallest_side] ];
 
 
         Index cells_above[2] = { cells_below[0], cells_below[1] };

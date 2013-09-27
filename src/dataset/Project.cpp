@@ -826,11 +826,12 @@ Project<REAL>::getSolutionIndex( const std::string& name )
     }
 }
 
+
 template<typename REAL>
 typename Project<REAL>::ReportStep&
 Project<REAL>::reportStepBySeqNum( unsigned int seqnum )
 {
-    for(auto it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
+    for(typename std::vector<ReportStep>::iterator it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
         if( it->m_seqnum == seqnum ) {
             return *it;
         }
@@ -839,14 +840,16 @@ Project<REAL>::reportStepBySeqNum( unsigned int seqnum )
     ReportStep& step = m_report_steps.back();
     step.m_seqnum = seqnum;
     step.m_solutions.resize( m_solution_names.size() );
-    for(auto it=step.m_solutions.begin(); it!=step.m_solutions.end(); ++it ) {
+    for(typename std::vector<Solution>::iterator it=step.m_solutions.begin(); it!=step.m_solutions.end(); ++it ) {
         it->m_reader = READER_NONE;
     }
+
+
     std::sort( m_report_steps.begin(),
                m_report_steps.end(),
-               []( const ReportStep& a, const ReportStep& b ) { return a.m_seqnum < b.m_seqnum; } );
+               Project<REAL>::compareReportStep);
 
-    for(auto it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
+    for(typename std::vector<ReportStep>::iterator it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
         if( it->m_seqnum == seqnum ) {
             return *it;
         }

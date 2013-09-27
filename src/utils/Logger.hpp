@@ -8,6 +8,18 @@
  ******************************************************************************/
 #pragma once
 #include <GL/glew.h>
+
+// Define blank macros if we aren't debugging.
+// These will be identical in log4cxx and std::cout
+#ifndef DEBUG
+// Detailed logging removed for release builds
+#define LOGGER_TRACE(a,b)
+#define LOGGER_INFO(a,b)
+#define LOGGER_DEBUG(a,b)
+#endif
+
+
+#ifdef FRVIEW_HAS_LOG4CXX
 #include <log4cxx/logger.h>
 
 typedef log4cxx::LoggerPtr Logger;
@@ -22,17 +34,39 @@ static inline Logger getLogger( const std::string name )
 #define LOGGER_TRACE(a,b)   LOG4CXX_TRACE(a,b)
 #define LOGGER_INFO(a,b)    LOG4CXX_INFO(a,b)
 #define LOGGER_DEBUG(a,b)   LOG4CXX_DEBUG(a,b)
-#else
-// Detailed logging removed for release builds
-#define LOGGER_TRACE(a,b)
-#define LOGGER_INFO(a,b)
-#define LOGGER_DEBUG(a,b)
 #endif
+
 // Warnings and up are always logged
 #define LOGGER_WARN(a,b)    LOG4CXX_WARN(a,b)
 #define LOGGER_ERROR(a,b)   LOG4CXX_ERROR(a,b)
 #define LOGGER_FATAL(a,b)   LOG4CXX_FATAL(a,b)
 
+
+
+#else // ifdef FRVIEW_HAS_LOG4CXX
+#include <iostream>
+#include <string>
+
+typedef std::string Logger;
+static inline Logger getLogger(const std::string name)
+{
+    return name;
+}
+
+#ifdef DEBUG
+// Detailed logging only enabled for debug builds
+#define LOGGER_TRACE(a,b)   std::cout << "TRACE(" << a << "): " << b << std::endl;
+#define LOGGER_INFO(a,b)    std::cout << "INFO(" << a << "): " << b << std::endl;
+#define LOGGER_DEBUG(a,b)   std::cout << "DEBUG("<< a << "): " << b << std::endl;
+#endif
+
+// Warnings and up are always logged
+#define LOGGER_WARN(a,b)    std::cerr << "WARN(" << a << "): " << b << std::endl;
+#define LOGGER_ERROR(a,b)   std::cerr << "ERROR(" << a << "): " << b << std::endl;
+#define LOGGER_FATAL(a,b)   std::cerr << "FATAL(" << a << "): " << b << std::endl;
+#endif // ifdef FRVIEW_HAS_LOG4CXX
+
+// Check invariants are logger agnostic
 #ifdef CHECK_INVARIANTS
 #define LOGGER_INVARIANT(a,b) if(!(b)) { \
     LOGGER_FATAL( a, "Invariant (" << #b << ") broken at" << __FILE__ << '@' << __LINE__ ); \
@@ -69,8 +103,6 @@ static inline Logger getLogger( const std::string name )
 #define LOGGER_INVARIANT_LESS(a,b,c)
 #define LOGGER_INVARIANT_LESS_EQUAL(a,b,c)
 #endif
-
-
 
 void
 initializeLoggingFramework( int* argc, char** argv );

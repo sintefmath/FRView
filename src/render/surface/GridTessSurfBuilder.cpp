@@ -12,6 +12,7 @@
 #include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
+#include <sstream>
 
 namespace resources {
 }
