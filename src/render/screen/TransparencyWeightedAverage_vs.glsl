@@ -13,7 +13,7 @@
  * GNU Affero General Public License for more details.
  *
  * You should have received a copy of the GNU Affero General Public License
- * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
+ * along with the FRView.  If not, see http://www.gnu.org/licenses/.
  */
 
 layout(location=0) in vec4 position;
