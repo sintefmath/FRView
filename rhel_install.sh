@@ -67,9 +67,9 @@ sed -i 's/Listen 80/Listen 8080/g' ${INSTALL_DIR}/httpd/conf/httpd.conf
 
 cat >> ${INSTALL_DIR}/httpd/conf/httpd.conf <<EOF
 
-LoadModule trell_module ${INSTALL_DIR}/var/trell/module/libmod_trell.so
+LoadModule trell_module ${INSTALL_DIR}/var/trell/module/libmod_tinia_trell.so
 TrellMasterId "trell_master"
-TrellMasterExe "${INSTALL_DIR}/var/trell/bin/trell_master"
+TrellMasterExe "${INSTALL_DIR}/var/trell/bin/tinia_trell_master"
 TrellAppRoot "${INSTALL_DIR}/var/trell/apps"
 TrellSchemaRoot "${INSTALL_DIR}/var/trell/schemas"
 TrellJobWWWRoot "${INSTALL_DIR}/var/trell/js"
