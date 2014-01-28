@@ -214,11 +214,6 @@ IF( DESKTOP_JOB )
     TARGET_LINK_LIBRARIES( frview_desktop_job
                            ${TINIA_LIBRARIES}
                            frview_core
-                           ${tinia_RenderListGL_LIBRARY}
-                           ${tinia_RenderList_LIBRARY}
-                           ${tinia_jobcontroller_LIBRARY}
-                           ${tinia_model_LIBRARY}
-                           ${tinia_qtcontroller_LIBRARY}
                            ${HPMC_LIBRARY}
                            ${GLEW}
                            ${OPENGL_LIBRARIES}
@@ -238,12 +233,6 @@ IF( CLOUD_JOB )
     TARGET_LINK_LIBRARIES( frview_cloud_job
                            ${TINIA_LIBRARIES}
                            frview_core
-                           ${tinia_RenderListGL_LIBRARY}
-                           ${tinia_RenderList_LIBRARY}
-                           ${tinia_jobcontroller_LIBRARY}
-                           ${tinia_model_LIBRARY}
-                           ${tinia_modelxml_LIBRARY}
-                           ${tinia_trell_LIBRARY}
                            ${HPMC_LIBRARY}
                            ${GLEW}
                            ${OPENGL_LIBRARIES}
