@@ -31,7 +31,8 @@ class Project : public boost::noncopyable
 public:
     enum GeometryType {
         GEOMETRY_NONE,
-        GEOMETRY_CORNERPOINT_GRID
+        GEOMETRY_CORNERPOINT_GRID,
+        GEOMETRY_TETRAHEDRAL_GRID
     };
 
     Project(const std::string filename,
@@ -164,6 +165,7 @@ private:
         ECLIPSE_EGRID_FILE,
         FOOBAR_GRID_FILE,
         FOOBAR_TXT_GRID_FILE,
+        VTK_XML_VTU_FILE,
         ECLIPSE_RESTART_FILE,
         ECLIPSE_UNIFIED_RESTART_FILE
     };
@@ -189,6 +191,12 @@ private:
         std::vector<int>                                m_refine_map_compact;
     }                                               m_cornerpoint_geometry;
 
+    struct {
+        std::vector<REAL>                               m_vertices;
+        std::vector<int>                                m_tetrahedra;
+    }                                               m_tetrahedral_geometry;
+            
+    
     struct ReportStep {
         unsigned int                                m_seqnum;
         std::string                                 m_date;

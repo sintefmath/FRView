@@ -27,6 +27,7 @@
 #include "eclipse/EclipseParser.hpp"
 #include "cornerpoint/Tessellator.hpp"
 #include "dataset/FooBarParser.hpp"
+#include "dataset/VtkXmlParser.hpp"
 #include "render/GridTessBridge.hpp"
 #include "render/GridFieldBridge.hpp"
 
@@ -72,7 +73,15 @@ Project<REAL>::Project(const std::string filename,
       *it = toupper( *it );
     }
 
-    if( suffix == "GTXT" ) {
+    if( suffix == "VTU" ) {
+        File file;
+        file.m_filetype = VTK_XML_VTU_FILE;
+        file.m_timestep = -1;
+        file.m_path     = filename;
+        m_unprocessed_files.push_front( file );
+        LOGGER_DEBUG( log, "Found VTU file" );
+    }
+    else if( suffix == "GTXT" ) {
         File file;
         file.m_filetype = FOOBAR_TXT_GRID_FILE;
         file.m_timestep = -1;
@@ -528,6 +537,28 @@ Project<REAL>::refresh( int rx, int ry, int rz )
 //                m_geometry_set = true;
                 break;
             }
+            else if( it->m_filetype == VTK_XML_VTU_FILE ) {
+                try {
+                    
+                    std::vector<float>  vertices;
+                    std::vector<int>    tetrahedra;
+                    
+                    VtkXmlParser::parse( vertices, tetrahedra, it->m_path );
+                    
+                    LOGGER_DEBUG( log, "Parsed VTU file Nv=" << (vertices.size()/3) 
+                                  << ", Nt=" << (tetrahedra.size()/4) );
+
+                    m_geometry_type = GEOMETRY_TETRAHEDRAL_GRID;
+                    m_tetrahedral_geometry.m_vertices.swap( vertices );
+                    m_tetrahedral_geometry.m_tetrahedra.swap( tetrahedra );
+                }
+                catch( const std::runtime_error& e ) {
+                    LOGGER_ERROR( log, it->m_path << ": Parse error: " << e.what() );
+                }
+                m_unprocessed_files.erase( it );
+                
+            }
+            
         }
     }
     if( m_unprocessed_files.empty() ) {
