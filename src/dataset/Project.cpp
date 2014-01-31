@@ -556,7 +556,7 @@ Project<REAL>::refresh( int rx, int ry, int rz )
                     LOGGER_ERROR( log, it->m_path << ": Parse error: " << e.what() );
                 }
                 m_unprocessed_files.erase( it );
-                
+                break;
             }
             
         }
