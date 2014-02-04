@@ -18,7 +18,7 @@
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "cornerpoint/Tessellator.hpp"
-#include "dataset/TetraMesh.hpp"
+#include "dataset/PolyhedralMeshSource.hpp"
 #include "eclipse/EclipseReader.hpp"
 #include "utils/PerfTimer.hpp"
 
@@ -164,7 +164,7 @@ ASyncReader::handleReadProject( const Command& cmd )
             rsp.m_project_grid = tess_bridge;
             postResponse( cmd, rsp );
         }
-        else if( project->geometryType() == dataset::Project<float>::GEOMETRY_TETRAHEDRAL_GRID ) {
+        else if( project->geometryType() == dataset::Project<float>::GEOMETRY_POLYHEDRAL_MESH ) {
             boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
             m_field_remap = project->fieldRemap();
             

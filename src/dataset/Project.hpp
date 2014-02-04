@@ -19,11 +19,14 @@
 #include <string>
 #include <list>
 #include <vector>
+#include <memory>
 #include <boost/utility.hpp>
 #include <unordered_map>
 #include "eclipse/Eclipse.hpp"
 
 namespace dataset {
+    class PolyhedralMeshSource;
+
 
 template<typename REAL>
 class Project : public boost::noncopyable
@@ -32,7 +35,7 @@ public:
     enum GeometryType {
         GEOMETRY_NONE,
         GEOMETRY_CORNERPOINT_GRID,
-        GEOMETRY_TETRAHEDRAL_GRID
+        GEOMETRY_POLYHEDRAL_MESH
     };
 
     Project(const std::string filename,
@@ -128,6 +131,7 @@ public:
 
     // -------------------------------------------------------------------------
 
+    
     const std::vector<REAL>&
     tetraVertices() const { return m_tetrahedral_geometry.m_vertices; }
     
@@ -224,6 +228,9 @@ private:
     std::vector<ReportStep>                         m_report_steps;
     std::list<File>                                 m_unprocessed_files;
 
+    std::shared_ptr<PolyhedralMeshSource>   m_polyhedral_mesh_source;
+    
+    
     void
     refineCornerpointGeometry( unsigned int rx,
                                unsigned int ry,

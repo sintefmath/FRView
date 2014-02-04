@@ -18,20 +18,22 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "dataset/PolyhedralMeshSource.hpp"
 
 class GridTess;
 class GridField;
 
-class VtkXmlParser
+namespace dataset {
+
+class VTKXMLSource : public dataset::PolyhedralMeshSource
 {
 public:
-
-    static
-    void
-    parse( std::vector<float>&         vertices,
-           std::vector<int>&  tetrahedra,
-           const std::string&          filename );
+    
+    VTKXMLSource( const std::string& filename );
 
 protected:
 
 };
+
+
+} // of namespace dataset

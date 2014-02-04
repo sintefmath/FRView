@@ -27,7 +27,7 @@
 #include "eclipse/EclipseParser.hpp"
 #include "cornerpoint/Tessellator.hpp"
 #include "dataset/FooBarParser.hpp"
-#include "dataset/VtkXmlParser.hpp"
+#include "dataset/VTKXMLSource.hpp"
 #include "render/GridTessBridge.hpp"
 #include "render/GridFieldBridge.hpp"
 
@@ -540,7 +540,10 @@ Project<REAL>::refresh( int rx, int ry, int rz )
             else if( it->m_filetype == VTK_XML_VTU_FILE ) {
                 try {
                     
-                    std::vector<float>  vertices;
+                    m_polyhedral_mesh_source.reset( new VTKXMLSource( it->m_path ) );
+                    m_geometry_type = GEOMETRY_POLYHEDRAL_MESH;
+
+                    /*std::vector<float>  vertices;
                     std::vector<int>    tetrahedra;
                     
                     VtkXmlParser::parse( vertices, tetrahedra, it->m_path );
@@ -548,9 +551,9 @@ Project<REAL>::refresh( int rx, int ry, int rz )
                     LOGGER_DEBUG( log, "Parsed VTU file Nv=" << (vertices.size()/3) 
                                   << ", Nt=" << (tetrahedra.size()/4) );
 
-                    m_geometry_type = GEOMETRY_TETRAHEDRAL_GRID;
                     m_tetrahedral_geometry.m_vertices.swap( vertices );
                     m_tetrahedral_geometry.m_tetrahedra.swap( tetrahedra );
+                    */
                 }
                 catch( const std::runtime_error& e ) {
                     LOGGER_ERROR( log, it->m_path << ": Parse error: " << e.what() );

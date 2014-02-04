@@ -15,7 +15,7 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "dataset/TetraMesh.hpp"
+#include "dataset/PolyhedralMeshSource.hpp"
 #include "render/GridTessBridge.hpp"
 
 namespace {

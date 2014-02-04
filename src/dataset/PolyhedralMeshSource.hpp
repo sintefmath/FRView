@@ -23,6 +23,23 @@
 
 namespace dataset {
 
+class PolyhedralMeshSource
+{
+public:
+    
+protected:
+    std::vector<float>                  m_vertices; ///< in R^3.
+    std::vector<int>                    m_indices;  ///< Offsets into m_vertices.
+    std::vector<int>                    m_polygons; ///< Offsets into m_indices.
+    std::vector<int>                    m_cells;    ///< Offsets into m_polygons.
+
+    std::vector<std::string>            m_cell_field_name;
+    std::vector< std::vector<float> >   m_cell_field_data;
+};
+
+
+
+
 template<typename Tessellation>
 class TetraMesh
 {
