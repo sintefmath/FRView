@@ -168,10 +168,12 @@ ASyncReader::handleReadProject( const Command& cmd )
             boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
             m_field_remap = project->fieldRemap();
             
-            dataset::TetraMesh< render::GridTessBridge > parser( *tess_bridge );
-            parser.parse( m_model,
-                          project->tetraVertices(),
-                          project->tetraIndices() );
+            project->source()->tessellation( *tess_bridge, m_model );
+            
+//            dataset::TetraMesh< render::GridTessBridge > parser( *tess_bridge );
+//            parser.parse( m_model,
+//                          project->tetraVertices(),
+//                          project->tetraIndices() );
 
             Response rsp;
             rsp.m_type = Response::PROJECT;

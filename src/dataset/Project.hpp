@@ -166,6 +166,9 @@ public:
         }                                           m_location;
     };
 
+    std::shared_ptr<PolyhedralMeshSource>
+    source() { return m_polyhedral_mesh_source; }
+    
     const std::vector<int>&
     fieldRemap() const { return m_cornerpoint_geometry.m_refine_map_compact; }
 

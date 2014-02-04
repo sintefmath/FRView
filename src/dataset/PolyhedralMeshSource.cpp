@@ -15,6 +15,8 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <iostream>
+#include <algorithm>
 #include "dataset/PolyhedralMeshSource.hpp"
 #include "render/GridTessBridge.hpp"
 
@@ -109,28 +111,72 @@ struct HalfTriangle
 namespace dataset {
 
 template<typename Tessellation>
-TetraMesh<Tessellation>::TetraMesh( Tessellation& tessellation )
-    : m_tessellation( tessellation )
-{}
-
-template<typename Tessellation>
 void
-TetraMesh<Tessellation>::parse( boost::shared_ptr<tinia::model::ExposedModel> model,
-                                const std::vector<SrcReal> &vertices,
-                                const std::vector<int> &indices )
+PolyhedralMeshSource::tessellation( Tessellation& tessellation,
+                                    boost::shared_ptr<tinia::model::ExposedModel> model )
 {
+    Logger log = getLogger( "dataset.PolyhedralMeshSource.tessellation" );
     
+    typedef float                               SrcReal;
+    typedef typename Tessellation::Real         Real;
+    typedef typename Tessellation::Index        Index;
+    typedef typename Tessellation::Real4        Real4;
+    typedef typename Tessellation::Orientation  Orientation;
+    typedef typename Tessellation::Segment      Segment;
+    typedef typename Tessellation::Interface    Interface;
+    static const Orientation ORIENTATION_I = Tessellation::ORIENTATION_I;
+    static const Orientation ORIENTATION_J = Tessellation::ORIENTATION_J;
+    static const Orientation ORIENTATION_K = Tessellation::ORIENTATION_K;
+    static const Index IllegalIndex = (~(Index)0u);
+
     model->updateElement<std::string>( "asyncreader_what", "Tetra!" );
     model->updateElement<int>( "asyncreader_progress", 0 );
 
-    // assume that tessellation is empty
-    for(size_t i=0; i<vertices.size(); i+=3 ) {
-        m_tessellation.addVertex( Real4( vertices[i+0],
-                                          vertices[i+1],
-                                          vertices[i+2] ) );
+    // copy vertices
+    for(size_t i=0; i<m_vertices.size(); i+=3 ) {
+        tessellation.addVertex( Real4( m_vertices[i+0],
+                                       m_vertices[i+1],
+                                       m_vertices[i+2] ) );
     }
+
+    std::vector<Index> tmp;
+    
+    std::vector<Index> indices;
+    
+    // copy indices and remove symmetries s.t. pairs of polygons can be directly
+    // compared
+    for(Index c=0; (c+1)<m_cells.size(); c++ ) {
+        Index p_o = m_cells[c];
+        Index p_n = m_cells[c+1]-p_o;
+        
+        tmp.clear();
+        for(Index p=0; p<p_n; p++) {
+            Index i_o = m_polygons[p_o+p];
+            Index i_n = m_polygons[p_o+p+1]-i_o;
+
+            // Find min index & copy to tmp
+            for(Index i=0; i<i_n; i++ ) {
+                tmp.push_back( m_indices[i_o+i] );
+            }
+        }
+        std::sort( tmp.begin(), tmp.end() );
+        typename std::vector<Index>::iterator it = std::unique( tmp.begin(), tmp.end() );
+        tmp.resize( std::distance( tmp.begin(), it ) );
+        
+        for( size_t i=0; i<tmp.size(); i++ ) {
+            std::cerr << c << ": " << tmp[i] << ", ";
+        }
+        std::cerr << "\n";
+        
+        
+    }
+
+    
+    
+    // extract half-triangles
     std::vector<HalfTriangle> ht;
 
+#if 0
     m_tessellation.setCellCount( indices.size()/4 );
     for(size_t i=0; i<indices.size(); i+=4 ) {
         m_tessellation.setCell( i, i,
@@ -155,9 +201,11 @@ TetraMesh<Tessellation>::parse( boost::shared_ptr<tinia::model::ExposedModel> mo
         
         j = i;
     }
+#endif    
 }
 
+template void PolyhedralMeshSource::tessellation< render::GridTessBridge >( render::GridTessBridge& tessellation,
+boost::shared_ptr<tinia::model::ExposedModel> model );
 
-template class TetraMesh< render::GridTessBridge >;
 
 } // of namespace input

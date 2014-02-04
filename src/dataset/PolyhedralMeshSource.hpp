@@ -27,6 +27,13 @@ class PolyhedralMeshSource
 {
 public:
     
+
+    template<typename Tessellation>
+    void
+    tessellation( Tessellation& tessellation,
+                  boost::shared_ptr<tinia::model::ExposedModel> model );
+    
+    
 protected:
     std::vector<float>                  m_vertices; ///< in R^3.
     std::vector<int>                    m_indices;  ///< Offsets into m_vertices.
@@ -36,43 +43,6 @@ protected:
     std::vector<std::string>            m_cell_field_name;
     std::vector< std::vector<float> >   m_cell_field_data;
 };
-
-
-
-
-template<typename Tessellation>
-class TetraMesh
-{
-public:
-    /** \name Forwarding
-      * Forwarding of tessellation types and constants. */
-    /** \@{ */
-    typedef float                               SrcReal;
-    typedef typename Tessellation::Real         Real;
-    typedef typename Tessellation::Index        Index;
-    typedef typename Tessellation::Real4        Real4;
-    typedef typename Tessellation::Orientation  Orientation;
-    typedef typename Tessellation::Segment      Segment;
-    typedef typename Tessellation::Interface    Interface;
-    static const Orientation ORIENTATION_I = Tessellation::ORIENTATION_I;
-    static const Orientation ORIENTATION_J = Tessellation::ORIENTATION_J;
-    static const Orientation ORIENTATION_K = Tessellation::ORIENTATION_K;
-    static const Index IllegalIndex = (~(Index)0u);
-    /** @} */
-
-    TetraMesh( Tessellation& tessellation );
-    
-    void
-    parse( boost::shared_ptr<tinia::model::ExposedModel> model,
-           const std::vector<SrcReal>&                   vertices,
-           const std::vector<int>&                       indices );
-    
-private:
-    Tessellation&                   m_tessellation;
-    
-};
-
-
 
 
 } // of namespace input
