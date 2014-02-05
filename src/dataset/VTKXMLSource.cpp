@@ -471,8 +471,6 @@ VTKXMLSource::VTKXMLSource(const std::string &filename)
     
     m_vertices.swap( cd.m_piece_points );
     
-    m_polygons.push_back( 0 );
-    m_cells.push_back( 0 );
     for(size_t c=0; c<cd.m_piece_cells_n; c++ ) {
         
         size_t o = c < 1 ? 0 : cd.m_piece_offsets[c-1];
@@ -504,28 +502,28 @@ VTKXMLSource::VTKXMLSource(const std::string &filename)
                 LOGGER_ERROR( log, "VTK_TETRA expects 4 vertices, got " << n );
                 throw std::runtime_error( "Inconsistency in VTK data" );
             }
-
-            m_indices.push_back( cd.m_piece_connectivity[o+0] );
-            m_indices.push_back( cd.m_piece_connectivity[o+3] );
-            m_indices.push_back( cd.m_piece_connectivity[o+2] );
-            m_polygons.push_back( m_indices.size() );
-            
-            m_indices.push_back( cd.m_piece_connectivity[o+1] );
-            m_indices.push_back( cd.m_piece_connectivity[o+3] );
-            m_indices.push_back( cd.m_piece_connectivity[o+0] );
-            m_polygons.push_back( m_indices.size() );
-
-            m_indices.push_back( cd.m_piece_connectivity[o+2] );
-            m_indices.push_back( cd.m_piece_connectivity[o+3] );
-            m_indices.push_back( cd.m_piece_connectivity[o+1] );
-            m_polygons.push_back( m_indices.size() );
-
-            m_indices.push_back( cd.m_piece_connectivity[o+1] );
-            m_indices.push_back( cd.m_piece_connectivity[o+0] );
-            m_indices.push_back( cd.m_piece_connectivity[o+2] );
-            m_polygons.push_back( m_indices.size() );
-
             m_cells.push_back( m_polygons.size() );
+
+            m_polygons.push_back( m_indices.size() );
+            m_indices.push_back( cd.m_piece_connectivity[o+0] );
+            m_indices.push_back( cd.m_piece_connectivity[o+3] );
+            m_indices.push_back( cd.m_piece_connectivity[o+2] );
+            
+            m_polygons.push_back( m_indices.size() );
+            m_indices.push_back( cd.m_piece_connectivity[o+1] );
+            m_indices.push_back( cd.m_piece_connectivity[o+3] );
+            m_indices.push_back( cd.m_piece_connectivity[o+0] );
+
+            m_polygons.push_back( m_indices.size() );
+            m_indices.push_back( cd.m_piece_connectivity[o+2] );
+            m_indices.push_back( cd.m_piece_connectivity[o+3] );
+            m_indices.push_back( cd.m_piece_connectivity[o+1] );
+
+            m_polygons.push_back( m_indices.size() );
+            m_indices.push_back( cd.m_piece_connectivity[o+1] );
+            m_indices.push_back( cd.m_piece_connectivity[o+0] );
+            m_indices.push_back( cd.m_piece_connectivity[o+2] );
+
             break;
  
         default:
@@ -533,6 +531,8 @@ VTKXMLSource::VTKXMLSource(const std::string &filename)
             break;
         }
     }
+    m_cells.push_back( m_polygons.size() );
+    m_polygons.push_back( m_indices.size() );
     
     LOGGER_DEBUG( log, "created "
                   << (m_vertices.size()/3) << " vertices, "

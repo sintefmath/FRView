@@ -162,13 +162,14 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
         std::sort( tmp.begin(), tmp.end() );
         typename std::vector<Index>::iterator it = std::unique( tmp.begin(), tmp.end() );
         tmp.resize( std::distance( tmp.begin(), it ) );
-        
-        for( size_t i=0; i<tmp.size(); i++ ) {
-            std::cerr << c << ": " << tmp[i] << ", ";
-        }
-        std::cerr << "\n";
-        
-        
+
+//        if( tmp.size() != 4 ) {
+//            std::cerr << c << ": ";
+//            for( size_t i=0; i<tmp.size(); i++ ) {
+//                std::cerr << tmp[i] << ", ";
+//            }
+//            std::cerr << "\n";
+//        }
     }
 
     
