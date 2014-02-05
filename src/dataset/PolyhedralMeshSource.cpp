@@ -22,6 +22,58 @@
 
 namespace {
 
+template<typename Index>
+struct HalfPolygon
+{
+    HalfPolygon( Index cell, Index* indices, int n, bool side )
+        : m_cell( cell ), m_indices( indices ), m_n( n ), m_side( side ) {}
+
+    /** Used for lexicographical sort. */
+    bool
+    operator<( const HalfPolygon& other ) const
+    {
+        // fewer indices is smaller than many indices
+        if( m_n < other.m_n ) {
+            return true;
+        }
+        else if( m_n > other.m_n ) {
+            return false;
+        }
+        // same number of indices, compare lexicographically
+        for( unsigned int i=0; i<m_n; i++ ) {
+            if( m_indices[i] < other.m_indices[i] ) {
+                return true;
+            }
+            else if( m_indices[i] > other.m_indices[i] ) {
+                return false;
+            }
+        }
+        return true;    // identical
+    }
+
+    bool
+    match( const HalfPolygon& other ) const
+    {
+        if( m_n != other.m_n ) {
+            return false;
+        }
+        for( unsigned int i=0; i<m_n; i++ ) {
+            if( m_indices[i] != other.m_indices[i] ) {
+                return false;
+            }
+        }
+        return true;    // identical
+    }
+    
+    
+    Index           m_cell;
+    Index*          m_indices;
+    int             m_n;        // should be safe to assume that the vertex
+                                // count of a polygon is less than 31 bits.
+    bool            m_side;     // side 0 is not flipped, side 1 is flipped.
+};
+
+
 /** Helper struct used to build cell-cell connectivity. */
 struct HalfTriangle
 {
@@ -139,43 +191,78 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
                                        m_vertices[i+2] ) );
     }
 
-    std::vector<Index> tmp;
+    // used to hold the unique set of indices for a cell.
+    std::vector<Index> cell_corners;
     
-    std::vector<Index> indices;
+    // copy of indices with rotation and reverse-symmetries removed, such that
+    // matching polygons will have identical index sequences.
+    std::vector<Index> indices( m_indices.size() );
+
+    // Half-polygons that we will match. Note that these contain pointers into
+    // the indices-arrays, and thus, indices must not be resized (may trigger
+    // reallocation).
+    std::vector<HalfPolygon<Index> > half_polygons;
     
-    // copy indices and remove symmetries s.t. pairs of polygons can be directly
-    // compared
+    // Populate cell_corners and indices
     for(Index c=0; (c+1)<m_cells.size(); c++ ) {
         Index p_o = m_cells[c];
         Index p_n = m_cells[c+1]-p_o;
         
-        tmp.clear();
+        cell_corners.clear();
+        Index k = 0;
         for(Index p=0; p<p_n; p++) {
             Index i_o = m_polygons[p_o+p];
             Index i_n = m_polygons[p_o+p+1]-i_o;
 
-            // Find min index & copy to tmp
+            // find smallest index in polygon
             for(Index i=0; i<i_n; i++ ) {
-                tmp.push_back( m_indices[i_o+i] );
+                if( m_indices[i_o+i] < m_indices[i_o+k] ) {
+                    k = i;
+                }
             }
+
+            // check if we should reverse the order of the indices
+            bool flip = m_indices[ i_o + ((k+2)%i_n) ] < m_indices[ i_o + ((k+1)%i_n) ];
+            
+            // rotate (and optionally flip) indices into new buffer
+            for( Index i=0; i<i_n; i++ ) {
+                Index ix = m_indices[ i_o + ((k+ (flip ? i_n-i : i ))%i_n) ];
+                indices[ i_o + i ] = ix;
+                cell_corners.push_back( ix );
+            }
+            
+            half_polygons.push_back( HalfPolygon<Index>( c,
+                                                         indices.data() + i_o,
+                                                         i_n,
+                                                         flip ) );
+            
+            // invariant check that index 0 is smallest and that index 1 is
+            // smaller than index 2.
+            for( Index i=1; i<i_n; i++) {
+                assert( indices[i_o] < indices[i_o+i] );
+            }
+            assert( indices[i_o+1] < indices[i_o+2] );
         }
-        std::sort( tmp.begin(), tmp.end() );
-        typename std::vector<Index>::iterator it = std::unique( tmp.begin(), tmp.end() );
-        tmp.resize( std::distance( tmp.begin(), it ) );
 
-//        if( tmp.size() != 4 ) {
-//            std::cerr << c << ": ";
-//            for( size_t i=0; i<tmp.size(); i++ ) {
-//                std::cerr << tmp[i] << ", ";
-//            }
-//            std::cerr << "\n";
-//        }
+        // remove duplicate cell vertex indices        
+        std::sort( cell_corners.begin(), cell_corners.end() );
+        typename std::vector<Index>::iterator it = std::unique( cell_corners.begin(), cell_corners.end() );
+        cell_corners.resize( std::distance( cell_corners.begin(), it ) );
+        
+        if( cell_corners.size() != 4 ) {
+            std::cerr << c << ": ";
+            for( size_t i=0; i<cell_corners.size(); i++ ) {
+                std::cerr << cell_corners[i] << ", ";
+            }
+            std::cerr << "\n";
+        }
+
     }
+    
+    // match half-polygons in order to find adjacent cells. 
+    std::sort( half_polygons.begin(), half_polygons.end() );
 
     
-    
-    // extract half-triangles
-    std::vector<HalfTriangle> ht;
 
 #if 0
     m_tessellation.setCellCount( indices.size()/4 );
