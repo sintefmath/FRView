@@ -76,89 +76,6 @@ struct HalfPolygon
 };
 
 
-/** Helper struct used to build cell-cell connectivity. */
-struct HalfTriangle
-{
-    HalfTriangle( int a, int b, int c, int cell )
-    {
-#ifdef DEBUG
-        assert( a != b );
-        assert( a != c );
-        assert( b != c );
-#endif
-        std::cerr << a << ", " << b << ", " << c << " -> ";
-        
-        // make sure a is the smallest index
-        if( b < a ) {
-            int t = a;
-            a = b;
-            b = c;
-            c = t;
-        }
-        else if( c < a ) {
-            int t = b;
-            b = a;
-            a = c;
-            c = t;
-        }
-#ifdef DEBUG
-        std::cerr << a << ", " << b << ", " << c << "\n";
-               
-        
-        assert( a < b );
-        assert( a < c );
-#endif
-        // optionally flip 
-        if( b < c ) {
-            m_flipped = false;
-        }
-        else {
-            int t = b;
-            b = c;
-            c = t;
-            m_flipped = true;
-        }
-        
-        m_a = a;
-        m_b = b;
-        m_c = c;
-        m_cell = cell;
-    }
-
-    /** Lexicographical sort. */
-    bool
-    operator<( const HalfTriangle& other ) const
-    {
-        if( m_a < other.m_a ) {
-            return true;
-        }
-        else if( m_a == other.m_a ) {
-            if( m_b < other.m_b ) {
-                return true;
-            }
-            else if( m_b == other.m_b ) {
-                
-                if( m_c < other.m_c ) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    
-    bool
-    match( const HalfTriangle& other ) const {
-        return (m_a == other.m_a) && (m_b == other.m_b) && (m_c == other.m_c);
-    }
-
-    int m_a;
-    int m_b;
-    int m_c;
-    int m_cell;
-    bool m_flipped;
-
-};
-
 }
 
 
@@ -350,34 +267,7 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
         tessellation.addPolygon( interface, segments.data(), segments.size() );
     }
 
-    
 
-#if 0
-    m_tessellation.setCellCount( indices.size()/4 );
-    for(size_t i=0; i<indices.size(); i+=4 ) {
-        m_tessellation.setCell( i, i,
-                                 indices[i+0], indices[i+0],
-                                 indices[i+1], indices[i+1],
-                                 indices[i+2], indices[i+2],
-                                 indices[i+3], indices[i+3] );
-        
-        
-        ht.push_back( HalfTriangle( indices[i+0], indices[i+3], indices[i+2], i ) );
-        ht.push_back( HalfTriangle( indices[i+1], indices[i+3], indices[i+0], i ) );
-        ht.push_back( HalfTriangle( indices[i+2], indices[i+3], indices[i+1], i ) );
-        ht.push_back( HalfTriangle( indices[i+0], indices[i+2], indices[i+1], i ) );
-    }
-
-    std::sort( ht.begin(), ht.end() );
-    
-    for( size_t j=0; j<ht.size(); ) {
-        size_t i=j+1;
-        for( ; ht[j].match( ht[i] ); i++ ) ;
-        
-        
-        j = i;
-    }
-#endif    
 }
 
 template void PolyhedralMeshSource::tessellation< render::GridTessBridge >( render::GridTessBridge& tessellation,
