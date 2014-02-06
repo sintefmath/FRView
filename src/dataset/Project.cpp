@@ -939,21 +939,36 @@ template<typename REAL>
 unsigned int
 Project<REAL>::nx() const
 {
-    return m_cornerpoint_geometry.m_rx*m_cornerpoint_geometry.m_nx;
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        return m_cornerpoint_geometry.m_rx*m_cornerpoint_geometry.m_nx;
+    }
+    else {
+        return 1;
+    }
 }
 
 template<typename REAL>
 unsigned int
 Project<REAL>::ny() const
 {
-    return m_cornerpoint_geometry.m_ry*m_cornerpoint_geometry.m_ny;
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        return m_cornerpoint_geometry.m_ry*m_cornerpoint_geometry.m_ny;
+    }
+    else {
+        return 1;
+    }
 }
 
 template<typename REAL>
 unsigned int
 Project<REAL>::nz() const
 {
-    return m_cornerpoint_geometry.m_rz*m_cornerpoint_geometry.m_nz;
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        return m_cornerpoint_geometry.m_rz*m_cornerpoint_geometry.m_nz;
+    }
+    else {
+        return m_polyhedral_mesh_source->activeCells();
+    }
 }
 
 

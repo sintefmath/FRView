@@ -34,6 +34,10 @@ public:
                   boost::shared_ptr<tinia::model::ExposedModel> model );
     
     
+    size_t
+    activeCells() { return (m_cells.empty()?0:m_cells.size()-1); }
+    
+    
 protected:
     std::vector<float>                  m_vertices; ///< in R^3.
     std::vector<int>                    m_indices;  ///< Offsets into m_vertices.
