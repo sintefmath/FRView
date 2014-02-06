@@ -296,6 +296,24 @@ Project<REAL>::bakeCornerpointGeometry()
 
 
 template<typename REAL>
+REAL
+Project<REAL>::cornerPointXYScale() const {
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        return m_cornerpoint_geometry.m_xyscale;
+    }
+    return 1.f;
+}
+
+template<typename REAL>
+REAL
+Project<REAL>::cornerPointZScale() const {
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        m_cornerpoint_geometry.m_zscale;
+    }
+    return 1.f;
+}
+
+template<typename REAL>
 void
 Project<REAL>::refineCornerpointGeometry( unsigned int rx,
                                           unsigned int ry,

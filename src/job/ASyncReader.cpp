@@ -169,12 +169,10 @@ ASyncReader::handleReadProject( const Command& cmd )
             m_field_remap = project->fieldRemap();
             
             project->source()->tessellation( *tess_bridge, m_model );
+            m_model->updateElement<std::string>( "asyncreader_what", "Organizing data..." );
+            m_model->updateElement<int>( "asyncreader_progress", 0 );
+            tess_bridge->process();
             
-//            dataset::TetraMesh< render::GridTessBridge > parser( *tess_bridge );
-//            parser.parse( m_model,
-//                          project->tetraVertices(),
-//                          project->tetraIndices() );
-
             Response rsp;
             rsp.m_type = Response::PROJECT;
             rsp.m_project = project;

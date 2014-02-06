@@ -124,19 +124,11 @@ public:
 
 
     REAL
-    cornerPointXYScale() const { return m_cornerpoint_geometry.m_xyscale; }
+    cornerPointXYScale() const;
 
     REAL
-    cornerPointZScale() const { return m_cornerpoint_geometry.m_zscale; }
+    cornerPointZScale() const;
 
-    // -------------------------------------------------------------------------
-
-    
-    const std::vector<REAL>&
-    tetraVertices() const { return m_tetrahedral_geometry.m_vertices; }
-    
-    const std::vector<int>&
-    tetraIndices() const { return m_tetrahedral_geometry.m_tetrahedra; }
 
     // -------------------------------------------------------------------------
     

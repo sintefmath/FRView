@@ -306,7 +306,7 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
         // create segment list
         segments.resize( half_polygons[j].m_n );
         for( int i=0; i<half_polygons[j].m_n; i++ ) {
-            segments[i] = Segment( half_polygons[j].m_indices[i], n_ix, 2 );
+            segments[i] = Segment( n_ix, half_polygons[j].m_indices[i], 3 );
         }
 
         // find matching half-polygons            
