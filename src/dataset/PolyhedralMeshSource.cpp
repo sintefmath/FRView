@@ -17,6 +17,8 @@
 
 #include <iostream>
 #include <algorithm>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "dataset/PolyhedralMeshSource.hpp"
 #include "render/GridTessBridge.hpp"
 
@@ -40,7 +42,7 @@ struct HalfPolygon
             return false;
         }
         // same number of indices, compare lexicographically
-        for( unsigned int i=0; i<m_n; i++ ) {
+        for( int i=0; i<m_n; i++ ) {
             if( m_indices[i] < other.m_indices[i] ) {
                 return true;
             }
@@ -57,7 +59,7 @@ struct HalfPolygon
         if( m_n != other.m_n ) {
             return false;
         }
-        for( unsigned int i=0; i<m_n; i++ ) {
+        for( int i=0; i<m_n; i++ ) {
             if( m_indices[i] != other.m_indices[i] ) {
                 return false;
             }
@@ -204,6 +206,8 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
     std::vector<HalfPolygon<Index> > half_polygons;
     
     // Populate cell_corners and indices
+    
+    tessellation.setCellCount( m_cells.size()-1 );
     for(Index c=0; (c+1)<m_cells.size(); c++ ) {
         Index p_o = m_cells[c];
         Index p_n = m_cells[c+1]-p_o;
@@ -249,6 +253,16 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
         typename std::vector<Index>::iterator it = std::unique( cell_corners.begin(), cell_corners.end() );
         cell_corners.resize( std::distance( cell_corners.begin(), it ) );
         
+        tessellation.setCell( c, c,
+                              cell_corners[0],
+                              cell_corners[1 % cell_corners.size() ],
+                              cell_corners[2 % cell_corners.size() ],
+                              cell_corners[3 % cell_corners.size() ],
+                              cell_corners[4 % cell_corners.size() ],
+                              cell_corners[5 % cell_corners.size() ],
+                              cell_corners[6 % cell_corners.size() ],
+                              cell_corners[7 % cell_corners.size() ] );
+        
         if( cell_corners.size() != 4 ) {
             std::cerr << c << ": ";
             for( size_t i=0; i<cell_corners.size(); i++ ) {
@@ -259,8 +273,82 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
 
     }
     
-    // match half-polygons in order to find adjacent cells. 
+    // --- match half-polygons to find adjacent cells --------------------------
+
+    // step 1: sort half-polygons lexicographically
     std::sort( half_polygons.begin(), half_polygons.end() );
+
+    // step 2: find matching half-polygons
+    
+    std::vector<Segment> segments;
+    for( size_t j=0; j<half_polygons.size(); j++ ) {
+
+        
+        
+        // create normal vector; we currently assume planar polygons, should
+        // do something more clever.
+
+        glm::vec3 a = glm::make_vec3( m_vertices.data() + 3*half_polygons[j].m_indices[0] );
+        glm::vec3 b = glm::make_vec3( m_vertices.data() + 3*half_polygons[j].m_indices[1] );
+        glm::vec3 c = glm::make_vec3( m_vertices.data() + 3*half_polygons[j].m_indices[2] );
+        glm::vec3 n = glm::normalize( glm::cross( b-a, c-a ) );
+
+        Index n_ix = tessellation.addNormal( Real4( n.x, n.y, n.z ) );
+        
+        Orientation orientation = ORIENTATION_I;
+        if( glm::abs(n.y) > glm::abs(n.x) ) {
+            orientation = ORIENTATION_J;
+        }
+        if( glm::abs(n.z) > glm::abs(n.y) ) {
+            orientation = ORIENTATION_K;
+        }
+
+        // create segment list
+        segments.resize( half_polygons[j].m_n );
+        for( int i=0; i<half_polygons[j].m_n; i++ ) {
+            segments[i] = Segment( half_polygons[j].m_indices[i], n_ix, 2 );
+        }
+
+        // find matching half-polygons            
+        size_t i=j+1;
+        for( ; i<half_polygons.size(); i++ ) {
+            if( !half_polygons[j].match( half_polygons[i ] ) ) {
+                break;
+            }
+        }
+        
+        // specify connectivity
+        Interface interface;
+        if( i == j+1 ) {
+            // boundary face
+            if( half_polygons[j].m_side == false ) {
+                interface = Interface( half_polygons[j].m_cell, IllegalIndex, orientation );
+            }
+            else {
+                interface = Interface( IllegalIndex, half_polygons[j].m_cell, orientation );
+            }
+        }
+        else if( i == j+2 ) {
+            // interior face
+            if( half_polygons[j].m_side == half_polygons[j+1].m_side ) {
+                LOGGER_WARN( log, "Inconsistent mesh face." );
+                continue;
+            }
+            if( half_polygons[j].m_side == false ) {
+                interface = Interface( half_polygons[j].m_cell, half_polygons[j+1].m_cell, orientation );
+            }
+            else {
+                interface = Interface( half_polygons[j+1].m_cell, half_polygons[j].m_cell, orientation );
+            }
+        }
+        else {
+            // non-manifold face
+            LOGGER_WARN( log, "Non-manifold face." );
+            continue;
+        }
+        
+        tessellation.addPolygon( interface, segments.data(), segments.size() );
+    }
 
     
 
