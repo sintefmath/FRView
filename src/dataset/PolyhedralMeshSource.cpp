@@ -35,12 +35,12 @@ struct HalfPolygon
     operator<( const HalfPolygon& other ) const
     {
         // fewer indices is smaller than many indices
-        if( m_n < other.m_n ) {
+        /*if( m_n < other.m_n ) {
             return true;
         }
         else if( m_n > other.m_n ) {
             return false;
-        }
+        }*/
         // same number of indices, compare lexicographically
         for( int i=0; i<m_n; i++ ) {
             if( m_indices[i] < other.m_indices[i] ) {
@@ -197,8 +197,11 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
 
     // step 2: find matching half-polygons
     
+    size_t iface_i = 0;
+    size_t iface_b = 0;
+    size_t iface_f = 0;
     std::vector<Segment> segments;
-    for( size_t j=0; j<half_polygons.size(); j++ ) {
+    for( size_t j=0; j<half_polygons.size(); j ) {
 
         
         
@@ -244,6 +247,8 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
             else {
                 interface = Interface( IllegalIndex, half_polygons[j].m_cell, orientation );
             }
+            iface_b++;
+            tessellation.addPolygon( interface, segments.data(), segments.size() );
         }
         else if( i == j+2 ) {
             // interior face
@@ -257,15 +262,19 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
             else {
                 interface = Interface( half_polygons[j+1].m_cell, half_polygons[j].m_cell, orientation );
             }
+            iface_i++;
+            tessellation.addPolygon( interface, segments.data(), segments.size() );
         }
         else {
             // non-manifold face
             LOGGER_WARN( log, "Non-manifold face." );
-            continue;
+            iface_f++;
         }
-        
-        tessellation.addPolygon( interface, segments.data(), segments.size() );
+        j=i;
     }
+    LOGGER_DEBUG( log, iface_b << " boundary interfaces, " <<
+                  iface_i << " internal interfaces, and " <<
+                  iface_f << " non-manifold interfaces." );
 
 
 }
