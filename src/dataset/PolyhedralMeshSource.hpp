@@ -32,10 +32,19 @@ public:
     void
     tessellation( Tessellation& tessellation,
                   boost::shared_ptr<tinia::model::ExposedModel> model );
-    
+
+    template<typename Field>
+    void
+    field( Field& field, const size_t index ) const;
     
     size_t
-    activeCells() { return (m_cells.empty()?0:m_cells.size()-1); }
+    fields() { return m_cell_field_name.size(); }
+    
+    const std::string&
+    fieldName( unsigned int name_index ) const { return m_cell_field_name[ name_index ]; }
+    
+    size_t
+    activeCells() const { return (m_cells.empty()?0:m_cells.size()-1); }
     
     
 protected:

@@ -308,7 +308,7 @@ template<typename REAL>
 REAL
 Project<REAL>::cornerPointZScale() const {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
-        m_cornerpoint_geometry.m_zscale;
+        return m_cornerpoint_geometry.m_zscale;
     }
     return 1.f;
 }
@@ -936,6 +936,13 @@ template<typename REAL>
 unsigned int
 Project<REAL>::solutions() const
 {
+    if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
+        if( m_polyhedral_mesh_source ) {
+            Logger log = getLogger( "FOOBARZ" );
+            LOGGER_DEBUG( log,m_polyhedral_mesh_source->fields() );
+            return m_polyhedral_mesh_source->fields();
+        }
+    }
     return m_solution_names.size();
 }
 
@@ -943,6 +950,14 @@ template<typename REAL>
 const std::string&
 Project<REAL>::solutionName( unsigned int name_index ) const
 {
+    if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
+        if( m_polyhedral_mesh_source ) {
+            Logger log = getLogger( "FOOBART" );
+            LOGGER_DEBUG( log,m_polyhedral_mesh_source->fieldName( name_index ));
+            
+            return m_polyhedral_mesh_source->fieldName( name_index );
+        }
+    }
     return m_solution_names.at( name_index );
 }
 
@@ -1080,16 +1095,29 @@ Project<REAL>::solution( Solution& solution,
                          const uint report_step )
 {
     Logger log = getLogger( package + ".solution" );
-    if( solution_ix >= m_solution_names.size() ) {
-        LOGGER_ERROR( log, "Illegal solution index " << solution_ix );
-        return false;
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        if( solution_ix >= m_solution_names.size() ) {
+            LOGGER_ERROR( log, "Illegal solution index " << solution_ix );
+            return false;
+        }
+        if( report_step >= m_report_steps.size() ) {
+            LOGGER_ERROR( log, "Illegal report step " << report_step );
+            return false;
+        }
+        solution = m_report_steps[ report_step ].m_solutions[ solution_ix ];
+        return true;
     }
-    if( report_step >= m_report_steps.size() ) {
-        LOGGER_ERROR( log, "Illegal report step " << report_step );
-        return false;
+    else if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
+        if( m_polyhedral_mesh_source
+                && (report_step == 0)
+                && (solution_ix < m_polyhedral_mesh_source->fields() ) )
+        {
+            solution.m_reader = READER_FROM_SOURCE;
+            solution.m_location.m_source_index = solution_ix;
+            return true;
+        }
     }
-    solution = m_report_steps[ report_step ].m_solutions[ solution_ix ];
-    return true;
+    return false;
 }
 
 template<typename REAL>

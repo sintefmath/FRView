@@ -148,19 +148,24 @@ public:
 
     enum SolutionReader {
         READER_NONE,
-        READER_UNFORMATTED_ECLIPSE
+        READER_UNFORMATTED_ECLIPSE,
+        READER_FROM_SOURCE // Let source class handle reading
     };
     struct Solution {
         SolutionReader                              m_reader;
         std::string                                 m_path;
         union {
             eclipse::Block                          m_unformatted_eclipse;
+            size_t                                  m_source_index;
         }                                           m_location;
     };
 
     std::shared_ptr<PolyhedralMeshSource>
     source() { return m_polyhedral_mesh_source; }
     
+    const std::shared_ptr<PolyhedralMeshSource>
+    source() const { return m_polyhedral_mesh_source; }
+
     const std::vector<int>&
     fieldRemap() const { return m_cornerpoint_geometry.m_refine_map_compact; }
 

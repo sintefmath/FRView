@@ -534,6 +534,12 @@ VTKXMLSource::VTKXMLSource(const std::string &filename)
     m_cells.push_back( m_polygons.size() );
     m_polygons.push_back( m_indices.size() );
     
+    // Import cell data
+    m_cell_field_name.swap( cd.m_piece_cell_data_name );
+    m_cell_field_data.swap( cd.m_piece_cell_data_vals );
+        
+        
+    
     LOGGER_DEBUG( log, "created "
                   << (m_vertices.size()/3) << " vertices, "
                   << m_indices.size() << " indices, "

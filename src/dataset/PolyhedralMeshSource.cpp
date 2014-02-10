@@ -21,6 +21,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "dataset/PolyhedralMeshSource.hpp"
 #include "render/GridTessBridge.hpp"
+#include "render/GridFieldBridge.hpp"
 
 namespace {
 
@@ -201,7 +202,7 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
     size_t iface_b = 0;
     size_t iface_f = 0;
     std::vector<Segment> segments;
-    for( size_t j=0; j<half_polygons.size(); j ) {
+    for( size_t j=0; j<half_polygons.size(); ) {
 
         
         
@@ -282,5 +283,28 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
 template void PolyhedralMeshSource::tessellation< render::GridTessBridge >( render::GridTessBridge& tessellation,
 boost::shared_ptr<tinia::model::ExposedModel> model );
 
+
+template<typename Field>
+void
+PolyhedralMeshSource::field( Field& field, const size_t index ) const
+{
+    if( field.count() != m_cell_field_data[ index ].size() ) {
+        throw std::runtime_error( "element count mismatch" );
+    }
+    if( m_cell_field_data[ index ].empty() ) {
+        // nothing to do
+        return;
+    }
+    field.minimum() = m_cell_field_data[ index ][0];
+    field.maximum() = m_cell_field_data[ index ][0];
+    for( size_t i=0; i<m_cell_field_data[ index ].size(); i++ ) {
+        typename Field::REAL v = m_cell_field_data[ index ][i];
+        field.minimum() = std::min( field.minimum(), v );
+        field.maximum() = std::max( field.minimum(), v );
+        field.values()[i] = v;
+    }
+}
+
+template void PolyhedralMeshSource::field<render::GridFieldBridge>( render::GridFieldBridge&, const size_t ) const;
 
 } // of namespace input

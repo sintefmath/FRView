@@ -46,7 +46,8 @@ public:
                       const bool triangulate = false );
 
     bool
-    issueReadSolution( const dataset::Project<float>::Solution& solution_location );
+    issueReadSolution( const boost::shared_ptr< dataset::Project<float> > project,
+                       const dataset::Project<float>::Solution& solution_location );
 
     bool
     getProject( boost::shared_ptr< dataset::Project<float> >& project,
@@ -72,6 +73,7 @@ protected:
         int                                     m_refine_j;
         int                                     m_refine_k;
         bool                                    m_triangulate;
+        boost::shared_ptr< dataset::Project<float> >       m_project;
         dataset::Project<float>::Solution                m_solution_location;
     };
 
