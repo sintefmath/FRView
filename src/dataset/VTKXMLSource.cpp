@@ -251,6 +251,7 @@ end_element( void* user_data, const xmlChar* name )
     std::vector<float> float_buffer;
     std::vector<int>   int_buffer;
     if( tag.m_handle_chars != Tag::CHARACTER_IGNORE ) {
+        tag.m_char_buffer.push_back( '\0' ); // zero-terminate string
         char* p = tag.m_char_buffer.data();
         char* e = p+1;
         switch ( tag.m_handle_chars ) {
