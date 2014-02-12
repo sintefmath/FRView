@@ -38,6 +38,8 @@ namespace cornerpoint {
     static const std::string package = "CornerPointTessellator";
 
 template<typename Tessellation>
+const typename Tessellator<Tessellation>::Index Tessellator<Tessellation>::IllegalIndex = (~(typename Tessellator<Tessellation>::Index)0u);
+template<typename Tessellation>
 Tessellator<Tessellation>::Tessellator( Tessellation& tessellation )
     : m_tessellation( tessellation )
 {}
