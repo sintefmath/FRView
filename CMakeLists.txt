@@ -56,6 +56,8 @@ FIND_PACKAGE( Tinia 0.2.5 REQUIRED COMPONENTS Server Desktop )
 FIND_PACKAGE( OpenGL REQUIRED)
 FIND_LIBRARY( GLEW  NAMES GLEW glew32 PATHS ${LIB_PATHS} )
 FIND_PACKAGE( GLM REQUIRED )
+# For VTK reading
+FIND_PACKAGE( LibXml2 REQUIRED)
 FIND_LIBRARY( LOG4CXX_LOG4CXX_LIBRARY log4cxx
     /usr/lib
     /usr/local/lib
@@ -197,7 +199,9 @@ ADD_LIBRARY( frview_core
 
 TARGET_LINK_LIBRARIES( frview_core
                        ${SHADER_LIBS}
-                       ${JS_LIBS} )
+                       ${JS_LIBS}
+                       ${LIBXML2_LIBRARIES}
+)
 
 
 # --- Compile and link desktop job ---------------------------------------------
