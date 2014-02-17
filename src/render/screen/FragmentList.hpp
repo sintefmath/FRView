@@ -41,7 +41,25 @@ public:
             boost::shared_ptr<const GridField>  field,
             const std::vector<RenderItem>&      items );    
 protected:
+    void
+    resizeFragmentBuffers( );
+    
+    void
+    resizeScreenSizedBuffers();
+    
     surface::Renderer   m_surface_renderer;
+    GLint               m_texbuf_max_texels;
+    GLint               m_fragment_alloc;   ///< Number of fragments allocated.
+    GLint               m_fragment_alloc_loc;
+    GLBuffer            m_fragment_counter_buf; ///< Counts the fragments.
+    GLBuffer            m_fragment_rgba_buf;    //
+    GLTexture           m_fragment_rgba_tex;
+    GLBuffer            m_fragment_depth_buf;   // FLOAT
+    GLTexture           m_fragment_depth_tex;
+    GLBuffer            m_fragment_next_buf;    // list next pointers R32I
+    GLTexture           m_fragment_next_tex;
+    GLTexture           m_fragment_head_buf;    // width x height list headers, R32I
+    GLFramebuffer       m_fragment_head_fbo;
 };
     
     
