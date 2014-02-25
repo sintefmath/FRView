@@ -71,7 +71,7 @@ OrderIndependentTransparency::processFragments( GLuint fbo,
 {
     glBindFramebuffer( GL_FRAMEBUFFER, fbo );
     glDisable( GL_DEPTH_TEST );
-    //glEnable( GL_BLEND );
+    glEnable( GL_BLEND );
     glDepthMask( GL_FALSE );
     glBlendFunc( GL_ONE, GL_ONE );
     

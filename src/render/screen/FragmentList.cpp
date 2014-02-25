@@ -125,15 +125,12 @@ FragmentList::render( GLuint                              fbo,
         
         glm::mat4 M = glm::make_mat4( modelview ) * glm::make_mat4( local_to_world );
         
+        
+        // Setup empty FBO for rendering
+        glBindFramebuffer( GL_FRAMEBUFFER, m_empty_fbo.get() );
+        glFramebufferParameteri( GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_WIDTH, width );
+        glFramebufferParameteri( GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_HEIGHT, height );
         glViewport( 0, 0, m_width, m_height );
-        
-        glBindFramebuffer( GL_FRAMEBUFFER, fbo );
-        
-        glEnable( GL_DEPTH_TEST );
-        glDepthFunc( GL_LESS );
-        glDepthMask( GL_TRUE );
-        glDisable( GL_BLEND );
-        
         m_surface_renderer.draw( glm::value_ptr( M ), projection,
                                  m_width, m_height,
                                  tess, field, items );

@@ -20,33 +20,47 @@
 
 layout(location=0)  out vec4            frag_color;
 
-//layout(binding=0)   uniform sampler2D   tex_solid_color;
-//layout(binding=1)   uniform sampler2D   tex_transparent_color;
-//layout(binding=2)   uniform sampler2D   tex_transparent_complexity;
-
 layout(binding=0, rgba32f)  uniform imageBuffer  fragment_rgba;
 layout(binding=1, rg32i)    uniform iimageBuffer fragment_node;
 layout(binding=2, r32i)     uniform iimage2D     fragment_head;
+
+
 
 void main(void)
 {
     int head = imageLoad( fragment_head, ivec2( gl_FragCoord.xy) ).x;
     if( head != -1 ) {
-        float near = 1.0;
-        
-        int ix = head;
-        int best_ix = ix;
-        do {
-            ivec2 node = imageLoad( fragment_node, ix ).xy;
-            float depth = intBitsToFloat( node.y );
-            if( depth < near ) {
-                near = depth;
-                best_ix = ix;
+        float processed_depth = -1e6;
+
+        frag_color = vec4( 0.f, 0.f, 0.f, 1.f );
+        for(int q=0; q<100; q++ ) {
+            
+            float current_depth = 1e6;
+            int   current_index = head;
+            
+            int ix = head;
+            do {
+                ivec2 node = imageLoad( fragment_node, ix ).xy;
+                float depth = intBitsToFloat( node.y );
+                if( (depth > processed_depth) && (depth < current_depth ) ) {
+                    current_depth = depth;
+                    current_index = ix;
+                } 
+                ix = node.x;
+            } while( ix != -1 );
+            
+            if( current_depth > 1.0 ) {
+                break;
             }
-            ix = node.x;
-        } while( ix != -1 );
-        
-        frag_color = imageLoad( fragment_rgba, best_ix );
+            
+            vec4 fragment = imageLoad( fragment_rgba, current_index );
+            
+            float a = frag_color.a*fragment.a;
+            
+            frag_color.rgb += a*fragment.rgb;
+            frag_color.a = max( 0.f, frag_color.a-a);
+            processed_depth = current_depth;
+        }
     }
     else {
         discard;
