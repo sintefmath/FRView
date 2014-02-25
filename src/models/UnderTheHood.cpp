@@ -122,7 +122,7 @@ UnderTheHood::update( bool force )
     }
 
     double delta = PerfTimer::delta( m_update_timer, curr );
-    if( force || delta > 0.5 ) {
+    if( force || (delta > 0.5f && m_frames > 10 ) ) {
         std::stringstream o;
         o.str("");
         o << std::setprecision(4 )
@@ -137,23 +137,41 @@ UnderTheHood::update( bool force )
         m_update_timer.reset();
 
         o.str("");
-        o << std::setprecision(4 )
-          << (m_proxy_gen.average()*1e-6 ) << " ms ("
-          << m_proxy_gen.samples() << " samples)";
+        o << std::setprecision(4 );
+        if( m_proxy_gen.samples() > 0 ) {
+          o << (m_proxy_gen.average()*1e-6 ) << " ms (";
+        }
+        else {
+            o << "n/a (";
+        }
+        o << m_proxy_gen.samples() << " samples)";
         m_model->updateElement<string>( profile_proxy_gen_key, o.str() );
 
         o.str("");
-        o << std::setprecision(4 )
-          << (m_surface_gen.average()*1e-6 ) << " ms ("
-          << m_surface_gen.samples() << " samples)";
+        o << std::setprecision(4 );
+        if( m_surface_gen.samples() > 0 ) {
+            o << (m_surface_gen.average()*1e-6 ) << " ms (";
+        }
+        else {
+            o << "n/a (";
+        }
+        o  << m_surface_gen.samples() << " samples)";
         m_model->updateElement<string>( profile_surface_gen_key, o.str() );
 
         o.str("");
-        o << std::setprecision(4 )
-          << (m_surface_render.average()*1e-6 ) << " ms ("
-          << m_surface_render.samples() << " samples)";
+        o << std::setprecision(4 );
+        if( m_surface_render.samples() > 0 ) {
+            o << (m_surface_render.average()*1e-6 ) << " ms (";
+        }
+        else {
+            o << "n/a (";
+        }
+        o << m_surface_render.samples() << " samples)";
         m_model->updateElement<string>( profile_surface_render_key, o.str() );
 
+        m_proxy_gen.reset();
+        m_surface_gen.reset();
+        m_surface_render.reset();
     }
 }
 
