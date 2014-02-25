@@ -64,6 +64,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_grid_stats( m_model, *this ),
       m_has_context( false ),
       m_async_reader( new ASyncReader( m_model ) ),
+      m_enable_gl_debug( false ),
       m_renderlist_initialized( false ),
       m_renderlist_state( RENDERLIST_SENT ),
       m_has_pipeline( false ),
@@ -368,6 +369,10 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_model->setGUILayout( root, tinia::model::gui::DESKTOP);
 
     for(auto it=files.begin(); it!=files.end(); ++it ) {
+        if( (*it) == "--gl-debug-log" ) {
+            m_enable_gl_debug = true;
+        }
+        
         if( (*it).find('.') != std::string::npos ) {
             loadFile( *it, 1, 1, 1, false );
             break;
@@ -792,7 +797,8 @@ FRViewJob::initGL()
     Logger log = getLogger( "CPViewJob.initGL" );
     glewInit();
 
-    if( false && glewIsSupported( "GL_KHR_debug" ) ) {
+    if( m_enable_gl_debug && glewIsSupported( "GL_KHR_debug" ) ) {
+        LOGGER_DEBUG( log, "Enabling OpenGL debug logging" );
         glEnable( GL_DEBUG_OUTPUT );
         glDebugMessageCallback( debugLogger, NULL );
         glDebugMessageControl( GL_DONT_CARE,

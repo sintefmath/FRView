@@ -125,6 +125,9 @@ private:
     bool                                            m_has_context;
     boost::shared_ptr<ASyncReader>                    m_async_reader;
 
+    /** True if we want to enable OpenGL debug messages ourselves. */
+    bool                                            m_enable_gl_debug;
+    
     /** @{ */
     enum {
         PROJECT_NO_FILE,
