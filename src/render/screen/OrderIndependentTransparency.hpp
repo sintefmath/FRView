@@ -16,22 +16,19 @@
  */
 
 #pragma once
-#include <GL/glew.h>
-#include "render/surface/Renderer.hpp"
-#include "render/screen/Transparency.hpp"
+#include "render/screen/FragmentList.hpp"
 
 namespace render {
     namespace screen {
 
-class FragmentList : public Transparency
+class OrderIndependentTransparency : public FragmentList
 {
 public:
-    FragmentList( const GLsizei width, const GLsizei height );
-   
-    ~FragmentList();
+    OrderIndependentTransparency( const GLsizei width, const GLsizei height );
+    
+    ~OrderIndependentTransparency();
 
-    virtual
-    void
+/*    void
     render( GLuint                              fbo,
             const GLsizei                       width,
             const GLsizei                       height,
@@ -40,36 +37,19 @@ public:
             const GLfloat*                      projection,
             boost::shared_ptr<const GridTess>   tess,
             boost::shared_ptr<const GridField>  field,
-            const std::vector<RenderItem>&      items );    
+            const std::vector<RenderItem>&      items );    */
+    
 protected:
-    void
-    resizeFragmentBuffers( );
-    
-    void
-    resizeScreenSizedBuffers();
-    
-    virtual
+    GLProgram           m_fsq_prog;
+    GLVertexArrayObject m_fsq_vao;
+    GLBuffer            m_fsq_buf;
+
     void
     processFragments( GLuint        fbo,
                       const GLsizei width,
-                      const GLsizei height ) = 0;
-    
-    
-    surface::Renderer   m_surface_renderer;
-    GLint               m_texbuf_max_texels;
-    GLint               m_fragment_alloc;   ///< Number of fragments allocated.
-    GLint               m_fragment_alloc_loc;
-    GLBuffer            m_fragment_counter_buf; ///< Counts the fragments.
-    GLBuffer            m_fragment_counter_readback_buf;
-    GLBuffer            m_fragment_rgba_buf;    //
-    GLTexture           m_fragment_rgba_tex;
-    GLBuffer            m_fragment_node_buf;    // list next pointers RG32I
-    GLTexture           m_fragment_node_tex;
-    GLTexture           m_fragment_head_tex;    // width x height list headers, R32I
-    GLFramebuffer       m_fragment_head_fbo;
+                      const GLsizei height );
 
 };
-    
     
     } // of namespace screen
 } // of namespace render

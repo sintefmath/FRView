@@ -51,14 +51,16 @@ FragmentList::FragmentList(const GLsizei width, const GLsizei height)
                                                  "fragment_alloc" );
     
     glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_fragment_counter_buf.get() );
-    glBufferData( GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), NULL, GL_DYNAMIC_DRAW );
+    glBufferData( GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), NULL, GL_DYNAMIC_COPY );
     glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
+    
+    glBindBuffer( GL_COPY_WRITE_BUFFER, m_fragment_counter_readback_buf.get() );
+    glBufferData( GL_COPY_WRITE_BUFFER, sizeof(GLuint), NULL, GL_STREAM_READ );
+    glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
 
     m_fragment_alloc = 10000;
     resizeFragmentBuffers();
     resizeScreenSizedBuffers();
-
-    
 }
     
 FragmentList::~FragmentList()
@@ -85,26 +87,30 @@ FragmentList::render( GLuint                              fbo,
     }
     
 
-    GLint ost = 42;
-    glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_fragment_counter_buf.get() );
-    glBufferData( GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &ost, GL_DYNAMIC_DRAW );
-    glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
+    //GLint ost = 42;
+    //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_fragment_counter_buf.get() );
+    //glBufferData( GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &ost, GL_DYNAMIC_DRAW );
+    //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
     
 
     bool done;
     do {
         done = true;
 
-        // init fragment list        
+        // current fragment counter
         glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_fragment_counter_buf.get() );
         glClearBufferData( GL_ATOMIC_COUNTER_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, NULL );
+        glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
 
+        // list head image
         glBindFramebuffer( GL_FRAMEBUFFER, m_fragment_head_fbo.get() );
         GLint clear[4] = { -1, -1, -1, -1 };
         glClearBufferiv( GL_COLOR, 0, clear );
         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
         // glClearTexImage is 4.4
 
+        // node buffer
+        glInvalidateBufferData( m_fragment_node_buf.get() );
         
         glProgramUniform1i( m_surface_renderer.program().get(),
                             m_fragment_alloc_loc,
@@ -112,18 +118,10 @@ FragmentList::render( GLuint                              fbo,
         
         glBindBufferBase( GL_ATOMIC_COUNTER_BUFFER, 0, m_fragment_counter_buf.get() );
 
-        glActiveTexture( GL_TEXTURE0 );
-        glBindTexture( GL_TEXTURE_BUFFER, m_fragment_rgba_tex.get() );
-
-        glActiveTexture( GL_TEXTURE1 );
-        glBindTexture( GL_TEXTURE_BUFFER, m_fragment_depth_tex.get() );
+        glBindImageTexture( 0, m_fragment_rgba_tex.get(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F );
+        glBindImageTexture( 1, m_fragment_node_tex.get(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG32I );
+        glBindImageTexture( 2, m_fragment_head_tex.get(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32I );
         
-        glActiveTexture( GL_TEXTURE2 );
-        glBindTexture( GL_TEXTURE_BUFFER, m_fragment_next_tex.get() );
-
-        glActiveTexture( GL_TEXTURE3 );
-        glBindTexture( GL_TEXTURE_2D, m_fragment_head_buf.get() );
-
         
         glm::mat4 M = glm::make_mat4( modelview ) * glm::make_mat4( local_to_world );
         
@@ -143,9 +141,22 @@ FragmentList::render( GLuint                              fbo,
                              local_to_world, modelview, projection,
                              items );
 
+        glBindBufferBase( GL_ATOMIC_COUNTER_BUFFER, 0, 0 );
+        
+        // initialize host to device transfer
+        glBindBuffer( GL_COPY_READ_BUFFER, m_fragment_counter_buf.get() );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, m_fragment_counter_readback_buf.get() );
+        glCopyBufferSubData( GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof(GLuint) );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
+        glBindBuffer( GL_COPY_READ_BUFFER, 0 );
+        glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+        
+        processFragments( fbo, width, height );
         
         GLint fragments = 0;
-        glGetBufferSubData( GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLint), &fragments );
+        glBindBuffer( GL_COPY_READ_BUFFER, m_fragment_counter_readback_buf.get() );
+        glGetBufferSubData( GL_COPY_READ_BUFFER, 0, sizeof(GLint), &fragments );
+        glBindBuffer( GL_COPY_READ_BUFFER, 0 );
         if( (m_fragment_alloc < fragments) && (m_fragment_alloc < m_texbuf_max_texels) ) {
             m_fragment_alloc = std::min( (m_texbuf_max_texels+(m_texbuf_max_texels>>4)), fragments );
             resizeFragmentBuffers();
@@ -166,15 +177,10 @@ FragmentList::resizeFragmentBuffers( )
     glBindTexture( GL_TEXTURE_BUFFER, m_fragment_rgba_tex.get() );
     glTexBuffer( GL_TEXTURE_BUFFER, GL_RGBA32F, m_fragment_rgba_buf.get() );
     
-    glBindBuffer( GL_TEXTURE_BUFFER, m_fragment_depth_buf.get() );
-    glBufferData( GL_TEXTURE_BUFFER, sizeof(GLfloat)*m_fragment_alloc, NULL, GL_DYNAMIC_DRAW );
-    glBindTexture( GL_TEXTURE_BUFFER, m_fragment_depth_tex.get() );
-    glTexBuffer( GL_TEXTURE_BUFFER, GL_R32F, m_fragment_depth_buf.get() );
-    
-    glBindBuffer( GL_TEXTURE_BUFFER, m_fragment_next_buf.get() );
-    glBufferData( GL_TEXTURE_BUFFER, sizeof(GLfloat)*m_fragment_alloc, NULL, GL_DYNAMIC_DRAW );
-    glBindTexture( GL_TEXTURE_BUFFER, m_fragment_next_tex.get() );
-    glTexBuffer( GL_TEXTURE_BUFFER, GL_R32F, m_fragment_next_buf.get() );
+    glBindBuffer( GL_TEXTURE_BUFFER, m_fragment_node_buf.get() );
+    glBufferData( GL_TEXTURE_BUFFER, 2*sizeof(GLfloat)*m_fragment_alloc, NULL, GL_DYNAMIC_DRAW );
+    glBindTexture( GL_TEXTURE_BUFFER, m_fragment_node_tex.get() );
+    glTexBuffer( GL_TEXTURE_BUFFER, GL_RG32F, m_fragment_node_buf.get() );
     
     glBindBuffer( GL_TEXTURE_BUFFER, 0 );
     glBindTexture( GL_TEXTURE_BUFFER, 0 );
@@ -183,14 +189,14 @@ FragmentList::resizeFragmentBuffers( )
 void
 FragmentList::resizeScreenSizedBuffers()
 {
-    glBindTexture( GL_TEXTURE_2D, m_fragment_head_buf.get() );
+    glBindTexture( GL_TEXTURE_2D, m_fragment_head_tex.get() );
     glTexImage2D( GL_TEXTURE_2D, 0, GL_R32I, m_width, m_height, 0, GL_RED_INTEGER, GL_INT, NULL );
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0 );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0 );
     glBindTexture( GL_TEXTURE_2D, 0 );
     
     glBindFramebuffer( GL_FRAMEBUFFER, m_fragment_head_fbo.get() );
-    glFramebufferTexture( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_fragment_head_buf.get(), 0 );
+    glFramebufferTexture( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_fragment_head_tex.get(), 0 );
     glDrawBuffer( GL_COLOR_ATTACHMENT0 );
     glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 

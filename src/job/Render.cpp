@@ -33,7 +33,7 @@
 #include "render/screen/TransparencyNone.hpp"
 #include "render/screen/TransparencyAdditive.hpp"
 #include "render/screen/TransparencyWeightedAverage.hpp"
-#include "render/screen/FragmentList.hpp"
+#include "render/screen/OrderIndependentTransparency.hpp"
 #include "render/RenderItem.hpp"
 
 void
@@ -211,9 +211,9 @@ FRViewJob::render( const float*  projection,
         case 3:
         default:
             if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::screen::FragmentList)) )
+                    (typeid(*m_screen_manager.get()) != typeid(render::screen::OrderIndependentTransparency)) )
             {
-                m_screen_manager.reset( new render::screen::FragmentList( width, height ) );
+                m_screen_manager.reset( new render::screen::OrderIndependentTransparency( width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;
