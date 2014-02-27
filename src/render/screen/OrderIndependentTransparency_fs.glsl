@@ -52,13 +52,14 @@ void main(void)
             if( current_depth > 1.0 ) {
                 break;
             }
-            
             vec4 fragment = imageLoad( fragment_rgba, current_index );
-            
-            float a = frag_color.a*fragment.a;
-            
-            frag_color.rgb += a*fragment.rgb;
-            frag_color.a = max( 0.f, frag_color.a-a);
+           
+            // fragments are premultiplied
+            frag_color.rgb = frag_color.rgb + frag_color.a*fragment.rgb;
+            frag_color.a   = frag_color.a*(1.f-fragment.a);
+            if( frag_color.a < 0.01f ) {
+                break;
+            }
             processed_depth = current_depth;
         }
     }

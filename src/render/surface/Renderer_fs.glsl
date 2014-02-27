@@ -64,15 +64,10 @@ vec4 colorize()
         float cb = lineCover( gl_FragCoord.xy, in_f.boundary_b, line_width );
         float cc = lineCover( gl_FragCoord.xy, in_f.boundary_c, line_width );
 
-        float c = max( ca, max( cb, cc ) );
+        float c = edge_color.w*max( ca, max( cb, cc ) );
         if( c > 0.f ) {
-            float alpha = edge_color.w *c;
-
-            color.rgb = mix( color.rgb, edge_color.rgb, alpha );
-            color.a += alpha;
-            //  color = mix( vec4(alpha*edge_color.rgb, alpha), color, 0.1*alpha );
-
-//            color += vec4( alpha*edge_color.rgb, alpha );
+            color.rgb = c*edge_color.rgb + (1.f-c)*color.rgb;
+            color.a   = color.a + c - color.a*c;
         }
 #else
         float line = min(abs(dot( vec3( gl_FragCoord.xy, 1.f ), in_f.boundary_a )),

@@ -73,7 +73,7 @@ OrderIndependentTransparency::processFragments( GLuint fbo,
     glDisable( GL_DEPTH_TEST );
     glEnable( GL_BLEND );
     glDepthMask( GL_FALSE );
-    glBlendFunc( GL_ONE, GL_ONE );
+    glBlendFunc( GL_ONE, GL_SRC_ALPHA );
     
     glUseProgram( m_fsq_prog.get() );
     glBindImageTexture( 0, m_fragment_rgba_tex.get(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F );

@@ -131,6 +131,8 @@ FragmentList::render( GLuint                              fbo,
         glFramebufferParameteri( GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_WIDTH, width );
         glFramebufferParameteri( GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_HEIGHT, height );
         glViewport( 0, 0, m_width, m_height );
+
+        
         m_surface_renderer.draw( glm::value_ptr( M ), projection,
                                  m_width, m_height,
                                  tess, field, items );
