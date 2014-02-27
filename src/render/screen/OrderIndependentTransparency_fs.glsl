@@ -28,11 +28,11 @@ layout(binding=2, r32i)     uniform iimage2D     fragment_head;
 
 void main(void)
 {
+    frag_color = vec4( 0.f, 0.f, 0.f, 1.f );
     int head = imageLoad( fragment_head, ivec2( gl_FragCoord.xy) ).x;
     if( head != -1 ) {
         float processed_depth = -1e6;
 
-        frag_color = vec4( 0.f, 0.f, 0.f, 1.f );
         for(int q=0; q<100; q++ ) {
             
             float current_depth = 1e6;
@@ -64,6 +64,6 @@ void main(void)
         }
     }
     else {
-        discard;
+        //discard;
     }
 }

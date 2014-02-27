@@ -23,13 +23,15 @@
 namespace render {
     namespace screen {
         namespace glsl {
-            extern const std::string FragmentList_geo_fs;
+            extern const std::string FragmentList_geo_solid_fs;
+            extern const std::string FragmentList_geo_transparent_fs;
         }
         static const std::string package = "render.screen.FragmentList";
 
 
 FragmentList::FragmentList(const GLsizei width, const GLsizei height)
-    : m_surface_renderer( glsl::FragmentList_geo_fs )
+    : m_surface_renderer_solid( glsl::FragmentList_geo_solid_fs ),
+      m_surface_renderer_transparent( glsl::FragmentList_geo_transparent_fs )
 {
     Logger log = getLogger( package + ".constructor" );
     m_width = width;
@@ -39,15 +41,13 @@ FragmentList::FragmentList(const GLsizei width, const GLsizei height)
     GLint minor=0;
     glGetIntegerv( GL_MAJOR_VERSION, &major );
     glGetIntegerv( GL_MINOR_VERSION, &minor );
-
     // Atomic counter buffer requires 4.2
-    
 
     glGetIntegerv( GL_MAX_TEXTURE_BUFFER_SIZE, &m_texbuf_max_texels );
     LOGGER_DEBUG( log, "GL_MAX_TEXTURE_BUFFER_SIZE=" << m_texbuf_max_texels );
 
 
-    m_fragment_alloc_loc = glGetUniformLocation( m_surface_renderer.program().get(),
+    m_fragment_alloc_loc = glGetUniformLocation( m_surface_renderer_transparent.program().get(),
                                                  "fragment_alloc" );
     
     glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_fragment_counter_buf.get() );
@@ -86,13 +86,22 @@ FragmentList::render( GLuint                              fbo,
         resizeScreenSizedBuffers();
     }
     
-
-    //GLint ost = 42;
-    //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_fragment_counter_buf.get() );
-    //glBufferData( GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &ost, GL_DYNAMIC_DRAW );
-    //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
+    glm::mat4 M = glm::make_mat4( modelview ) * glm::make_mat4( local_to_world );
     
+    // --- Solid pass; normal rendering populating the z-buffer ----------------
 
+    glBindFramebuffer( GL_DRAW_FRAMEBUFFER, fbo );
+    glEnable( GL_DEPTH_TEST );
+    glDepthFunc( GL_LESS );
+    m_surface_renderer_solid.draw( glm::value_ptr( M ), projection,
+                             m_width, m_height,
+                             tess, field, items );
+    renderMiscellaneous( width, height,
+                         local_to_world, modelview, projection,
+                         items );
+    
+    // --- Fragment list pass; do z-test, but no updates -----------------------
+    
     bool done;
     do {
         done = true;
@@ -112,7 +121,7 @@ FragmentList::render( GLuint                              fbo,
         // node buffer
         glInvalidateBufferData( m_fragment_node_buf.get() );
         
-        glProgramUniform1i( m_surface_renderer.program().get(),
+        glProgramUniform1i( m_surface_renderer_transparent.program().get(),
                             m_fragment_alloc_loc,
                             m_fragment_alloc );
         
@@ -122,24 +131,18 @@ FragmentList::render( GLuint                              fbo,
         glBindImageTexture( 1, m_fragment_node_tex.get(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG32I );
         glBindImageTexture( 2, m_fragment_head_tex.get(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32I );
         
-        
-        glm::mat4 M = glm::make_mat4( modelview ) * glm::make_mat4( local_to_world );
-        
-        
-        // Setup empty FBO for rendering
-        glBindFramebuffer( GL_FRAMEBUFFER, m_empty_fbo.get() );
-        glFramebufferParameteri( GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_WIDTH, width );
-        glFramebufferParameteri( GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_HEIGHT, height );
+        glBindFramebuffer( GL_DRAW_FRAMEBUFFER, fbo );
         glViewport( 0, 0, m_width, m_height );
-
+        glEnable( GL_DEPTH_TEST );
+        glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE );
+        glDepthMask( GL_FALSE );
         
-        m_surface_renderer.draw( glm::value_ptr( M ), projection,
-                                 m_width, m_height,
-                                 tess, field, items );
-        renderMiscellaneous( width, height,
-                             local_to_world, modelview, projection,
-                             items );
-
+        m_surface_renderer_transparent.draw( glm::value_ptr( M ), projection,
+                                             m_width, m_height,
+                                             tess, field, items );
+        
+        glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
+        glDepthMask( GL_TRUE );
         glBindBufferBase( GL_ATOMIC_COUNTER_BUFFER, 0, 0 );
         
         // initialize host to device transfer

@@ -55,11 +55,11 @@ protected:
                       const GLsizei height ) = 0;
     
     
-    surface::Renderer   m_surface_renderer;
+    surface::Renderer   m_surface_renderer_solid;
+    surface::Renderer   m_surface_renderer_transparent;
     GLint               m_texbuf_max_texels;
     GLint               m_fragment_alloc;   ///< Number of fragments allocated.
     GLint               m_fragment_alloc_loc;
-    GLFramebuffer       m_empty_fbo;
     GLBuffer            m_fragment_counter_buf; ///< Counts the fragments.
     GLBuffer            m_fragment_counter_readback_buf;
     GLBuffer            m_fragment_rgba_buf;    //

@@ -15,21 +15,15 @@
  * along with the FRView.  If not, see http://www.gnu.org/licenses/.
  */
 
-layout(binding=0, offset=0) uniform atomic_uint  fragment_counter;
-                            uniform int          fragment_alloc;
-layout(binding=0, rgba32f)  uniform imageBuffer  fragment_rgba;
-layout(binding=1, rg32i)    uniform iimageBuffer fragment_node;
-layout(binding=2, r32i)     uniform iimage2D     fragment_head;
+layout(location=0)          out     vec4         frag_color;
 
 void main(void)
 {
     vec4 color = colorize();
-    if( color.a > 0.0f ) {
-        int ix = int( atomicCounterIncrement( fragment_counter ) );
-        if( ix < fragment_alloc ) {
-            int next = imageAtomicExchange( fragment_head, ivec2(gl_FragCoord.xy), ix );
-            imageStore( fragment_rgba, ix, color );
-            imageStore( fragment_node, ix, ivec4(next, floatBitsToInt( gl_FragCoord.z ), 0.f, 0.f ) );
-        }
+    if( color.a == 1.f ) {
+        frag_color = color;
+    }
+    else {
+        discard;
     }
 }
