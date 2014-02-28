@@ -62,6 +62,17 @@ Transparency::renderMiscellaneous( const GLsizei                       width,
     
 }
 
+void
+Transparency::renderOverlay( const GLsizei                       width,
+                             const GLsizei                       height,
+                             const GLfloat*                      local_to_world,
+                             const GLfloat*                      modelview,
+                             const GLfloat*                      projection,
+                             const std::vector<RenderItem>&      items )
+{
+    
+
+}
 
 
     } // of namespace screen

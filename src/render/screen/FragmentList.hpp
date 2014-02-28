@@ -60,6 +60,7 @@ protected:
     GLint               m_texbuf_max_texels;
     GLint               m_fragment_alloc;   ///< Number of fragments allocated.
     GLint               m_fragment_alloc_loc;
+    GLBuffer            m_status_ubo;
     GLBuffer            m_fragment_counter_buf; ///< Counts the fragments.
     GLBuffer            m_fragment_counter_readback_buf;
     GLBuffer            m_fragment_rgba_buf;    //

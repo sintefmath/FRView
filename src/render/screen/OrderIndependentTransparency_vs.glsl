@@ -1,4 +1,4 @@
-#version 330
+#version 420
 /* Copyright STIFTELSEN SINTEF 2013
  *
  * This file is part of FRView.
@@ -17,12 +17,22 @@
  */
 
 layout(location=0) in vec4 position;
+layout(std140, binding=0) uniform FragmenListBlock {
+    int     fragment_count;
+    int     fragment_alloc;
+};
 
 out vec2 normalized;
 
 void
 main()
 {
-    normalized = 0.5f*(position.xy + vec2(1.f) );
-    gl_Position = position;
+    if( fragment_count <= fragment_alloc ) {
+        normalized = 0.5f*(position.xy + vec2(1.f) );
+        gl_Position = position;
+    }
+    else {
+        normalized = vec2(0.f);
+        gl_Position = vec4(0.f);
+    }
 }

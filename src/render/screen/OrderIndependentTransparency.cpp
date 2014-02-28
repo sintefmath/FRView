@@ -80,9 +80,12 @@ OrderIndependentTransparency::processFragments( GLuint fbo,
     glBindImageTexture( 1, m_fragment_node_tex.get(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RG32I );
     glBindImageTexture( 2, m_fragment_head_tex.get(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32I );
 
+    glBindBufferBase( GL_UNIFORM_BUFFER, 0, m_status_ubo.get() );
+    
     glBindVertexArray( m_fsq_vao.get() );
     glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );    
 
+    glBindBufferBase( GL_UNIFORM_BUFFER, 0, 0 );
     glBindVertexArray( 0 );
     glUseProgram( 0 ); 
 

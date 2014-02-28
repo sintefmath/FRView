@@ -49,7 +49,11 @@ FragmentList::FragmentList(const GLsizei width, const GLsizei height)
 
     m_fragment_alloc_loc = glGetUniformLocation( m_surface_renderer_transparent.program().get(),
                                                  "fragment_alloc" );
-    
+
+    glBindBuffer( GL_UNIFORM_BUFFER, m_status_ubo.get() );
+    glBufferData( GL_UNIFORM_BUFFER, 2*sizeof(GLint), NULL, GL_DYNAMIC_COPY );
+    glBindBuffer( GL_UNIFORM_BUFFER, 0 );
+
     glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_fragment_counter_buf.get() );
     glBufferData( GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), NULL, GL_DYNAMIC_COPY );
     glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
@@ -94,8 +98,8 @@ FragmentList::render( GLuint                              fbo,
     glEnable( GL_DEPTH_TEST );
     glDepthFunc( GL_LESS );
     m_surface_renderer_solid.draw( glm::value_ptr( M ), projection,
-                             m_width, m_height,
-                             tess, field, items );
+                                   m_width, m_height,
+                                   tess, field, items );
     renderMiscellaneous( width, height,
                          local_to_world, modelview, projection,
                          items );
@@ -145,12 +149,19 @@ FragmentList::render( GLuint                              fbo,
         glDepthMask( GL_TRUE );
         glBindBufferBase( GL_ATOMIC_COUNTER_BUFFER, 0, 0 );
         
-        // initialize host to device transfer
+        // initialize copies of fragment count
         glBindBuffer( GL_COPY_READ_BUFFER, m_fragment_counter_buf.get() );
+
+        // copy to host readback buffer
         glBindBuffer( GL_COPY_WRITE_BUFFER, m_fragment_counter_readback_buf.get() );
         glCopyBufferSubData( GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof(GLuint) );
+
+        glBindBuffer( GL_COPY_WRITE_BUFFER, m_status_ubo.get() );
+        glCopyBufferSubData( GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof(GLuint) );
+
         glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
         glBindBuffer( GL_COPY_READ_BUFFER, 0 );
+
         glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
         
         processFragments( fbo, width, height );
@@ -165,6 +176,11 @@ FragmentList::render( GLuint                              fbo,
             done = false;
         }
     } while(!done);
+    
+    renderOverlay( width, height,
+                   local_to_world, modelview, projection,
+                   items );
+    
     glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
 }
 
@@ -183,6 +199,11 @@ FragmentList::resizeFragmentBuffers( )
     glBufferData( GL_TEXTURE_BUFFER, 2*sizeof(GLfloat)*m_fragment_alloc, NULL, GL_DYNAMIC_DRAW );
     glBindTexture( GL_TEXTURE_BUFFER, m_fragment_node_tex.get() );
     glTexBuffer( GL_TEXTURE_BUFFER, GL_RG32F, m_fragment_node_buf.get() );
+    
+    // Update status_buffer with new count
+    glBindBuffer( GL_UNIFORM_BUFFER, m_status_ubo.get() );
+    glBufferSubData( GL_UNIFORM_BUFFER, sizeof(GLint), sizeof(GLint), (void*)&m_fragment_alloc );
+    glBindBuffer( GL_UNIFORM_BUFFER, 0 );
     
     glBindBuffer( GL_TEXTURE_BUFFER, 0 );
     glBindTexture( GL_TEXTURE_BUFFER, 0 );

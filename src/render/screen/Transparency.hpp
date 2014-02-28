@@ -61,7 +61,15 @@ protected:
                          const GLfloat*                      modelview,
                          const GLfloat*                      projection,
                          const std::vector<RenderItem>&      items );
-
+    
+    void
+    renderOverlay( const GLsizei                       width,
+                   const GLsizei                       height,
+                   const GLfloat*                      local_to_world,
+                   const GLfloat*                      modelview,
+                   const GLfloat*                      projection,
+                   const std::vector<RenderItem>&      items );
+    
 };
     
     
