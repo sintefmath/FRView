@@ -70,7 +70,9 @@ TransparencyNone::render( GLuint                              fbo,
     renderMiscellaneous( width, height,
                          local_to_world, modelview, projection,
                          items );
-   
+    renderOverlay( width, height,
+                   local_to_world, modelview, projection,
+                   items );   
 }
 
     } // of namespace screen

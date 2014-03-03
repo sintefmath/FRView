@@ -234,6 +234,10 @@ TransparencyAdditive::render( GLuint                              fbo,
     glEnable( GL_DEPTH_TEST );
     glDisable( GL_BLEND );
     glDepthMask( GL_TRUE );
+
+    renderOverlay( width, height,
+                   local_to_world, modelview, projection,
+                   items );
 }
 
     } // of namespace screen
