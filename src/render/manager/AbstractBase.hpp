@@ -22,6 +22,7 @@
 #include <render/RenderItem.hpp>
 #include <render/wells/Renderer.hpp>
 #include <models/Appearance.hpp>
+#include "render/TextRenderer.hpp"
 
 namespace models {
     class Appearance;
@@ -73,7 +74,15 @@ protected:
     models::Appearance::ShadingModel    m_shading_model;
     
     wells::WellRenderer                 m_well_renderer;
+    TextRenderer                        m_legend_text;
+    GLProgram                           m_legend_prog;
+    
+    float                               m_legend_min;
+    float                               m_legend_max;
 
+    GLVertexArrayObject m_fsq_vao;
+    GLBuffer            m_fsq_buf;
+    
     /** Return GLSL defines deduced from appearance model. */
     virtual
     const std::string

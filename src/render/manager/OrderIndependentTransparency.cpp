@@ -34,19 +34,6 @@ OrderIndependentTransparency::OrderIndependentTransparency( const models::Appear
 {
     Logger log = getLogger( package + ".constructor" );
     
-    static const GLfloat quad[ 4*4 ] = {
-         1.f, -1.f, 0.f, 1.f,
-         1.f,  1.f, 0.f, 1.f,
-        -1.f, -1.f, 0.f, 1.f,
-        -1.f,  1.f, 0.f, 1.f
-    };
-    glBindVertexArray( m_fsq_vao.get() );
-    glBindBuffer( GL_ARRAY_BUFFER, m_fsq_buf.get() );
-    glBufferData( GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW );
-    glVertexAttribPointer( 0, 4, GL_FLOAT, GL_FALSE, 0, NULL );
-    glEnableVertexAttribArray( 0 );
-    glBindBuffer( GL_ARRAY_BUFFER, 0 );
-    glBindVertexArray( 0 );
     
     GLuint vs = utils::compileShader( log, glsl::OrderIndependentTransparency_vs, GL_VERTEX_SHADER );
     GLuint fs = utils::compileShader( log, glsl::OrderIndependentTransparency_fs, GL_FRAGMENT_SHADER );

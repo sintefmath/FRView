@@ -209,6 +209,11 @@ TextRenderer::add( const std::string& text,
     float shift_j = 0.f;
 
     switch( anchor_type ) {
+    case ANCHOR_W:
+        shift_i = -(max_i/2.f) + anchor_spacing;
+        shift_j = -(max_j/2.f);
+        break;
+    
     case ANCHOR_C:
         shift_i = -(max_i/2.f);
         shift_j = -(max_j/2.f);

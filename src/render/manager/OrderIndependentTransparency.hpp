@@ -44,8 +44,6 @@ public:
     
 protected:
     GLProgram           m_fsq_prog;
-    GLVertexArrayObject m_fsq_vao;
-    GLBuffer            m_fsq_buf;
 
     void
     processFragments( GLuint        fbo,
