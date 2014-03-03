@@ -65,6 +65,10 @@ public:
 protected:
     GLsizei                             m_width;
     GLsizei                             m_height;
+
+    /** Normalized 1D texture encoding RGB-values for field. */
+    GLTexture                           m_color_map;
+
     models::Appearance::Revision        m_appearance_revision;
     models::Appearance::ShadingModel    m_shading_model;
     

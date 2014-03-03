@@ -66,7 +66,7 @@ TransparencyNone::render( GLuint                              fbo,
     
     m_surface_renderer.draw( glm::value_ptr( M ), projection,
                              m_width, m_height,
-                             tess, field, items );
+                             tess, field, m_color_map, items );
     renderMiscellaneous( width, height,
                          local_to_world, modelview, projection,
                          items );

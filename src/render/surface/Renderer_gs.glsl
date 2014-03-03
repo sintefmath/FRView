@@ -39,6 +39,7 @@ out GO {
 layout(binding=0)   uniform usamplerBuffer  cells;
 layout(binding=1)   uniform samplerBuffer   normals;
 layout(binding=2)   uniform samplerBuffer   field;
+layout(binding=3)   uniform sampler1D       color_map;
                     uniform mat3            NM;
                     uniform vec2            field_remap;
                     uniform bool            use_field;
@@ -84,22 +85,11 @@ main()
                 value = log( value );
             }
             float scalar = clamp( field_remap.y*( value - field_remap.x), 0.0, 1.0 );
-            color = max( vec3(0.f),
-                         sin( vec3( 4.14f*(scalar - 0.5f),
-                                    3.14f*(scalar),
-                                    4.14f*(scalar + 0.5f) ) ) );
+            color = texture( color_map, scalar ).rgb;
         }
         else {
+            // undef -> gray
             color.rgb = vec3( 0.5, 0.5, 0.55 );
-            /*
-                    // color cells by id
-            color.rgb = surface_color.rgb;
-            uint cid = cell & 0x0fffffffu;
-            color.rgb = surface_color.rgb *
-                    vec3(  0.5*float( int( cid & 4u  ) == 0 ) + 0.5*float( int( cid & 1u ) == 0  ),
-                           0.5*float( int( cid & 8u ) == 0 ) + 0.5*float( int( cid & 1u ) != 0  ),
-                           0.5*float( int( cid & 16u ) == 0 ) + 0.5*float( int( cid & 2u ) == 0  ));
-            */
         }
     }
 

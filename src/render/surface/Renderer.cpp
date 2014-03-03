@@ -67,13 +67,14 @@ Renderer::Renderer( const std::string& defines, const std::string& fragment_sour
 
     
 void
-Renderer::draw( const GLfloat*                                        modelview,
-                const GLfloat*                                        projection,
-                const GLsizei                                         width,
-                const GLsizei                                         height,
-                const boost::shared_ptr<const GridTess>               tess,
-                const boost::shared_ptr<const GridField>              field,
-                const std::vector<RenderItem>&  render_items )
+Renderer::draw( const GLfloat*                            modelview,
+                const GLfloat*                            projection,
+                const GLsizei                             width,
+                const GLsizei                             height,
+                const boost::shared_ptr<const GridTess>   tess,
+                const boost::shared_ptr<const GridField>  field,
+                GLTexture&                                color_map,
+                const std::vector<RenderItem>&            render_items )
 {
 
     
@@ -113,6 +114,8 @@ Renderer::draw( const GLfloat*                                        modelview,
     else {
         glBindTexture( GL_TEXTURE_BUFFER, 0 );
     }
+    glActiveTexture( GL_TEXTURE3 );
+    glBindTexture( GL_TEXTURE_1D, color_map.get() );
 
     // Bind vertex position VAO
     glBindVertexArray( tess->vertexPositonsAsVertexArrayObject() );

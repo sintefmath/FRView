@@ -100,7 +100,7 @@ FragmentList::render( GLuint                              fbo,
     glDepthFunc( GL_LESS );
     m_surface_renderer_solid.draw( glm::value_ptr( M ), projection,
                                    m_width, m_height,
-                                   tess, field, items );
+                                   tess, field, m_color_map, items );
     renderMiscellaneous( width, height,
                          local_to_world, modelview, projection,
                          items );
@@ -144,7 +144,7 @@ FragmentList::render( GLuint                              fbo,
         
         m_surface_renderer_transparent.draw( glm::value_ptr( M ), projection,
                                              m_width, m_height,
-                                             tess, field, items );
+                                             tess, field, m_color_map, items );
         
         glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
         glDepthMask( GL_TRUE );

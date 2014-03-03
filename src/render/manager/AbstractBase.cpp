@@ -30,9 +30,30 @@ AbstractBase::AbstractBase( const models::Appearance& appearance,
                             const GLsizei height )
     : m_width( width ),
       m_height( height ),
+      m_color_map( "color_map" ),
       m_appearance_revision( appearance.revision() ),
       m_shading_model( appearance.shadingModel() )
-{}
+{
+    std::vector<glm::vec3> ramp( 256 );
+    for(size_t i=0; i<ramp.size(); i++ ) {
+        float scalar = static_cast<float>(i)/static_cast<float>(ramp.size()-1);
+        
+        ramp[i] = glm::clamp( glm::sin( glm::vec3( 4.14f*(scalar - 0.5f),
+                                                   3.14f*(scalar),
+                                                   4.14f*(scalar + 0.5f) ) ),
+                              glm::vec3( 0.f ),
+                              glm::vec3( 1.f ) );
+    }
+    
+    glBindTexture( GL_TEXTURE_1D, m_color_map.get() );
+    glTexImage1D( GL_TEXTURE_1D, 0, GL_RGB, 256, 0, GL_RGB, GL_FLOAT, ramp.data() );
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_BASE_LEVEL, 0 );
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAX_LEVEL, 0 );
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture( GL_TEXTURE_1D, 0 );
+}
     
 AbstractBase::~AbstractBase()
 {
