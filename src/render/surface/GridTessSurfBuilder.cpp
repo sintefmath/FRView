@@ -198,15 +198,6 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
             glUseProgram( m_meta_prog.get() );
             glUniform1i( m_meta_loc_flip, flip_faces ? GL_TRUE : GL_FALSE );
 
-            //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_meta_counters );
-            //glClearBufferData( GL_ATOMIC_COUNTER_BUFFER,
-            //                   GL_R32UI,
-            //                   GL_RED,
-            //                   GL_UNSIGNED_INT,
-            //                   NULL );
-            //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
-            //glBindBufferBase( GL_ATOMIC_COUNTER_BUFFER, 0, m_meta_counters );
-
             glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, m_meta_xfb.get() );
             glBeginTransformFeedback( GL_POINTS );
             for( uint i=0; i<SURFACE_N; i++ ) {
@@ -220,20 +211,6 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
             redo_meta = false;
             redo_triangulate = true;
 
-            //std::vector<GLuint> foo(6);
-            //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_meta_counters );
-            //glGetBufferSubData( GL_ATOMIC_COUNTER_BUFFER,
-            //                    0,
-            //                    24,
-            //                    foo.data() );
-            //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
-            //std::cerr << "FOO: "
-            //          << foo[0] << "\t"
-            //          << foo[1] << "\t"
-            //          << foo[2] << "\t"
-            //          << foo[3] << "\t"
-            //          << foo[4] << "\t"
-            //          << foo[5] << "\n";
         }
 
         // --- then, triangulate all the surfaces
@@ -246,7 +223,14 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
                     glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, surfaces[i]->indicesTransformFeedbackObject() );
                     glBeginQuery( GL_PRIMITIVES_GENERATED, surfaces[i]->indicesCountQuery() );
                     glBeginTransformFeedback( GL_POINTS );
+                    
+                    // The following call seems to invoke 'GL_INVALID_OPERATION
+                    // error generated. Transform feedback object not valid for
+                    // draw.'. Not sure why. If replaced with drawArrays using
+                    // count from queries, we get no error. Result seems to be
+                    // sane regardless of error.
                     glDrawTransformFeedbackStream( GL_POINTS, m_meta_xfb.get(), i );
+
                     glEndTransformFeedback( );
                     glEndQuery( GL_PRIMITIVES_GENERATED );
                 }
