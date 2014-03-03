@@ -463,7 +463,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         }
         dataset::Project<float>::Solution sol;
         if( m_project->solution( sol, m_solution_index, m_report_step_index ) ) {
-            if( m_async_reader->issueReadSolution( sol ) ) {
+            if( m_async_reader->issueReadSolution( m_project, sol ) ) {
             }
         }
     }
@@ -473,7 +473,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         m_report_step_index = value;
         dataset::Project<float>::Solution sol;
         if( m_project->solution( sol, m_solution_index, m_report_step_index ) ) {
-            if( m_async_reader->issueReadSolution( sol ) ) {
+            if( m_async_reader->issueReadSolution( m_project, sol ) ) {
             }
         }
     }

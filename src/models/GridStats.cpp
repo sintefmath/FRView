@@ -101,7 +101,7 @@ GridStats::update( boost::shared_ptr<dataset::Project<float> > project,
 
     o.str("");
     o << na << " (";
-    if( na == 0 ) {
+    if( (na == 0) || (nx==0)|| (ny==0)|| (nz==0) ) {
         o << "n/a";
     }
     else {

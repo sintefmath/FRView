@@ -27,6 +27,7 @@
 #include "eclipse/EclipseParser.hpp"
 #include "cornerpoint/Tessellator.hpp"
 #include "dataset/FooBarParser.hpp"
+#include "dataset/VTKXMLSource.hpp"
 #include "render/GridTessBridge.hpp"
 #include "render/GridFieldBridge.hpp"
 
@@ -72,7 +73,15 @@ Project<REAL>::Project(const std::string filename,
       *it = toupper( *it );
     }
 
-    if( suffix == "GTXT" ) {
+    if( suffix == "VTU" ) {
+        File file;
+        file.m_filetype = VTK_XML_VTU_FILE;
+        file.m_timestep = -1;
+        file.m_path     = filename;
+        m_unprocessed_files.push_front( file );
+        LOGGER_DEBUG( log, "Found VTU file" );
+    }
+    else if( suffix == "GTXT" ) {
         File file;
         file.m_filetype = FOOBAR_TXT_GRID_FILE;
         file.m_timestep = -1;
@@ -285,6 +294,24 @@ Project<REAL>::bakeCornerpointGeometry()
 #endif
 }
 
+
+template<typename REAL>
+REAL
+Project<REAL>::cornerPointXYScale() const {
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        return m_cornerpoint_geometry.m_xyscale;
+    }
+    return 1.f;
+}
+
+template<typename REAL>
+REAL
+Project<REAL>::cornerPointZScale() const {
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        return m_cornerpoint_geometry.m_zscale;
+    }
+    return 1.f;
+}
 
 template<typename REAL>
 void
@@ -528,6 +555,31 @@ Project<REAL>::refresh( int rx, int ry, int rz )
 //                m_geometry_set = true;
                 break;
             }
+            else if( it->m_filetype == VTK_XML_VTU_FILE ) {
+                try {
+                    
+                    m_polyhedral_mesh_source.reset( new VTKXMLSource( it->m_path ) );
+                    m_geometry_type = GEOMETRY_POLYHEDRAL_MESH;
+
+                    /*std::vector<float>  vertices;
+                    std::vector<int>    tetrahedra;
+                    
+                    VtkXmlParser::parse( vertices, tetrahedra, it->m_path );
+                    
+                    LOGGER_DEBUG( log, "Parsed VTU file Nv=" << (vertices.size()/3) 
+                                  << ", Nt=" << (tetrahedra.size()/4) );
+
+                    m_tetrahedral_geometry.m_vertices.swap( vertices );
+                    m_tetrahedral_geometry.m_tetrahedra.swap( tetrahedra );
+                    */
+                }
+                catch( const std::runtime_error& e ) {
+                    LOGGER_ERROR( log, it->m_path << ": Parse error: " << e.what() );
+                }
+                m_unprocessed_files.erase( it );
+                break;
+            }
+            
         }
     }
     if( m_unprocessed_files.empty() ) {
@@ -884,6 +936,13 @@ template<typename REAL>
 unsigned int
 Project<REAL>::solutions() const
 {
+    if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
+        if( m_polyhedral_mesh_source ) {
+            Logger log = getLogger( "FOOBARZ" );
+            LOGGER_DEBUG( log,m_polyhedral_mesh_source->fields() );
+            return m_polyhedral_mesh_source->fields();
+        }
+    }
     return m_solution_names.size();
 }
 
@@ -891,6 +950,14 @@ template<typename REAL>
 const std::string&
 Project<REAL>::solutionName( unsigned int name_index ) const
 {
+    if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
+        if( m_polyhedral_mesh_source ) {
+            Logger log = getLogger( "FOOBART" );
+            LOGGER_DEBUG( log,m_polyhedral_mesh_source->fieldName( name_index ));
+            
+            return m_polyhedral_mesh_source->fieldName( name_index );
+        }
+    }
     return m_solution_names.at( name_index );
 }
 
@@ -905,21 +972,36 @@ template<typename REAL>
 unsigned int
 Project<REAL>::nx() const
 {
-    return m_cornerpoint_geometry.m_rx*m_cornerpoint_geometry.m_nx;
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        return m_cornerpoint_geometry.m_rx*m_cornerpoint_geometry.m_nx;
+    }
+    else {
+        return 1;
+    }
 }
 
 template<typename REAL>
 unsigned int
 Project<REAL>::ny() const
 {
-    return m_cornerpoint_geometry.m_ry*m_cornerpoint_geometry.m_ny;
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        return m_cornerpoint_geometry.m_ry*m_cornerpoint_geometry.m_ny;
+    }
+    else {
+        return 1;
+    }
 }
 
 template<typename REAL>
 unsigned int
 Project<REAL>::nz() const
 {
-    return m_cornerpoint_geometry.m_rz*m_cornerpoint_geometry.m_nz;
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        return m_cornerpoint_geometry.m_rz*m_cornerpoint_geometry.m_nz;
+    }
+    else {
+        return m_polyhedral_mesh_source->activeCells();
+    }
 }
 
 
@@ -1013,16 +1095,29 @@ Project<REAL>::solution( Solution& solution,
                          const uint report_step )
 {
     Logger log = getLogger( package + ".solution" );
-    if( solution_ix >= m_solution_names.size() ) {
-        LOGGER_ERROR( log, "Illegal solution index " << solution_ix );
-        return false;
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        if( solution_ix >= m_solution_names.size() ) {
+            LOGGER_ERROR( log, "Illegal solution index " << solution_ix );
+            return false;
+        }
+        if( report_step >= m_report_steps.size() ) {
+            LOGGER_ERROR( log, "Illegal report step " << report_step );
+            return false;
+        }
+        solution = m_report_steps[ report_step ].m_solutions[ solution_ix ];
+        return true;
     }
-    if( report_step >= m_report_steps.size() ) {
-        LOGGER_ERROR( log, "Illegal report step " << report_step );
-        return false;
+    else if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
+        if( m_polyhedral_mesh_source
+                && (report_step == 0)
+                && (solution_ix < m_polyhedral_mesh_source->fields() ) )
+        {
+            solution.m_reader = READER_FROM_SOURCE;
+            solution.m_location.m_source_index = solution_ix;
+            return true;
+        }
     }
-    solution = m_report_steps[ report_step ].m_solutions[ solution_ix ];
-    return true;
+    return false;
 }
 
 template<typename REAL>

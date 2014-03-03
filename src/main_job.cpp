@@ -17,6 +17,7 @@
 
 #include <GL/glew.h>
 #include <string>
+#include <clocale>
 #include <list>
 #include <tinia/qtcontroller/QTController.hpp>
 
@@ -30,6 +31,11 @@ namespace resources {
 int
 main( int argc, char** argv )
 {
+    // Make sure that text-based data sources are parsed in a predictable
+    // manner, in particular, let the decimal point be '.'.  As this function
+    // is rather thread-unsafe, we call it here before any threads are created.
+    std::setlocale( LC_ALL, "C" );
+
     initializeLoggingFramework( &argc, argv );
     std::list<std::string> files;
     for(int i=1; i<argc; i++ ) {

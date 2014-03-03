@@ -23,6 +23,11 @@ namespace render {
     class GridTess;
     class GridField;
 
+    
+/** Bridge between field source and GPU representation.    
+ *
+ * \note When source populates values, it must also set min and max value.
+ */
 class GridFieldBridge : public boost::noncopyable
 {
     friend class GridField;

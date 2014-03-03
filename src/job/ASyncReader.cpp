@@ -18,6 +18,7 @@
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "cornerpoint/Tessellator.hpp"
+#include "dataset/PolyhedralMeshSource.hpp"
 #include "eclipse/EclipseReader.hpp"
 #include "utils/PerfTimer.hpp"
 
@@ -55,10 +56,12 @@ ASyncReader::issueReadProject( const std::string& file,
 }
 
 bool
-ASyncReader::issueReadSolution( const dataset::Project<float>::Solution& solution_location )
+ASyncReader::issueReadSolution( const boost::shared_ptr< dataset::Project<float> > project,
+                                const dataset::Project<float>::Solution& solution_location )
 {
     Command cmd;
     cmd.m_type = Command::READ_SOLUTION;
+    cmd.m_project = project;
     cmd.m_solution_location = solution_location;
     postCommand( cmd );
     return true;
@@ -163,6 +166,22 @@ ASyncReader::handleReadProject( const Command& cmd )
             rsp.m_project_grid = tess_bridge;
             postResponse( cmd, rsp );
         }
+        else if( project->geometryType() == dataset::Project<float>::GEOMETRY_POLYHEDRAL_MESH ) {
+            boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
+            m_field_remap = project->fieldRemap();
+            
+            project->source()->tessellation( *tess_bridge, m_model );
+            m_model->updateElement<std::string>( "asyncreader_what", "Organizing data..." );
+            m_model->updateElement<int>( "asyncreader_progress", 0 );
+            tess_bridge->process();
+            
+            Response rsp;
+            rsp.m_type = Response::PROJECT;
+            rsp.m_project = project;
+            rsp.m_project_grid = tess_bridge;
+            postResponse( cmd, rsp );
+        }
+        
         else {
             m_model->updateElement<std::string>( "asyncreader_what", "Unsupported geometry type" );
             sleep(2);
@@ -208,7 +227,17 @@ ASyncReader::handleReadSolution( const Command& cmd )
                                  rsp.m_solution->maximum(),
                                  cmd.m_solution_location.m_location.m_unformatted_eclipse );
         }
-
+    }
+    else if( cmd.m_solution_location.m_reader == dataset::Project<float>::READER_FROM_SOURCE ) {
+        try {
+            rsp.m_solution.reset( new render::GridFieldBridge( cmd.m_project->source()->activeCells() ) );
+            cmd.m_project->source()->field( *rsp.m_solution.get(),
+                                            cmd.m_solution_location.m_location.m_source_index );
+            rsp.m_type = Response::SOLUTION;
+        }
+        catch( std::runtime_error& e ) {
+            LOGGER_ERROR( log, "Caught runtime error: " << e.what() );
+        }
     }
     else {
         LOGGER_ERROR( log, "Unsupported solution format" );

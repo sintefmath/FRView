@@ -17,6 +17,7 @@
 
 #include <list>
 #include <string>
+#include <clocale>
 #include <tinia/trell/IPCGLJobController.hpp>
 #include "utils/Logger.hpp"
 #include "job/FRViewJob.hpp"
@@ -28,6 +29,11 @@ namespace resources {
 int
 main( int argc, char** argv )
 {
+    // Make sure that text-based data sources are parsed in a predictable
+    // manner, in particular, let the decimal point be '.'.  As this function
+    // is rather thread-unsafe, we call it here before any threads are created.
+    std::setlocale( LC_ALL, "C" );
+    
     bool is_master = (argc > 2) && (strcmp( argv[1], argv[2] ) == 0 );
     if( is_master ){
         std::cerr << "Is master.\n";

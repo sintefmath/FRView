@@ -19,11 +19,14 @@
 #include <string>
 #include <list>
 #include <vector>
+#include <memory>
 #include <boost/utility.hpp>
 #include <unordered_map>
 #include "eclipse/Eclipse.hpp"
 
 namespace dataset {
+    class PolyhedralMeshSource;
+
 
 template<typename REAL>
 class Project : public boost::noncopyable
@@ -31,7 +34,8 @@ class Project : public boost::noncopyable
 public:
     enum GeometryType {
         GEOMETRY_NONE,
-        GEOMETRY_CORNERPOINT_GRID
+        GEOMETRY_CORNERPOINT_GRID,
+        GEOMETRY_POLYHEDRAL_MESH
     };
 
     Project(const std::string filename,
@@ -120,11 +124,14 @@ public:
 
 
     REAL
-    cornerPointXYScale() const { return m_cornerpoint_geometry.m_xyscale; }
+    cornerPointXYScale() const;
 
     REAL
-    cornerPointZScale() const { return m_cornerpoint_geometry.m_zscale; }
+    cornerPointZScale() const;
 
+
+    // -------------------------------------------------------------------------
+    
     struct Well
     {
         bool                                        m_defined;
@@ -141,15 +148,23 @@ public:
 
     enum SolutionReader {
         READER_NONE,
-        READER_UNFORMATTED_ECLIPSE
+        READER_UNFORMATTED_ECLIPSE,
+        READER_FROM_SOURCE // Let source class handle reading
     };
     struct Solution {
         SolutionReader                              m_reader;
         std::string                                 m_path;
         union {
             eclipse::Block                          m_unformatted_eclipse;
+            size_t                                  m_source_index;
         }                                           m_location;
     };
+
+    std::shared_ptr<PolyhedralMeshSource>
+    source() { return m_polyhedral_mesh_source; }
+    
+    const std::shared_ptr<PolyhedralMeshSource>
+    source() const { return m_polyhedral_mesh_source; }
 
     const std::vector<int>&
     fieldRemap() const { return m_cornerpoint_geometry.m_refine_map_compact; }
@@ -164,6 +179,7 @@ private:
         ECLIPSE_EGRID_FILE,
         FOOBAR_GRID_FILE,
         FOOBAR_TXT_GRID_FILE,
+        VTK_XML_VTU_FILE,
         ECLIPSE_RESTART_FILE,
         ECLIPSE_UNIFIED_RESTART_FILE
     };
@@ -189,6 +205,12 @@ private:
         std::vector<int>                                m_refine_map_compact;
     }                                               m_cornerpoint_geometry;
 
+    struct {
+        std::vector<REAL>                               m_vertices;
+        std::vector<int>                                m_tetrahedra;
+    }                                               m_tetrahedral_geometry;
+            
+    
     struct ReportStep {
         unsigned int                                m_seqnum;
         std::string                                 m_date;
@@ -206,6 +228,9 @@ private:
     std::vector<ReportStep>                         m_report_steps;
     std::list<File>                                 m_unprocessed_files;
 
+    std::shared_ptr<PolyhedralMeshSource>   m_polyhedral_mesh_source;
+    
+    
     void
     refineCornerpointGeometry( unsigned int rx,
                                unsigned int ry,
