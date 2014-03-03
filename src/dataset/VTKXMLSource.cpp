@@ -252,6 +252,22 @@ end_element( void* user_data, const xmlChar* name )
     std::vector<int>   int_buffer;
     if( tag.m_handle_chars != Tag::CHARACTER_IGNORE ) {
         tag.m_char_buffer.push_back( '\0' ); // zero-terminate string
+        
+#ifdef DEBUG
+        int tokens = 0;
+        int nonprint = 0;
+        int zerobytes = 0;
+        int checksum = 0;
+        for(size_t i=0; i<tag.m_char_buffer.size(); i++ ) {
+            checksum = (13*checksum + tag.m_char_buffer[i])&0xffff;
+            if( tag.m_char_buffer[i] == '\0' ) {
+                zerobytes++;
+            }
+            else if( (tag.m_char_buffer[i] < 9 ) || (tag.m_char_buffer[i] > 126 ) ) {
+                nonprint++;
+            }
+        }
+ #endif       
         char* p = tag.m_char_buffer.data();
         char* e = p+1;
         switch ( tag.m_handle_chars ) {
@@ -271,6 +287,9 @@ end_element( void* user_data, const xmlChar* name )
                 }
                 else {
                     float_buffer.push_back( v );
+#ifdef DEBUG
+                    tokens++;
+#endif
                     p = e;
                 }
             }
@@ -290,11 +309,22 @@ end_element( void* user_data, const xmlChar* name )
                 }
                 else {
                     int_buffer.push_back( v );
+#ifdef DEBUG
+                    tokens++;
+#endif
                     p = e;
                 }
             }
             break;
         }
+#ifdef DEBUG
+        LOGGER_DEBUG( cbd->m_log, "Parsed character data: " <<
+                      tag.m_char_buffer.size() << " characters, " <<
+                      tokens << " tokens, " <<
+                      nonprint << " non-printable chars, " <<
+                      zerobytes << " zero-bytes, checksum=" <<
+                      checksum );
+#endif
     }
     
     // --- perform action on closing of tag ------------------------------------

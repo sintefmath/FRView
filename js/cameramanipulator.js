@@ -329,7 +329,7 @@ MouseClickResponder.prototype = {
         var x = event.relativeX;
         var y = event.relativeY;
         this.m_manipulator.setStateNone( x, y );
-        this.pushMatrices();
+        //this.pushMatrices();
     },
     pushMatrices: function() {
         var viewer = this.m_model.getElementValue( this.m_key );

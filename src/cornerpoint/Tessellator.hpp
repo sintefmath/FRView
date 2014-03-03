@@ -42,7 +42,7 @@ public:
     static const Orientation ORIENTATION_I = Tessellation::ORIENTATION_I;
     static const Orientation ORIENTATION_J = Tessellation::ORIENTATION_J;
     static const Orientation ORIENTATION_K = Tessellation::ORIENTATION_K;
-    static const Index IllegalIndex = (~(Index)0u);
+    static const Index IllegalIndex;
     /** @} */
 
     /** Constructor, attaches itself to an empty tessellation. */
