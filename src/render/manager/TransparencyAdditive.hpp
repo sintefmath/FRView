@@ -1,4 +1,4 @@
-/* Copyright STIFTELSEN SINTEF 2014
+/* Copyright STIFTELSEN SINTEF 2013
  * 
  * This file is part of FRView.
  * FRView is free software: you can redistribute it and/or modify
@@ -16,19 +16,22 @@
  */
 
 #pragma once
-#include "render/screen/FragmentList.hpp"
+#include <GL/glew.h>
+#include "render/ManagedGL.hpp"
+#include "render/surface/Renderer.hpp"
+#include "render/manager/AbstractBase.hpp"
 
 namespace render {
-    namespace screen {
+    namespace manager {
 
-class OrderIndependentTransparency : public FragmentList
+class TransparencyAdditive : public AbstractBase
 {
 public:
-    OrderIndependentTransparency( const GLsizei width, const GLsizei height );
+    TransparencyAdditive( const GLsizei width, const GLsizei height );
     
-    ~OrderIndependentTransparency();
-
-/*    void
+    ~TransparencyAdditive();
+    
+    void
     render( GLuint                              fbo,
             const GLsizei                       width,
             const GLsizei                       height,
@@ -37,19 +40,32 @@ public:
             const GLfloat*                      projection,
             boost::shared_ptr<const GridTess>   tess,
             boost::shared_ptr<const GridField>  field,
-            const std::vector<RenderItem>&      items );    */
-    
+            const std::vector<RenderItem>&      items );  
 protected:
-    GLProgram           m_fsq_prog;
+    surface::Renderer   m_surface_renderer;
+    GLint               m_surface_renderer_solid_pass;
+
+    GLFramebuffer       m_fbo_solid;
+    GLFramebuffer       m_fbo_weighted_sum_transparent;
+    
+    GLTexture           m_solid_color_tex;
+    GLTexture           m_transparent_color_tex;
+    GLTexture           m_depth_tex;
+    
     GLVertexArrayObject m_fsq_vao;
     GLBuffer            m_fsq_buf;
 
-    void
-    processFragments( GLuint        fbo,
-                      const GLsizei width,
-                      const GLsizei height );
+    GLProgram           m_pass_weighted_sum_merge_m_program;
 
+
+    void
+    buildShaders();
+    
+    void
+    resize( const GLsizei width, const GLsizei height );
+    
 };
+    
     
     } // of namespace screen
 } // of namespace render

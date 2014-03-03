@@ -19,11 +19,11 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "utils/Logger.hpp"
 #include "utils/GLSLTools.hpp"
-#include "render/screen/TransparencyAdditive.hpp"
+#include "render/manager/TransparencyAdditive.hpp"
 
 
 namespace render {
-    namespace screen {
+    namespace manager {
         namespace glsl {
             extern const std::string TransparencyAdditive_geo_fs;
             extern const std::string TransparencyAdditive_vs;

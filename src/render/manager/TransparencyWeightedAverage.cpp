@@ -19,12 +19,12 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "utils/Logger.hpp"
 #include "utils/GLSLTools.hpp"
-#include "render/screen/TransparencyWeightedAverage.hpp"
+#include "render/manager/TransparencyWeightedAverage.hpp"
 
 
 namespace render {
 
-namespace screen {
+namespace manager {
         namespace glsl {
             extern const std::string TransparencyWeightedAverage_geo_fs;
             extern const std::string TransparencyWeightedAverage_vs;

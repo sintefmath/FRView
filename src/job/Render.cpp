@@ -30,10 +30,10 @@
 #include "render/CoordSysRenderer.hpp"
 #include "render/rlgen/GridVoxelization.hpp"          // move to renderlist
 #include "render/rlgen/VoxelSurface.hpp"  // move to renderlist
-#include "render/screen/TransparencyNone.hpp"
-#include "render/screen/TransparencyAdditive.hpp"
-#include "render/screen/TransparencyWeightedAverage.hpp"
-#include "render/screen/OrderIndependentTransparency.hpp"
+#include "render/manager/OnlySolid.hpp"
+#include "render/manager/TransparencyAdditive.hpp"
+#include "render/manager/TransparencyWeightedAverage.hpp"
+#include "render/manager/OrderIndependentTransparency.hpp"
 #include "render/RenderItem.hpp"
 
 void
@@ -186,34 +186,34 @@ FRViewJob::render( const float*  projection,
         switch ( m_appearance.renderQuality() ) {
         case 0:
             if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyNone)) )
+                    (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyNone)) )
             {
-                m_screen_manager.reset( new render::screen::TransparencyNone );
+                m_screen_manager.reset( new render::manager::TransparencyNone );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;
         case 1:
             if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyAdditive)) )
+                    (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyAdditive)) )
             {
-                m_screen_manager.reset( new render::screen::TransparencyAdditive( width, height ) );
+                m_screen_manager.reset( new render::manager::TransparencyAdditive( width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;
         case 2:
             if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyWeightedAverage)) )
+                    (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyWeightedAverage)) )
             {
-                m_screen_manager.reset( new render::screen::TransparencyWeightedAverage( width, height ) );
+                m_screen_manager.reset( new render::manager::TransparencyWeightedAverage( width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;
         case 3:
         default:
             if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::screen::OrderIndependentTransparency)) )
+                    (typeid(*m_screen_manager.get()) != typeid(render::manager::OrderIndependentTransparency)) )
             {
-                m_screen_manager.reset( new render::screen::OrderIndependentTransparency( width, height ) );
+                m_screen_manager.reset( new render::manager::OrderIndependentTransparency( width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;

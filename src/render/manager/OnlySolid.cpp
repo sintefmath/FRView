@@ -17,18 +17,18 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "render/screen/TransparencyNone.hpp"
+#include "render/manager/OnlySolid.hpp"
 
 
 namespace render {
-    namespace screen {
+    namespace manager {
         namespace glsl {
-            extern const std::string TransparencyNone_geo_fs;
+            extern const std::string OnlySolid_geo_fs;
         }
 
 
 TransparencyNone::TransparencyNone()
-    : m_surface_renderer( glsl::TransparencyNone_geo_fs )
+    : m_surface_renderer( glsl::OnlySolid_geo_fs )
 {}
     
 TransparencyNone::~TransparencyNone()

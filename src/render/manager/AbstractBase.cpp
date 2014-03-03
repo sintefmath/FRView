@@ -19,20 +19,20 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "render/wells/Representation.hpp"
-#include "render/screen/Transparency.hpp"
+#include "render/manager/AbstractBase.hpp"
 
 
 namespace render {
-    namespace screen {
+    namespace manager {
 
 
-Transparency::~Transparency()
+AbstractBase::~AbstractBase()
 {
 }
 
 
 void
-Transparency::renderMiscellaneous( const GLsizei                       width,
+AbstractBase::renderMiscellaneous( const GLsizei                       width,
                                    const GLsizei                       height,
                                    const GLfloat*                      local_to_world,
                                    const GLfloat*                      modelview,
@@ -63,7 +63,7 @@ Transparency::renderMiscellaneous( const GLsizei                       width,
 }
 
 void
-Transparency::renderOverlay( const GLsizei                       width,
+AbstractBase::renderOverlay( const GLsizei                       width,
                              const GLsizei                       height,
                              const GLfloat*                      local_to_world,
                              const GLfloat*                      modelview,

@@ -17,10 +17,10 @@
 
 #include "utils/Logger.hpp"
 #include "utils/GLSLTools.hpp"
-#include "render/screen/OrderIndependentTransparency.hpp"
+#include "render/manager/OrderIndependentTransparency.hpp"
 
 namespace render {
-    namespace screen {
+    namespace manager {
         namespace glsl {
             extern const std::string OrderIndependentTransparency_vs;
             extern const std::string OrderIndependentTransparency_fs;

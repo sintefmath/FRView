@@ -1,4 +1,4 @@
-/* Copyright STIFTELSEN SINTEF 2014
+/* Copyright STIFTELSEN SINTEF 2013
  * 
  * This file is part of FRView.
  * FRView is free software: you can redistribute it and/or modify
@@ -17,19 +17,24 @@
 
 #pragma once
 #include <GL/glew.h>
-#include "render/surface/Renderer.hpp"
-#include "render/screen/Transparency.hpp"
+#include <boost/utility.hpp>
+#include <boost/shared_ptr.hpp>
+#include <render/RenderItem.hpp>
+#include <render/wells/Renderer.hpp>
 
 namespace render {
-    namespace screen {
+    class GridTess;
+    class GridField;
 
-class FragmentList : public Transparency
+    namespace manager {
+
+class AbstractBase : public boost::noncopyable
 {
 public:
-    FragmentList( const GLsizei width, const GLsizei height );
    
-    ~FragmentList();
-
+    virtual
+    ~AbstractBase();
+     
     virtual
     void
     render( GLuint                              fbo,
@@ -40,36 +45,31 @@ public:
             const GLfloat*                      projection,
             boost::shared_ptr<const GridTess>   tess,
             boost::shared_ptr<const GridField>  field,
-            const std::vector<RenderItem>&      items );    
+            const std::vector<RenderItem>&      items ) = 0;
+    
+    
 protected:
-    void
-    resizeFragmentBuffers( );
+    GLsizei     m_width;
+    GLsizei     m_height;
     
-    void
-    resizeScreenSizedBuffers();
-    
-    virtual
-    void
-    processFragments( GLuint        fbo,
-                      const GLsizei width,
-                      const GLsizei height ) = 0;
-    
-    
-    surface::Renderer   m_surface_renderer_solid;
-    surface::Renderer   m_surface_renderer_transparent;
-    GLint               m_texbuf_max_texels;
-    GLint               m_fragment_alloc;   ///< Number of fragments allocated.
-    GLint               m_fragment_alloc_loc;
-    GLBuffer            m_status_ubo;
-    GLBuffer            m_fragment_counter_buf; ///< Counts the fragments.
-    GLBuffer            m_fragment_counter_readback_buf;
-    GLBuffer            m_fragment_rgba_buf;    //
-    GLTexture           m_fragment_rgba_tex;
-    GLBuffer            m_fragment_node_buf;    // list next pointers RG32I
-    GLTexture           m_fragment_node_tex;
-    GLTexture           m_fragment_head_tex;    // width x height list headers, R32I
-    GLFramebuffer       m_fragment_head_fbo;
+    wells::WellRenderer     m_well_renderer;
 
+    void
+    renderMiscellaneous( const GLsizei                       width,
+                         const GLsizei                       height,
+                         const GLfloat*                      local_to_world,
+                         const GLfloat*                      modelview,
+                         const GLfloat*                      projection,
+                         const std::vector<RenderItem>&      items );
+    
+    void
+    renderOverlay( const GLsizei                       width,
+                   const GLsizei                       height,
+                   const GLfloat*                      local_to_world,
+                   const GLfloat*                      modelview,
+                   const GLfloat*                      projection,
+                   const std::vector<RenderItem>&      items );
+    
 };
     
     

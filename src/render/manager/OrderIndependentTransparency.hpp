@@ -1,4 +1,4 @@
-/* Copyright STIFTELSEN SINTEF 2013
+/* Copyright STIFTELSEN SINTEF 2014
  * 
  * This file is part of FRView.
  * FRView is free software: you can redistribute it and/or modify
@@ -16,21 +16,19 @@
  */
 
 #pragma once
-#include <GL/glew.h>
-#include "render/surface/Renderer.hpp"
-#include "render/screen/Transparency.hpp"
+#include "render/manager/FragmentList.hpp"
 
 namespace render {
-    namespace screen {
+    namespace manager {
 
-class TransparencyNone : public Transparency
+class OrderIndependentTransparency : public FragmentList
 {
 public:
-    TransparencyNone();
-   
-    ~TransparencyNone();
+    OrderIndependentTransparency( const GLsizei width, const GLsizei height );
+    
+    ~OrderIndependentTransparency();
 
-    void
+/*    void
     render( GLuint                              fbo,
             const GLsizei                       width,
             const GLsizei                       height,
@@ -39,11 +37,19 @@ public:
             const GLfloat*                      projection,
             boost::shared_ptr<const GridTess>   tess,
             boost::shared_ptr<const GridField>  field,
-            const std::vector<RenderItem>&      items );    
-protected:
-    surface::Renderer   m_surface_renderer;
-};
+            const std::vector<RenderItem>&      items );    */
     
+protected:
+    GLProgram           m_fsq_prog;
+    GLVertexArrayObject m_fsq_vao;
+    GLBuffer            m_fsq_buf;
+
+    void
+    processFragments( GLuint        fbo,
+                      const GLsizei width,
+                      const GLsizei height );
+
+};
     
     } // of namespace screen
 } // of namespace render

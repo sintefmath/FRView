@@ -1,4 +1,4 @@
-/* Copyright STIFTELSEN SINTEF 2013
+/* Copyright STIFTELSEN SINTEF 2014
  * 
  * This file is part of FRView.
  * FRView is free software: you can redistribute it and/or modify
@@ -17,20 +17,20 @@
 
 #pragma once
 #include <GL/glew.h>
-#include "render/ManagedGL.hpp"
 #include "render/surface/Renderer.hpp"
-#include "render/screen/Transparency.hpp"
+#include "render/manager/AbstractBase.hpp"
 
 namespace render {
-    namespace screen {
+    namespace manager {
 
-class TransparencyAdditive : public Transparency
+class FragmentList : public AbstractBase
 {
 public:
-    TransparencyAdditive( const GLsizei width, const GLsizei height );
-    
-    ~TransparencyAdditive();
-    
+    FragmentList( const GLsizei width, const GLsizei height );
+   
+    ~FragmentList();
+
+    virtual
     void
     render( GLuint                              fbo,
             const GLsizei                       width,
@@ -40,30 +40,36 @@ public:
             const GLfloat*                      projection,
             boost::shared_ptr<const GridTess>   tess,
             boost::shared_ptr<const GridField>  field,
-            const std::vector<RenderItem>&      items );  
+            const std::vector<RenderItem>&      items );    
 protected:
-    surface::Renderer   m_surface_renderer;
-    GLint               m_surface_renderer_solid_pass;
-
-    GLFramebuffer       m_fbo_solid;
-    GLFramebuffer       m_fbo_weighted_sum_transparent;
-    
-    GLTexture           m_solid_color_tex;
-    GLTexture           m_transparent_color_tex;
-    GLTexture           m_depth_tex;
-    
-    GLVertexArrayObject m_fsq_vao;
-    GLBuffer            m_fsq_buf;
-
-    GLProgram           m_pass_weighted_sum_merge_m_program;
-
-
     void
-    buildShaders();
+    resizeFragmentBuffers( );
     
     void
-    resize( const GLsizei width, const GLsizei height );
+    resizeScreenSizedBuffers();
     
+    virtual
+    void
+    processFragments( GLuint        fbo,
+                      const GLsizei width,
+                      const GLsizei height ) = 0;
+    
+    
+    surface::Renderer   m_surface_renderer_solid;
+    surface::Renderer   m_surface_renderer_transparent;
+    GLint               m_texbuf_max_texels;
+    GLint               m_fragment_alloc;   ///< Number of fragments allocated.
+    GLint               m_fragment_alloc_loc;
+    GLBuffer            m_status_ubo;
+    GLBuffer            m_fragment_counter_buf; ///< Counts the fragments.
+    GLBuffer            m_fragment_counter_readback_buf;
+    GLBuffer            m_fragment_rgba_buf;    //
+    GLTexture           m_fragment_rgba_tex;
+    GLBuffer            m_fragment_node_buf;    // list next pointers RG32I
+    GLTexture           m_fragment_node_tex;
+    GLTexture           m_fragment_head_tex;    // width x height list headers, R32I
+    GLFramebuffer       m_fragment_head_fbo;
+
 };
     
     

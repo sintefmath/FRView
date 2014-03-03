@@ -19,12 +19,12 @@
 #include <GL/glew.h>
 #include "render/ManagedGL.hpp"
 #include "render/surface/Renderer.hpp"
-#include "render/screen/Transparency.hpp"
+#include "render/manager/AbstractBase.hpp"
 
 namespace render {
-    namespace screen {
+    namespace manager {
 
-class TransparencyWeightedAverage : public Transparency
+class TransparencyWeightedAverage : public AbstractBase
 {
 public:
     TransparencyWeightedAverage( const GLsizei width, const GLsizei height );

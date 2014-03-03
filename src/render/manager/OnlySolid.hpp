@@ -17,25 +17,19 @@
 
 #pragma once
 #include <GL/glew.h>
-#include <boost/utility.hpp>
-#include <boost/shared_ptr.hpp>
-#include <render/RenderItem.hpp>
-#include <render/wells/Renderer.hpp>
+#include "render/surface/Renderer.hpp"
+#include "render/manager/AbstractBase.hpp"
 
 namespace render {
-    class GridTess;
-    class GridField;
+    namespace manager {
 
-    namespace screen {
-
-class Transparency : public boost::noncopyable
+class TransparencyNone : public AbstractBase
 {
 public:
+    TransparencyNone();
    
-    virtual
-    ~Transparency();
-     
-    virtual
+    ~TransparencyNone();
+
     void
     render( GLuint                              fbo,
             const GLsizei                       width,
@@ -45,31 +39,9 @@ public:
             const GLfloat*                      projection,
             boost::shared_ptr<const GridTess>   tess,
             boost::shared_ptr<const GridField>  field,
-            const std::vector<RenderItem>&      items ) = 0;
-    
-    
+            const std::vector<RenderItem>&      items );    
 protected:
-    GLsizei     m_width;
-    GLsizei     m_height;
-    
-    wells::WellRenderer     m_well_renderer;
-
-    void
-    renderMiscellaneous( const GLsizei                       width,
-                         const GLsizei                       height,
-                         const GLfloat*                      local_to_world,
-                         const GLfloat*                      modelview,
-                         const GLfloat*                      projection,
-                         const std::vector<RenderItem>&      items );
-    
-    void
-    renderOverlay( const GLsizei                       width,
-                   const GLsizei                       height,
-                   const GLfloat*                      local_to_world,
-                   const GLfloat*                      modelview,
-                   const GLfloat*                      projection,
-                   const std::vector<RenderItem>&      items );
-    
+    surface::Renderer   m_surface_renderer;
 };
     
     

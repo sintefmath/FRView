@@ -27,6 +27,9 @@ static const string render_clipplane_key = "render_clip_plane";
 static const string render_grid_key = "_render_grid";
 static const string render_wells_key = "_render_wells";
 static const string line_thickness_key = "_line_thickness";
+
+static const string shading_model_key = "shading_model_key";
+
 static const std::string appearance_title_key       = "appearance_title";
 static const std::string render_quality_key             = "render_quality";
 static const std::string render_quality_string_key      = "render_quality_string";

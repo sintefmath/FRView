@@ -18,10 +18,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "utils/Logger.hpp"
-#include "render/screen/FragmentList.hpp"
+#include "render/manager/FragmentList.hpp"
 
 namespace render {
-    namespace screen {
+    namespace manager {
         namespace glsl {
             extern const std::string FragmentList_geo_solid_fs;
             extern const std::string FragmentList_geo_transparent_fs;
