@@ -21,17 +21,24 @@
 #include <boost/shared_ptr.hpp>
 #include <render/RenderItem.hpp>
 #include <render/wells/Renderer.hpp>
+#include <models/Appearance.hpp>
 
+namespace models {
+    class Appearance;
+}
 namespace render {
     class GridTess;
     class GridField;
-
+    
     namespace manager {
 
 class AbstractBase : public boost::noncopyable
 {
 public:
-   
+    AbstractBase( const models::Appearance& appearance,
+                  const GLsizei width,
+                  const GLsizei height );
+    
     virtual
     ~AbstractBase();
      
@@ -47,13 +54,27 @@ public:
             boost::shared_ptr<const GridField>  field,
             const std::vector<RenderItem>&      items ) = 0;
     
+    /** Checks if object is compatible with current appearance settings.
+     *
+     * \returns True if object need to be re-created.
+     */
+    virtual
+    bool
+    expired( const models::Appearance& appearance );
     
 protected:
-    GLsizei     m_width;
-    GLsizei     m_height;
+    GLsizei                             m_width;
+    GLsizei                             m_height;
+    models::Appearance::Revision        m_appearance_revision;
+    models::Appearance::ShadingModel    m_shading_model;
     
-    wells::WellRenderer     m_well_renderer;
+    wells::WellRenderer                 m_well_renderer;
 
+    /** Return GLSL defines deduced from appearance model. */
+    virtual
+    const std::string
+    defines() const;
+    
     void
     renderMiscellaneous( const GLsizei                       width,
                          const GLsizei                       height,

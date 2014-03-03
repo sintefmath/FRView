@@ -26,7 +26,9 @@ namespace render {
 class FragmentList : public AbstractBase
 {
 public:
-    FragmentList( const GLsizei width, const GLsizei height );
+    FragmentList( const models::Appearance& appearance,
+                  const GLsizei width,
+                  const GLsizei height );
    
     ~FragmentList();
 
@@ -41,6 +43,9 @@ public:
             boost::shared_ptr<const GridTess>   tess,
             boost::shared_ptr<const GridField>  field,
             const std::vector<RenderItem>&      items );    
+
+
+
 protected:
     void
     resizeFragmentBuffers( );

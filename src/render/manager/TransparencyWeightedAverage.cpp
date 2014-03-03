@@ -32,9 +32,11 @@ namespace manager {
         }
         static const std::string package = "render.screen.TransparencyWeightedAverage";
 
-TransparencyWeightedAverage::TransparencyWeightedAverage( const GLsizei width,
+TransparencyWeightedAverage::TransparencyWeightedAverage( const models::Appearance& appearance,
+                                                          const GLsizei width,
                                                           const GLsizei height )
-    : m_surface_renderer( glsl::TransparencyWeightedAverage_geo_fs ),
+    : AbstractBase( appearance, width, height ),
+      m_surface_renderer( defines(), glsl::TransparencyWeightedAverage_geo_fs ),
       m_fbo_solid( package + ".m_fbo_solid" ),
       m_fbo_weighted_average_transparent( package + ".wgt_avg_transparent" ),
       m_solid_color_tex( package + ".m_solid_color" ),

@@ -24,7 +24,9 @@ namespace render {
 class OrderIndependentTransparency : public FragmentList
 {
 public:
-    OrderIndependentTransparency( const GLsizei width, const GLsizei height );
+    OrderIndependentTransparency( const models::Appearance& appearance,
+                                  const GLsizei width,
+                                  const GLsizei height );
     
     ~OrderIndependentTransparency();
 
@@ -38,6 +40,7 @@ public:
             boost::shared_ptr<const GridTess>   tess,
             boost::shared_ptr<const GridField>  field,
             const std::vector<RenderItem>&      items );    */
+
     
 protected:
     GLProgram           m_fsq_prog;

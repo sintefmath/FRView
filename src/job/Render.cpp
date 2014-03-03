@@ -185,35 +185,43 @@ FRViewJob::render( const float*  projection,
 
         switch ( m_appearance.renderQuality() ) {
         case 0:
-            if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyNone)) )
+            if( (!m_screen_manager)
+                    || (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyNone))
+                    || m_screen_manager->expired( m_appearance ) )
             {
-                m_screen_manager.reset( new render::manager::TransparencyNone );
+                m_screen_manager.reset( new render::manager::TransparencyNone( m_appearance,
+                                                                               width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;
         case 1:
-            if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyAdditive)) )
+            if( (!m_screen_manager)
+                    || (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyAdditive))
+                    || m_screen_manager->expired( m_appearance ) )
             {
-                m_screen_manager.reset( new render::manager::TransparencyAdditive( width, height ) );
+                m_screen_manager.reset( new render::manager::TransparencyAdditive( m_appearance,
+                                                                                   width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;
         case 2:
-            if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyWeightedAverage)) )
+            if( (!m_screen_manager)
+                    || (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyWeightedAverage))
+                    || m_screen_manager->expired( m_appearance ) )
             {
-                m_screen_manager.reset( new render::manager::TransparencyWeightedAverage( width, height ) );
+                m_screen_manager.reset( new render::manager::TransparencyWeightedAverage( m_appearance,
+                                                                                          width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;
         case 3:
         default:
-            if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::manager::OrderIndependentTransparency)) )
+            if( (!m_screen_manager)
+                    || (typeid(*m_screen_manager.get()) != typeid(render::manager::OrderIndependentTransparency))
+                    || m_screen_manager->expired( m_appearance ) )
             {
-                m_screen_manager.reset( new render::manager::OrderIndependentTransparency( width, height ) );
+                m_screen_manager.reset( new render::manager::OrderIndependentTransparency( m_appearance,
+                                                                                           width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;

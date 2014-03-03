@@ -38,13 +38,24 @@ public:
         VISIBILITY_MASK_ALL             = 0xf
     } VisibilityMask;
 
+    typedef int Revision;
+    
     typedef int Theme;
 
+    typedef enum {
+        Solid = 0,
+        Diffuse = 1,
+        DiffuseSpecular = 2
+    } ShadingModel;
+    
     Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model,
                 bool& reload );
 
     ~Appearance();
 
+    Revision
+    revision() const { return m_revision; }
+    
     VisibilityMask
     visibilityMask() const;
 
@@ -54,6 +65,10 @@ public:
     void
     setDarkTheme();
 
+    ShadingModel
+    shadingModel() const
+    { return m_shading_model; }
+    
     void
     stateElementModified( tinia::model::StateElement * stateElement );
 
@@ -110,9 +125,11 @@ public:
     theme() const { return m_theme; }
 
 protected:
-    boost::shared_ptr<tinia::model::ExposedModel> m_model;
+    boost::shared_ptr<tinia::model::ExposedModel>   m_model;
+    Revision                                        m_revision;
     bool&                                       m_reload;
     int                                         m_render_quality;
+    ShadingModel                                m_shading_model;
     Theme                                       m_theme;
     bool                                        m_render_grid;
     bool                                        m_render_wells;
@@ -128,6 +145,9 @@ protected:
     glm::vec4                                   m_faults_fill_color;
     glm::vec4                                   m_faults_outline_color;
 
+    void
+    bumpRevision();
+    
 };
 
 

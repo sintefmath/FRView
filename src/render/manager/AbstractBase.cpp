@@ -25,9 +25,49 @@
 namespace render {
     namespace manager {
 
-
+AbstractBase::AbstractBase( const models::Appearance& appearance,
+                            const GLsizei width,
+                            const GLsizei height )
+    : m_width( width ),
+      m_height( height ),
+      m_appearance_revision( appearance.revision() ),
+      m_shading_model( appearance.shadingModel() )
+{}
+    
 AbstractBase::~AbstractBase()
 {
+}
+
+bool
+AbstractBase::expired( const models::Appearance& appearance )
+{
+    if( m_appearance_revision != appearance.revision() ) {
+        if( appearance.shadingModel() != m_shading_model ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+const std::string
+AbstractBase::defines() const
+{
+    std::string ret;
+    switch( m_shading_model ) {
+    case models::Appearance::Solid:
+        ret += "#define SHADING_MODEL_SOLID\n";
+        break;
+    case models::Appearance::Diffuse:
+        ret += "#define SHADING_MODEL_DIFFUSE\n";
+        ret += "#define SHADING_DIFFUSE_COMPONENT\n";
+        break;
+    case models::Appearance::DiffuseSpecular:
+        ret += "#define SHADING_MODEL_DIFFUSE_SPECULAR\n";
+        ret += "#define SHADING_DIFFUSE_COMPONENT\n";
+        ret += "#define SHADING_SPECULAR_COMPONENT\n";
+        break;
+    }
+    return ret;
 }
 
 

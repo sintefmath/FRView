@@ -34,7 +34,7 @@ namespace render {
         static const std::string package = "render.surface.Renderer";
 
     
-Renderer::Renderer( const std::string& fragment_source )
+Renderer::Renderer( const std::string& defines, const std::string& fragment_source )
     : m_main( package + ".main" )
 {
     Logger log = getLogger( package + ".constructor" );
@@ -42,10 +42,13 @@ Renderer::Renderer( const std::string& fragment_source )
     // move DO_PAINT into uniform
     
     GLint vs = utils::compileShader( log, glsl::Renderer_vs, GL_VERTEX_SHADER );
-    GLint gs = utils::compileShader( log, "#define DO_PAINT\n" +
+    GLint gs = utils::compileShader( log,
+                                     "#define DO_PAINT\n" +
+                                     defines +
                                      glsl::Renderer_gs, GL_GEOMETRY_SHADER );
     GLint fs = utils::compileShader( log,
                                      "#define DO_PAINT\n" +
+                                     defines +
                                      glsl::Renderer_fs +
                                      fragment_source, GL_FRAGMENT_SHADER );
 

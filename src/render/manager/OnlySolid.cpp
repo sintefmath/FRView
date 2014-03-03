@@ -27,8 +27,11 @@ namespace render {
         }
 
 
-TransparencyNone::TransparencyNone()
-    : m_surface_renderer( glsl::OnlySolid_geo_fs )
+TransparencyNone::TransparencyNone( const models::Appearance &appearance,
+                                    const GLsizei width,
+                                    const GLsizei height )
+    : AbstractBase( appearance, width, height ),
+      m_surface_renderer( defines(), glsl::OnlySolid_geo_fs )
 {}
     
 TransparencyNone::~TransparencyNone()

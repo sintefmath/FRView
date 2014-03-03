@@ -32,8 +32,11 @@ namespace render {
         static const std::string package = "render.screen.TransparencyAdditive";
 
 
-TransparencyAdditive::TransparencyAdditive( const GLsizei width, const GLsizei height )
-    : m_surface_renderer( glsl::TransparencyAdditive_geo_fs )
+TransparencyAdditive::TransparencyAdditive(  const models::Appearance& appearance,
+                                             const GLsizei width,
+                                             const GLsizei height )
+    : AbstractBase( appearance, width, height ),
+      m_surface_renderer( defines(), glsl::TransparencyAdditive_geo_fs )
 {
     m_surface_renderer_solid_pass = glGetUniformLocation( m_surface_renderer.program().get(),
                                                           "solid_pass" );

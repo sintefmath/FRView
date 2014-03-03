@@ -17,6 +17,13 @@
 
 #include "models/Appearance.hpp"
 
+namespace {
+    const char* shading_model_strings[] = { "Solid",
+                                            "Diffuse",
+                                            "Diffuse and Specular" };
+}
+
+
 namespace models {
     using std::string;
     using namespace tinia::model::gui;
@@ -46,52 +53,15 @@ static const std::string faults_label_key               = "faults_label";
 static const std::string faults_opacity_fill_key        = "faults_fill_opacity";
 static const std::string faults_opacity_outline_key     = "faults_outline_opacity";
 
-const std::string&
-Appearance::titleKey() const
-{
-    return appearance_title_key;
-}
-
-const std::string&
-Appearance::renderQualityStringKey() const
-{
-    return render_quality_string_key;
-}
-
-void
-Appearance::setLightTheme()
-{
-    m_theme = 1;
-    m_background_color          = glm::vec4( 1.f, 1.f, 1.f, 0.f );
-    m_clip_plane_color          = glm::vec4( 0.3f, 0.3f, 0.0f, 1.f );
-    m_subset_fill_color         = glm::vec4( 0.8f, 0.8f, 0.6f, m_subset_fill_color.w );
-    m_subset_outline_color      = glm::vec4( 0.0f, 0.0f, 0.0f, m_subset_outline_color.w );
-    m_boundary_fill_color       = glm::vec4( 1.0f, 0.4f, 0.6f, m_boundary_fill_color.w );
-    m_boundary_outline_color    = glm::vec4( 0.0f, 0.0f, 0.0f, m_boundary_outline_color.w );
-    m_faults_fill_color         = glm::vec4( 1.0f, 0.3f, 0.3f, m_faults_fill_color.w );
-    m_faults_outline_color      = glm::vec4( 0.4f, 0.0f, 0.0f, m_faults_outline_color.w );
-}
-
-void
-Appearance::setDarkTheme()
-{
-    m_theme = 2;
-    m_background_color          = glm::vec4( 0.f, 0.f, 0.f, 0.f );
-    m_clip_plane_color          = glm::vec4( 1.0f, 1.0f, 0.2f, 1.f );
-    m_subset_fill_color         = glm::vec4( 0.8f, 0.8f, 0.6f, m_subset_fill_color.w );
-    m_subset_outline_color      = glm::vec4( 0.0f, 0.0f, 0.0f, m_subset_outline_color.w );
-    m_boundary_fill_color       = glm::vec4( 1.0f, 0.4f, 0.6f, m_boundary_fill_color.w );
-    m_boundary_outline_color    = glm::vec4( 0.8f, 0.8f, 1.0f, m_boundary_outline_color.w );
-    m_faults_fill_color         = glm::vec4( 1.0f, 0.0f, 0.0f, m_faults_fill_color.w );
-    m_faults_outline_color      = glm::vec4( 1.0f, 0.5f, 0.5f, m_faults_outline_color.w );
-}
 
 
 Appearance::Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model,
                         bool& reload )
     : m_model( model ),
+      m_revision( 1 ),
       m_reload( reload ),
       m_render_quality( 3 ),
+      m_shading_model( Diffuse ),
       m_render_grid( false ),
       m_render_wells( false ),
       m_line_thickness( 0.5f ),
@@ -138,6 +108,15 @@ Appearance::Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model,
     m_model->addElement<bool>( light_theme_key, false, "Light theme" );
     m_model->addElement<bool>( render_clipplane_key, true, "Render clip plane" );
 
+    
+    m_model->addElementWithRestriction<std::string>( shading_model_key,
+                                                     shading_model_strings[ m_shading_model ],
+                                                    &shading_model_strings[0],
+                                                    &shading_model_strings[3] );
+    m_model->addAnnotation( shading_model_key, "Shading Model" );
+    m_model->addStateListener( shading_model_key, this );
+
+    
     m_model->addStateListener( render_grid_key, this );
     m_model->addStateListener( render_wells_key, this );
     m_model->addStateListener( line_thickness_key, this );
@@ -156,6 +135,53 @@ Appearance::~Appearance()
 {
 
 }
+void
+Appearance::bumpRevision()
+{
+    m_revision++;
+}
+
+const std::string&
+Appearance::titleKey() const
+{
+    return appearance_title_key;
+}
+
+const std::string&
+Appearance::renderQualityStringKey() const
+{
+    return render_quality_string_key;
+}
+
+
+void
+Appearance::setLightTheme()
+{
+    m_theme = 1;
+    m_background_color          = glm::vec4( 1.f, 1.f, 1.f, 0.f );
+    m_clip_plane_color          = glm::vec4( 0.3f, 0.3f, 0.0f, 1.f );
+    m_subset_fill_color         = glm::vec4( 0.8f, 0.8f, 0.6f, m_subset_fill_color.w );
+    m_subset_outline_color      = glm::vec4( 0.0f, 0.0f, 0.0f, m_subset_outline_color.w );
+    m_boundary_fill_color       = glm::vec4( 1.0f, 0.4f, 0.6f, m_boundary_fill_color.w );
+    m_boundary_outline_color    = glm::vec4( 0.0f, 0.0f, 0.0f, m_boundary_outline_color.w );
+    m_faults_fill_color         = glm::vec4( 1.0f, 0.3f, 0.3f, m_faults_fill_color.w );
+    m_faults_outline_color      = glm::vec4( 0.4f, 0.0f, 0.0f, m_faults_outline_color.w );
+}
+
+void
+Appearance::setDarkTheme()
+{
+    m_theme = 2;
+    m_background_color          = glm::vec4( 0.f, 0.f, 0.f, 0.f );
+    m_clip_plane_color          = glm::vec4( 1.0f, 1.0f, 0.2f, 1.f );
+    m_subset_fill_color         = glm::vec4( 0.8f, 0.8f, 0.6f, m_subset_fill_color.w );
+    m_subset_outline_color      = glm::vec4( 0.0f, 0.0f, 0.0f, m_subset_outline_color.w );
+    m_boundary_fill_color       = glm::vec4( 1.0f, 0.4f, 0.6f, m_boundary_fill_color.w );
+    m_boundary_outline_color    = glm::vec4( 0.8f, 0.8f, 1.0f, m_boundary_outline_color.w );
+    m_faults_fill_color         = glm::vec4( 1.0f, 0.0f, 0.0f, m_faults_fill_color.w );
+    m_faults_outline_color      = glm::vec4( 1.0f, 0.5f, 0.5f, m_faults_outline_color.w );
+}
+
 
 Appearance::VisibilityMask
 Appearance::visibilityMask() const
@@ -250,6 +276,17 @@ Appearance::stateElementModified( tinia::model::StateElement * stateElement )
     else if( key == render_clipplane_key ) {
         stateElement->getValue( m_clip_plane_visible );
     }
+    else if( key == shading_model_key ) {
+        std::string value;
+        stateElement->getValue( value );
+        for( int i=0; i<3; i++ ) {
+            if( value == shading_model_strings[i] ) {
+                m_shading_model  = (ShadingModel)i;
+                break;
+            }
+        }
+    }
+    bumpRevision();
 }
 
 tinia::model::gui::Element*
@@ -270,11 +307,14 @@ Appearance::guiFactory() const
     // -------------------------------------------------------------------------
     ElementGroup* rendering_quality_group = new ElementGroup( render_quality_key, true );
     root->addChild( rendering_quality_group );
-    Grid* alpha_quality_layout = new Grid(2,2);
+    Grid* alpha_quality_layout = new Grid(3,2);
     rendering_quality_group->setChild( alpha_quality_layout );
-    alpha_quality_layout->setChild( 0, 0, new HorizontalSlider( render_quality_key, true ) );
-    alpha_quality_layout->setChild( 0, 1, new Label( render_quality_string_key, true ) );
+    alpha_quality_layout->setChild( 0, 0, new Label( render_quality_string_key, true ) );
+    alpha_quality_layout->setChild( 0, 1, new HorizontalSlider( render_quality_key, true ) );
 
+    alpha_quality_layout->setChild( 1, 0, new Label( shading_model_key ) );
+    alpha_quality_layout->setChild( 1, 1, new ComboBox( shading_model_key ) );
+    
     // -------------------------------------------------------------------------
     ElementGroup* line_thickness_group = new ElementGroup( line_thickness_key, true );
     root->addChild( line_thickness_group );

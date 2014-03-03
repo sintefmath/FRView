@@ -32,7 +32,7 @@ namespace render {
 class Renderer
 {
 public:
-    Renderer( const std::string& fragment_source );
+    Renderer( const std::string& defines, const std::string& fragment_source );
     
     void
     draw( const GLfloat*                                        modelview,

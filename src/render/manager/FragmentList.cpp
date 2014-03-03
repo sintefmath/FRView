@@ -29,13 +29,14 @@ namespace render {
         static const std::string package = "render.screen.FragmentList";
 
 
-FragmentList::FragmentList(const GLsizei width, const GLsizei height)
-    : m_surface_renderer_solid( glsl::FragmentList_geo_solid_fs ),
-      m_surface_renderer_transparent( glsl::FragmentList_geo_transparent_fs )
+FragmentList::FragmentList( const models::Appearance& appearance,
+                            const GLsizei             width,
+                            const GLsizei             height )
+    : AbstractBase( appearance, width, height ),
+      m_surface_renderer_solid( defines(), glsl::FragmentList_geo_solid_fs ),
+      m_surface_renderer_transparent( defines(), glsl::FragmentList_geo_transparent_fs )
 {
     Logger log = getLogger( package + ".constructor" );
-    m_width = width;
-    m_height = height;
     
     GLint major=0;
     GLint minor=0;

@@ -90,13 +90,16 @@ main()
                                     4.14f*(scalar + 0.5f) ) ) );
         }
         else {
-            // color cells by id
+            color.rgb = vec3( 0.5, 0.5, 0.55 );
+            /*
+                    // color cells by id
             color.rgb = surface_color.rgb;
             uint cid = cell & 0x0fffffffu;
             color.rgb = surface_color.rgb *
                     vec3(  0.5*float( int( cid & 4u  ) == 0 ) + 0.5*float( int( cid & 1u ) == 0  ),
                            0.5*float( int( cid & 8u ) == 0 ) + 0.5*float( int( cid & 1u ) != 0  ),
                            0.5*float( int( cid & 16u ) == 0 ) + 0.5*float( int( cid & 2u ) == 0  ));
+            */
         }
     }
 

@@ -27,8 +27,10 @@ namespace render {
         }
         static const std::string package = "render.screen.OrderIndependentTransparency";
 
-OrderIndependentTransparency::OrderIndependentTransparency( const GLsizei width, const GLsizei height )
-    : FragmentList( width, height )
+OrderIndependentTransparency::OrderIndependentTransparency( const models::Appearance& appearance,
+                                                            const GLsizei width,
+                                                            const GLsizei height )
+    : FragmentList( appearance, width, height )
 {
     Logger log = getLogger( package + ".constructor" );
     

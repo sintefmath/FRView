@@ -26,7 +26,9 @@ namespace render {
 class TransparencyNone : public AbstractBase
 {
 public:
-    TransparencyNone();
+    TransparencyNone( const models::Appearance& appearance,
+                      const GLsizei width,
+                      const GLsizei height );
    
     ~TransparencyNone();
 

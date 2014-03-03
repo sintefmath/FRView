@@ -76,7 +76,16 @@ vec4 colorize()
     float s = pow( max( 0.f, dot(n,h) ), 50.f );
 
     vec4 color = in_f.color;
-    color.rgb = clamp( d*color.rgb /* + vec3(s)*/, vec3(0.f), vec3(1.f) );
+    color.rgb = clamp(
+#ifdef SHADING_DIFFUSE_COMPONENT
+                        d*color.rgb
+#else
+                        color.rgb
+#endif
+#ifdef SHADING_SPECULAR_COMPONENT
+                        + vec3(color.a*s)
+#endif
+                        , vec3(0.f), vec3(1.f) );
 
 #ifdef DO_PAINT
     if( edge_color.w > 0.f ) {
