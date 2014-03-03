@@ -170,7 +170,6 @@ AbstractBase::renderOverlay( const GLsizei                       width,
 {
     bool redo_text = false;
 
-    bool has_log_map = false;
     bool has_field = false;
     for( size_t i=0; i<items.size(); i++ ) {
         const RenderItem& item = items[i];
@@ -180,13 +179,14 @@ AbstractBase::renderOverlay( const GLsizei                       width,
             continue;
         }
         has_field = true;
-        has_log_map = item.m_field_log_map;
         
         if( (m_legend_max != item.m_field_max )
-                || (m_legend_min != item.m_field_min ) )
+                || (m_legend_min != item.m_field_min )
+                || (m_legend_log != item.m_field_log_map ) )
         {
             m_legend_max = item.m_field_max;
             m_legend_min = item.m_field_min;
+            m_legend_log = item.m_field_log_map;
             redo_text = true;
         }
     }
@@ -196,11 +196,24 @@ AbstractBase::renderOverlay( const GLsizei                       width,
     if( redo_text ) {
         m_legend_text.clear();
 
+        
         for( int i=0; i<5; i++ ) {
+            float t = i/4.f;
+            
             glm::vec3 pos = glm::vec3( -1.f, 2.f*(i/4.f)-1.f, 0.f );
             
+            
+            
             std::stringstream o;
-            o << i;
+            o << std::setprecision(4 );
+            if( m_legend_log ) {
+                t = exp(t);
+                
+                o << (m_legend_min*(1-t) + m_legend_max*t );
+            }
+            else {
+                o << (m_legend_min*(1-t) + m_legend_max*t );
+            }
             m_legend_text.add( o.str(),
                                render::TextRenderer::FONT_8X12,
                                glm::value_ptr( pos ),
@@ -225,6 +238,7 @@ AbstractBase::renderOverlay( const GLsizei                       width,
 //    glViewport( 0, 0, 100, 100 );
     m_legend_text.render( 120, 120, MP );
     
+#if 0
     glUseProgram( 0 );
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
@@ -239,15 +253,18 @@ AbstractBase::renderOverlay( const GLsizei                       width,
         glVertex3fv( glm::value_ptr( pos ) );
     }
     glEnd();
-    
+#endif    
     
     glViewport( 10, glm::max(0, height-130), 20, 120 );
     glActiveTexture( GL_TEXTURE0 );
     glBindTexture( GL_TEXTURE_1D, m_color_map.get() );
     
     glUseProgram( m_legend_prog.get() );
+
+#if 0
     glUniform1i( glGetUniformLocation( m_legend_prog.get(), "log_map"),
                  has_log_map ? 1 : 0 );
+#endif
     
     glUniformMatrix4fv( glGetUniformLocation( m_legend_prog.get(), "MP"),
                         1, GL_FALSE, MP );

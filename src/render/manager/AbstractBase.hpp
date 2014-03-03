@@ -76,6 +76,7 @@ protected:
     wells::WellRenderer                 m_well_renderer;
     TextRenderer                        m_legend_text;
     GLProgram                           m_legend_prog;
+    bool                                m_legend_log;
     
     float                               m_legend_min;
     float                               m_legend_max;
