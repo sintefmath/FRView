@@ -120,7 +120,7 @@ FRViewJob::fetchData()
                 m_has_color_field = false;
             }
             m_load_color_field = false;
-            m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
+            //m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
 
             m_wells->clear();
             if( m_appearance.renderWells() ) {
