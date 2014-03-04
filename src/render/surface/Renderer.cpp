@@ -147,8 +147,8 @@ Renderer::draw( const GLfloat*                            modelview,
         if( item.m_field_log_map ) {
             glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), GL_TRUE );
             glUniform2f( glGetUniformLocation( m_main.get(), "field_remap"),
-                         logf( item.m_field_min ),
-                         1.f/(logf( item.m_field_max) - logf( item.m_field_min ) ) );
+                         1.f/ item.m_field_min,
+                         1.f/logf( item.m_field_max/item.m_field_min ) );
         }
         else {
             glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), GL_FALSE );

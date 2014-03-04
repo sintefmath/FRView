@@ -82,10 +82,16 @@ main()
             uint cid = cell & 0x0fffffffu;
             float value = texelFetch( field, int(cid) ).r;
             if( log_map ) {
-                value = log( value );
+                // field_remap.x = 1.0/min_value
+                // field_remap.y = 1.0/log(max_value/min_value)
+                value = log( value*field_remap.x )*field_remap.y;
             }
-            float scalar = clamp( field_remap.y*( value - field_remap.x), 0.0, 1.0 );
-            color = texture( color_map, scalar ).rgb;
+            else {
+                // field_remap.x = min_value
+                // field_remap.y = 1.0/(max_value-min_value)
+                value = field_remap.y*( value - field_remap.x);
+            }
+            color = texture( color_map, value ).rgb;
         }
         else {
             // undef -> gray
