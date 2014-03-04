@@ -201,6 +201,10 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
             glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, m_meta_xfb.get() );
             glBeginTransformFeedback( GL_POINTS );
             for( uint i=0; i<SURFACE_N; i++ ) {
+                // We use GL_PRIMITIVES_GENERATED and not
+                // GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN since we are
+                // interested in the full count since we want to detect buffer
+                // overflows.
                 glBeginQueryIndexed( GL_PRIMITIVES_GENERATED, i, m_meta_query[i].get() );
             }
             glDrawArrays( GL_POINTS, 0, tess->polygonCount() );
@@ -224,13 +228,19 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
                     glBeginQuery( GL_PRIMITIVES_GENERATED, surfaces[i]->indicesCountQuery() );
                     glBeginTransformFeedback( GL_POINTS );
                     
+#if 0
                     // The following call seems to invoke 'GL_INVALID_OPERATION
                     // error generated. Transform feedback object not valid for
                     // draw.'. Not sure why. If replaced with drawArrays using
                     // count from queries, we get no error. Result seems to be
                     // sane regardless of error.
                     glDrawTransformFeedbackStream( GL_POINTS, m_meta_xfb.get(), i );
-
+#else
+                    GLuint count;
+                    glGetQueryObjectuiv( m_meta_query[i].get(), GL_QUERY_RESULT, &count );
+                    glDrawArrays( GL_POINTS, 0, std::min( m_meta_buf_N[i], (GLsizei)count ) );
+#endif
+                    
                     glEndTransformFeedback( );
                     glEndQuery( GL_PRIMITIVES_GENERATED );
                 }
@@ -269,6 +279,9 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
                                   << " resized to accomodate " << result
                                   << " triangles." );
                     redo_triangulate = true;
+                }
+                else {
+                    LOGGER_DEBUG( log, "Triangle surface " << i << " has " << result << " triangles" );
                 }
             }
         }
