@@ -64,13 +64,10 @@ AbstractBase::AbstractBase( const models::Appearance& appearance,
     // --- create color map texture --------------------------------------------
     std::vector<glm::vec3> ramp( 256 );
     for(size_t i=0; i<ramp.size(); i++ ) {
-        float scalar = static_cast<float>(i)/static_cast<float>(ramp.size()-1);
-        
-        ramp[i] = glm::clamp( glm::sin( glm::vec3( 4.14f*(scalar - 0.5f),
-                                                   3.14f*(scalar),
-                                                   4.14f*(scalar + 0.5f) ) ),
-                              glm::vec3( 0.f ),
-                              glm::vec3( 1.f ) );
+        float x = static_cast<float>(i)/static_cast<float>(ramp.size()-1);
+        ramp[i].x = (x < 0.50f ? 0.f   : (x < 0.75f ? 4.f*(x-0.5f)        : 1.f                 ));
+        ramp[i].y = (x < 0.25f ? 4.f*x : (x < 0.75f ? 1.f                 : 1.f - 4.f*(x-0.75f) ));
+        ramp[i].z = (x < 0.25f ? 1.f   : (x < 0.50f ? 1.f - 4.f*(x-0.25f) : 0.f                 ));
     }
     
     glBindTexture( GL_TEXTURE_1D, m_color_map.get() );
@@ -197,31 +194,20 @@ AbstractBase::renderOverlay( const GLsizei                       width,
         m_legend_text.clear();
 
         
-        for( int i=0; i<5; i++ ) {
-            float t = i/4.f;
-            
-            glm::vec3 pos = glm::vec3( -1.f, 2.f*(i/4.f)-1.f, 0.f );
-            
-            
-            
+        for( int i=0; i<10; i++ ) {
+            float t = i/9.f;
             std::stringstream o;
             o << std::setprecision(4 );
             if( m_legend_log ) {
-                t = exp(t);
-                
-                o << (m_legend_min*(1-t) + m_legend_max*t );
+                o << (std::pow( m_legend_max/m_legend_min, t )*m_legend_min);
             }
             else {
-                o << (m_legend_min*(1-t) + m_legend_max*t );
+                o << (m_legend_min*(1.f-t) + t*m_legend_max);
             }
-            m_legend_text.add( o.str(),
-                               render::TextRenderer::FONT_8X12,
-                               glm::value_ptr( pos ),
-                               2.f, 
-                               render::TextRenderer::ANCHOR_W );
+            GLfloat pos[3] = { -1.f, 2.f*t-1.f, 0.f };
+            m_legend_text.add( o.str(), render::TextRenderer::FONT_8X12,
+                               pos, 2.f, render::TextRenderer::ANCHOR_W );
         }
-        
-        
     }
 
     GLfloat MP[16] = {
@@ -234,38 +220,13 @@ AbstractBase::renderOverlay( const GLsizei                       width,
     
     glDisable( GL_DEPTH_TEST );
     glViewport( 35, glm::max(0, height-130), 120, 120 );
-    
-//    glViewport( 0, 0, 100, 100 );
     m_legend_text.render( 120, 120, MP );
-    
-#if 0
-    glUseProgram( 0 );
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
-    glMatrixMode( GL_MODELVIEW );
-    glLoadMatrixf( MP );
-    
-    glColor3f( 1.f, 1.f, 0.f );
-    glPointSize( 3.f );
-    glBegin( GL_POINTS );
-    for( int i=0; i<5; i++ ) {
-        glm::vec3 pos = glm::vec3( -1.f, 2.f*(i/4.f)-1.f, 0.f );
-        glVertex3fv( glm::value_ptr( pos ) );
-    }
-    glEnd();
-#endif    
-    
+
     glViewport( 10, glm::max(0, height-130), 20, 120 );
     glActiveTexture( GL_TEXTURE0 );
     glBindTexture( GL_TEXTURE_1D, m_color_map.get() );
     
     glUseProgram( m_legend_prog.get() );
-
-#if 0
-    glUniform1i( glGetUniformLocation( m_legend_prog.get(), "log_map"),
-                 has_log_map ? 1 : 0 );
-#endif
-    
     glUniformMatrix4fv( glGetUniformLocation( m_legend_prog.get(), "MP"),
                         1, GL_FALSE, MP );
     
