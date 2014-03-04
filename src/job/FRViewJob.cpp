@@ -57,6 +57,7 @@ using std::stringstream;
 FRViewJob::FRViewJob( const std::list<string>& files )
     : tinia::jobcontroller::OpenGLJob(),
       m_file( m_model, *this ),
+      m_source_selector( m_model ),
       m_under_the_hood( m_model, *this ),
       m_appearance( m_model, m_load_color_field ),
       m_visibility_mask( models::Appearance::VISIBILITY_MASK_NONE ),
@@ -132,6 +133,8 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     tab_buttons->addChild( under_the_hood_popup );
     tab_buttons->addChild( new HorizontalExpandingSpace );
 
+    tab_buttons->addChild( m_source_selector.guiFactory() );
+    
     HorizontalLayout* app_pane = new HorizontalLayout;
     root->addChild( app_pane );
     m_model->addElement<bool>("has_project", false );

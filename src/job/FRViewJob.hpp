@@ -29,6 +29,7 @@
 #include "models/GridStats.hpp"
 #include "models/File.hpp"
 #include "models/UnderTheHood.hpp"
+#include "models/SourceSelector.hpp"
 #include "render/TimerQuery.hpp"
 
 namespace dataset {
@@ -115,6 +116,7 @@ private:
 
 
     models::File                                    m_file;
+    models::SourceSelector                          m_source_selector;
     models::UnderTheHood                            m_under_the_hood;
     models::Appearance                              m_appearance;
     models::Appearance::VisibilityMask              m_visibility_mask;
