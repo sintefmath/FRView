@@ -33,7 +33,7 @@
 #include "render/TimerQuery.hpp"
 
 namespace dataset {
-    template<typename REAL> class Project;
+    class Project;
 } // of namespace dataset
 
 class ASyncReader;
@@ -138,7 +138,7 @@ private:
         PROJECT_UPDATE_SUBSET,
         PROJECT_OK
     }                                               m_project_state;
-    boost::shared_ptr<dataset::Project<float> >                m_project;
+    boost::shared_ptr<dataset::Project >                m_project;
     /** @} */
 
     /** @{ */

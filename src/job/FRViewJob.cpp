@@ -417,7 +417,7 @@ FRViewJob::loadFile( const std::string& filename,
 
     m_load_geometry = false;
     m_load_color_field = false;
-    m_project = boost::shared_ptr< dataset::Project<float> >();
+    m_project = boost::shared_ptr< dataset::Project >();
     std::list<std::string> solutions = {"none"};
     m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
     m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
@@ -469,7 +469,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
                 break;
             }
         }
-        dataset::Project<float>::Solution sol;
+        dataset::Project::Solution sol;
         if( m_project->solution( sol, m_solution_index, m_report_step_index ) ) {
             if( m_async_reader->issueReadSolution( m_project, sol ) ) {
             }
@@ -479,7 +479,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         int value;
         stateElement->getValue<int>( value );
         m_report_step_index = value;
-        dataset::Project<float>::Solution sol;
+        dataset::Project::Solution sol;
         if( m_project->solution( sol, m_solution_index, m_report_step_index ) ) {
             if( m_async_reader->issueReadSolution( m_project, sol ) ) {
             }

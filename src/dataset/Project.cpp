@@ -39,8 +39,7 @@ namespace dataset {
 
 static const std::string package = "dataset.Project";
 
-template<typename REAL>
-Project<REAL>::Project(const std::string filename,
+Project::Project(const std::string filename,
                        int refine_i,
                        int refine_j,
                        int refine_k )
@@ -147,11 +146,32 @@ Project<REAL>::Project(const std::string filename,
     refresh( refine_i, refine_j, refine_k );
 }
 
+Project::~Project()
+{
+}
 
-
-template<typename REAL>
 void
-Project<REAL>::addFile( const string& filename )
+Project::tessellation( Tessellation&                                  tessellation,
+                       boost::shared_ptr<tinia::model::ExposedModel>  model,
+                       const std::string&                             progress_description_key,
+                       const std::string&                             progress_counter_key )
+{
+    cornerpoint::Tessellator< render::GridTessBridge > tessellator( tessellation );
+    tessellator.tessellate( model, progress_description_key, progress_counter_key,
+                            nx(), ny(), nz(), nr(),
+                            cornerPointCoord(),
+                            cornerPointZCorn(),
+                            cornerPointActNum() );
+    
+    // organize data
+    model->updateElement<std::string>( "asyncreader_what", "Organizing data..." );
+    model->updateElement<int>( "asyncreader_progress", 0 );
+    tessellation.process();
+}
+
+
+void
+Project::addFile( const string& filename )
 {
     Logger log = getLogger( "Project.addFile" );
 
@@ -222,9 +242,8 @@ Project<REAL>::addFile( const string& filename )
 
 }
 
-template<typename REAL>
 void
-Project<REAL>::bakeCornerpointGeometry()
+Project::bakeCornerpointGeometry()
 {
     REAL minxy[3];
     REAL maxxy[3];
@@ -295,27 +314,24 @@ Project<REAL>::bakeCornerpointGeometry()
 }
 
 
-template<typename REAL>
-REAL
-Project<REAL>::cornerPointXYScale() const {
+Project::REAL
+Project::cornerPointXYScale() const {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_xyscale;
     }
     return 1.f;
 }
 
-template<typename REAL>
-REAL
-Project<REAL>::cornerPointZScale() const {
+Project::REAL
+Project::cornerPointZScale() const {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_zscale;
     }
     return 1.f;
 }
 
-template<typename REAL>
 void
-Project<REAL>::refineCornerpointGeometry( unsigned int rx,
+Project::refineCornerpointGeometry( unsigned int rx,
                                           unsigned int ry,
                                           unsigned int rz )
 {
@@ -444,9 +460,8 @@ Project<REAL>::refineCornerpointGeometry( unsigned int rx,
     m_cornerpoint_geometry.m_actnum.swap( new_actnum );
 }
 
-template<typename REAL>
 void
-Project<REAL>::refresh( int rx, int ry, int rz )
+Project::refresh( int rx, int ry, int rz )
 {
     Logger log = getLogger( "Project.refresh" );
 
@@ -634,9 +649,8 @@ Project<REAL>::refresh( int rx, int ry, int rz )
     }
 }
 
-template<typename REAL>
 const bool
-Project<REAL>::wellDefined(  const unsigned int report_step_ix,
+Project::wellDefined(  const unsigned int report_step_ix,
                              const unsigned int well_ix  ) const
 {
     Logger log = getLogger( package + ".wellDefined" );
@@ -650,9 +664,8 @@ Project<REAL>::wellDefined(  const unsigned int report_step_ix,
 }
 
 
-template<typename REAL>
 void
-Project<REAL>::addWell( const eclipse::Well& ewell,
+Project::addWell( const eclipse::Well& ewell,
                        const unsigned int sequence_number )
 {
     Logger log = getLogger( "Project.addWell.Eclipse" );
@@ -727,9 +740,8 @@ Project<REAL>::addWell( const eclipse::Well& ewell,
     }
 }
 
-template<typename REAL>
 void
-Project<REAL>::import( const eclipse::ReportStep& e_step,
+Project::import( const eclipse::ReportStep& e_step,
                        const std::string path )
 {
     Logger log = getLogger( "Project.Eclipse.Reportstep.import" );
@@ -812,9 +824,8 @@ Project<REAL>::import( const eclipse::ReportStep& e_step,
 }
 
 
-template<typename REAL>
 void
-Project<REAL>::cornerPointCellCentroid( REAL*               p,
+Project::cornerPointCellCentroid( REAL*               p,
                                         const unsigned int  i,
                                         const unsigned int  j,
                                         const unsigned int  k )
@@ -867,9 +878,8 @@ Project<REAL>::cornerPointCellCentroid( REAL*               p,
 }
 
 
-template<typename REAL>
 unsigned int
-Project<REAL>::getSolutionIndex( const std::string& name )
+Project::getSolutionIndex( const std::string& name )
 {
     auto it = m_solution_name_lut.find( name );
     if( it != m_solution_name_lut.end() ) {
@@ -888,9 +898,8 @@ Project<REAL>::getSolutionIndex( const std::string& name )
 }
 
 
-template<typename REAL>
-typename Project<REAL>::ReportStep&
-Project<REAL>::reportStepBySeqNum( unsigned int seqnum )
+typename Project::ReportStep&
+Project::reportStepBySeqNum( unsigned int seqnum )
 {
     for(typename std::vector<ReportStep>::iterator it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
         if( it->m_seqnum == seqnum ) {
@@ -908,7 +917,7 @@ Project<REAL>::reportStepBySeqNum( unsigned int seqnum )
 
     std::sort( m_report_steps.begin(),
                m_report_steps.end(),
-               Project<REAL>::compareReportStep);
+               Project::compareReportStep);
 
     for(typename std::vector<ReportStep>::iterator it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
         if( it->m_seqnum == seqnum ) {
@@ -920,9 +929,8 @@ Project<REAL>::reportStepBySeqNum( unsigned int seqnum )
 }
 
 
-template<typename REAL>
 void
-Project<REAL>::addSolution( const Solution&     solution,
+Project::addSolution( const Solution&     solution,
                             const std::string&  name,
                             const unsigned int  seqnum )
 {
@@ -932,9 +940,8 @@ Project<REAL>::addSolution( const Solution&     solution,
 }
 
 
-template<typename REAL>
 unsigned int
-Project<REAL>::solutions() const
+Project::solutions() const
 {
     if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
         if( m_polyhedral_mesh_source ) {
@@ -946,9 +953,8 @@ Project<REAL>::solutions() const
     return m_solution_names.size();
 }
 
-template<typename REAL>
 const std::string&
-Project<REAL>::solutionName( unsigned int name_index ) const
+Project::solutionName( unsigned int name_index ) const
 {
     if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
         if( m_polyhedral_mesh_source ) {
@@ -961,16 +967,14 @@ Project<REAL>::solutionName( unsigned int name_index ) const
     return m_solution_names.at( name_index );
 }
 
-template<typename REAL>
 unsigned int
-Project<REAL>::reportSteps() const
+Project::reportSteps() const
 {
     return m_report_steps.size();
 }
 
-template<typename REAL>
 unsigned int
-Project<REAL>::nx() const
+Project::nx() const
 {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_rx*m_cornerpoint_geometry.m_nx;
@@ -980,9 +984,8 @@ Project<REAL>::nx() const
     }
 }
 
-template<typename REAL>
 unsigned int
-Project<REAL>::ny() const
+Project::ny() const
 {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_ry*m_cornerpoint_geometry.m_ny;
@@ -992,9 +995,8 @@ Project<REAL>::ny() const
     }
 }
 
-template<typename REAL>
 unsigned int
-Project<REAL>::nz() const
+Project::nz() const
 {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_rz*m_cornerpoint_geometry.m_nz;
@@ -1006,9 +1008,8 @@ Project<REAL>::nz() const
 
 
 
-template<typename REAL>
-const std::vector<typename Project<REAL>::Well>&
-Project<REAL>::wells( const unsigned int step )
+const std::vector<typename Project::Well>&
+Project::wells( const unsigned int step )
 {
     if( step >= m_report_steps.size() ) {
         throw std::runtime_error( "Illegal report step" );
@@ -1018,10 +1019,9 @@ Project<REAL>::wells( const unsigned int step )
 
 
 
-template<typename REAL>
 template<typename Bridge>
 void
-Project<REAL>::field( Bridge& bridge, const unsigned int solution, const unsigned int step )
+Project::field( Bridge& bridge, const unsigned int solution, const unsigned int step )
 {
     if( solution >= m_solution_names.size()) {
         throw std::runtime_error( "Illegal solution index" );
@@ -1088,9 +1088,8 @@ Project<REAL>::field( Bridge& bridge, const unsigned int solution, const unsigne
     }
 }
 
-template<typename REAL>
 bool
-Project<REAL>::solution( Solution& solution,
+Project::solution( Solution& solution,
                          const uint solution_ix,
                          const uint report_step )
 {
@@ -1120,9 +1119,8 @@ Project<REAL>::solution( Solution& solution,
     return false;
 }
 
-template<typename REAL>
 const std::string&
-Project<REAL>::reportStepDate( unsigned int step ) const
+Project::reportStepDate( unsigned int step ) const
 {
     static const std::string illegal = "Illegal report step";
     if( m_report_steps.size() <= step ) {
@@ -1134,8 +1132,8 @@ Project<REAL>::reportStepDate( unsigned int step ) const
 }
 
 
-template class Project<float>;
-//template void Project<float>::geometry<GridTessBridge>( GridTessBridge& );
-template void Project<float>::field<render::GridFieldBridge>( render::GridFieldBridge&, const unsigned int, const unsigned int );
+//template class Project;
+//template void Project::geometry<GridTessBridge>( GridTessBridge& );
+template void Project::field<render::GridFieldBridge>( render::GridFieldBridge&, const unsigned int, const unsigned int );
 
 } // of namespace dataset

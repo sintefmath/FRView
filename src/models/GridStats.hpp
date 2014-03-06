@@ -23,7 +23,7 @@
 #include "models/Logic.hpp"
 
 namespace dataset {
-    template<typename REAL> class Project;
+    class Project;
 }
 namespace render {
     class GridTess;
@@ -52,7 +52,7 @@ public:
     update( );
 
     void
-    update( boost::shared_ptr<dataset::Project<float> > project,
+    update( boost::shared_ptr<dataset::Project > project,
             boost::shared_ptr<render::GridTess> tessellation );
 
 protected:

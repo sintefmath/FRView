@@ -82,10 +82,11 @@ struct HalfPolygon
 
 namespace dataset {
 
-template<typename Tessellation>
 void
-PolyhedralMeshSource::tessellation( Tessellation& tessellation,
-                                    boost::shared_ptr<tinia::model::ExposedModel> model )
+PolyhedralMeshSource::tessellation( Tessellation&                                  tessellation,
+                                    boost::shared_ptr<tinia::model::ExposedModel>  model,
+                                    const std::string&                             progress_description_key,
+                                    const std::string&                             progress_counter_key )
 {
     Logger log = getLogger( "dataset.PolyhedralMeshSource.tessellation" );
     
@@ -101,8 +102,8 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
     static const Orientation ORIENTATION_K = Tessellation::ORIENTATION_K;
     static const Index IllegalIndex = (~(Index)0u);
 
-    model->updateElement<std::string>( "asyncreader_what", "Tetra!" );
-    model->updateElement<int>( "asyncreader_progress", 0 );
+    model->updateElement<std::string>( progress_description_key, "Tetra!" );
+    model->updateElement<int>( progress_counter_key, 0 );
 
     // copy vertices
     for(size_t i=0; i<m_vertices.size(); i+=3 ) {
@@ -280,31 +281,29 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
 
 }
 
-template void PolyhedralMeshSource::tessellation< render::GridTessBridge >( render::GridTessBridge& tessellation,
-boost::shared_ptr<tinia::model::ExposedModel> model );
 
 
-template<typename Field>
 void
-PolyhedralMeshSource::field( Field& field, const size_t index ) const
+PolyhedralMeshSource::field( Field& field,
+                             const size_t field_index,
+                             const size_t timestep_index ) const
 {
-    if( field.count() != m_cell_field_data[ index ].size() ) {
+    if( field.count() != m_cell_field_data[ field_index ].size() ) {
         throw std::runtime_error( "element count mismatch" );
     }
-    if( m_cell_field_data[ index ].empty() ) {
+    if( m_cell_field_data[ field_index ].empty() ) {
         // nothing to do
         return;
     }
-    field.minimum() = m_cell_field_data[ index ][0];
-    field.maximum() = m_cell_field_data[ index ][0];
-    for( size_t i=0; i<m_cell_field_data[ index ].size(); i++ ) {
-        typename Field::REAL v = m_cell_field_data[ index ][i];
+    field.minimum() = m_cell_field_data[ field_index ][0];
+    field.maximum() = m_cell_field_data[ field_index ][0];
+    for( size_t i=0; i<m_cell_field_data[ field_index ].size(); i++ ) {
+        typename Field::REAL v = m_cell_field_data[ field_index ][i];
         field.minimum() = std::min( field.minimum(), v );
         field.maximum() = std::max( field.minimum(), v );
         field.values()[i] = v;
     }
 }
 
-template void PolyhedralMeshSource::field<render::GridFieldBridge>( render::GridFieldBridge&, const size_t ) const;
 
 } // of namespace input

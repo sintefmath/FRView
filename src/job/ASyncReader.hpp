@@ -46,11 +46,11 @@ public:
                       const bool triangulate = false );
 
     bool
-    issueReadSolution( const boost::shared_ptr< dataset::Project<float> > project,
-                       const dataset::Project<float>::Solution& solution_location );
+    issueReadSolution( const boost::shared_ptr< dataset::Project > project,
+                       const dataset::Project::Solution& solution_location );
 
     bool
-    getProject( boost::shared_ptr< dataset::Project<float> >& project,
+    getProject( boost::shared_ptr< dataset::Project >& project,
                 boost::shared_ptr< render::GridTessBridge>&  tess_bridge );
 
 
@@ -73,8 +73,8 @@ protected:
         int                                     m_refine_j;
         int                                     m_refine_k;
         bool                                    m_triangulate;
-        boost::shared_ptr< dataset::Project<float> >       m_project;
-        dataset::Project<float>::Solution                m_solution_location;
+        boost::shared_ptr< dataset::Project >       m_project;
+        dataset::Project::Solution                m_solution_location;
     };
 
     struct Response
@@ -83,7 +83,7 @@ protected:
             PROJECT,
             SOLUTION
         }                                       m_type;
-        boost::shared_ptr< dataset::Project<float> >       m_project;
+        boost::shared_ptr< dataset::Project >       m_project;
         boost::shared_ptr< render::GridTessBridge >       m_project_grid;
         boost::shared_ptr< render::GridFieldBridge >      m_solution;
     };

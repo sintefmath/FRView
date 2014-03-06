@@ -20,25 +20,34 @@
 #include <vector>
 #include <tinia/model/ExposedModel.hpp>
 #include "render/GridTess.hpp"
+#include "dataset/AbstractDataSource.hpp"
+#include "dataset/PolyhedralDataInterface.hpp"
 
 namespace dataset {
 
 class PolyhedralMeshSource
+        : public AbstractDataSource,
+          public PolyhedralDataInterface
 {
 public:
     
 
-    template<typename Tessellation>
     void
     tessellation( Tessellation& tessellation,
-                  boost::shared_ptr<tinia::model::ExposedModel> model );
+                  boost::shared_ptr<tinia::model::ExposedModel> model,
+                  const std::string&                             progress_description_key,
+                  const std::string&                             progress_counter_key );
 
-    template<typename Field>
     void
-    field( Field& field, const size_t index ) const;
+    field(  Field& field,
+            const size_t field_index,
+            const size_t timestep_index ) const;
     
     size_t
-    fields() { return m_cell_field_name.size(); }
+    fields() const { return m_cell_field_name.size(); }
+
+    size_t
+    timesteps() const { return 1; }
     
     const std::string&
     fieldName( unsigned int name_index ) const { return m_cell_field_name[ name_index ]; }

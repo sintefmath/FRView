@@ -22,7 +22,11 @@
 #include "eclipse/EclipseReader.hpp"
 #include "utils/PerfTimer.hpp"
 
-static const std::string package = "ASyncReader";
+namespace {
+    const std::string package = "ASyncReader";
+    const std::string progress_description_key = "asyncreader_what";
+    const std::string progress_counter_key     = "asyncreader_progress";
+}
 
 ASyncReader::ASyncReader( boost::shared_ptr<tinia::model::ExposedModel> model )
     : m_ticket_counter(1),
@@ -31,8 +35,8 @@ ASyncReader::ASyncReader( boost::shared_ptr<tinia::model::ExposedModel> model )
 {
     Logger log = getLogger( package + ".ASyncReader" );
     m_model->addElement<bool>( "asyncreader_working", false, "Loading and preprocessing" );
-    m_model->addElement<std::string>( "asyncreader_what", "Idle" );
-    m_model->addConstrainedElement<int>( "asyncreader_progress", 0, 0, 100, "Progress" );
+    m_model->addElement<std::string>( progress_description_key, "Idle" );
+    m_model->addConstrainedElement<int>( progress_counter_key, 0, 0, 100, "Progress" );
     m_model->addElement<int>( "asyncreader_ticket", 0 );
 }
 
@@ -56,8 +60,8 @@ ASyncReader::issueReadProject( const std::string& file,
 }
 
 bool
-ASyncReader::issueReadSolution( const boost::shared_ptr< dataset::Project<float> > project,
-                                const dataset::Project<float>::Solution& solution_location )
+ASyncReader::issueReadSolution( const boost::shared_ptr< dataset::Project > project,
+                                const dataset::Project::Solution& solution_location )
 {
     Command cmd;
     cmd.m_type = Command::READ_SOLUTION;
@@ -69,7 +73,7 @@ ASyncReader::issueReadSolution( const boost::shared_ptr< dataset::Project<float>
 
 
 bool
-ASyncReader::getProject( boost::shared_ptr< dataset::Project<float> >& project,
+ASyncReader::getProject( boost::shared_ptr< dataset::Project >& project,
                          boost::shared_ptr< render::GridTessBridge>&  tess_bridge )
 {
     std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
@@ -129,14 +133,14 @@ ASyncReader::handleReadProject( const Command& cmd )
     Logger log = getLogger( package + ".handleReadProject" );
     m_model->updateElement<bool>( "asyncreader_working", true );
     try {
-        m_model->updateElement<std::string>( "asyncreader_what", "Indexing files..." );
-        m_model->updateElement<int>( "asyncreader_progress", 0 );
+        m_model->updateElement<std::string>( progress_description_key, "Indexing files..." );
+        m_model->updateElement<int>( progress_counter_key, 0 );
 
-        boost::shared_ptr< dataset::Project<float> > project( new dataset::Project<float>( cmd.m_project_file,
+        boost::shared_ptr< dataset::Project > project( new dataset::Project( cmd.m_project_file,
                                                                        cmd.m_refine_i,
                                                                        cmd.m_refine_j,
                                                                        cmd.m_refine_k ) );
-        if( project->geometryType() == dataset::Project<float>::GEOMETRY_CORNERPOINT_GRID ) {
+        if( project->geometryType() == dataset::Project::GEOMETRY_CORNERPOINT_GRID ) {
 
             boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
 
@@ -145,8 +149,8 @@ ASyncReader::handleReadProject( const Command& cmd )
 
             cornerpoint::Tessellator< render::GridTessBridge > tess( *tess_bridge );
             tess.tessellate( m_model,
-                             "asyncreader_what",
-                             "asyncreader_progress",
+                             progress_description_key,
+                             progress_counter_key,
                              project->nx(),
                              project->ny(),
                              project->nz(),
@@ -156,8 +160,8 @@ ASyncReader::handleReadProject( const Command& cmd )
                              project->cornerPointActNum() );
 
             // organize data
-            m_model->updateElement<std::string>( "asyncreader_what", "Organizing data..." );
-            m_model->updateElement<int>( "asyncreader_progress", 0 );
+            m_model->updateElement<std::string>(progress_description_key, "Organizing data..." );
+            m_model->updateElement<int>( progress_counter_key, 0 );
             tess_bridge->process();
 
             Response rsp;
@@ -166,13 +170,13 @@ ASyncReader::handleReadProject( const Command& cmd )
             rsp.m_project_grid = tess_bridge;
             postResponse( cmd, rsp );
         }
-        else if( project->geometryType() == dataset::Project<float>::GEOMETRY_POLYHEDRAL_MESH ) {
+        else if( project->geometryType() == dataset::Project::GEOMETRY_POLYHEDRAL_MESH ) {
             boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
             m_field_remap = project->fieldRemap();
             
-            project->source()->tessellation( *tess_bridge, m_model );
-            m_model->updateElement<std::string>( "asyncreader_what", "Organizing data..." );
-            m_model->updateElement<int>( "asyncreader_progress", 0 );
+            project->source()->tessellation( *tess_bridge, m_model, progress_description_key, progress_counter_key );
+            m_model->updateElement<std::string>( progress_description_key, "Organizing data..." );
+            m_model->updateElement<int>( progress_counter_key, 0 );
             tess_bridge->process();
             
             Response rsp;
@@ -183,12 +187,12 @@ ASyncReader::handleReadProject( const Command& cmd )
         }
         
         else {
-            m_model->updateElement<std::string>( "asyncreader_what", "Unsupported geometry type" );
+            m_model->updateElement<std::string>( progress_description_key, "Unsupported geometry type" );
             sleep(2);
         }
     }
     catch( std::runtime_error& e ) {
-        m_model->updateElement<std::string>( "asyncreader_what", e.what() );
+        m_model->updateElement<std::string>( progress_description_key, e.what() );
         sleep(2);
     }
     m_model->updateElement<bool>( "asyncreader_working", false );
@@ -198,11 +202,11 @@ void
 ASyncReader::handleReadSolution( const Command& cmd )
 {
     Logger log = getLogger( package + ".handleReadSolution" );
-    m_model->updateElement<std::string>( "asyncreader_what", "Reading solution..." );
+    m_model->updateElement<std::string>( progress_description_key, "Reading solution..." );
 
     Response rsp;
     rsp.m_type = Response::SOLUTION;
-    if( cmd.m_solution_location.m_reader == dataset::Project<float>::READER_UNFORMATTED_ECLIPSE ) {
+    if( cmd.m_solution_location.m_reader == dataset::Project::READER_UNFORMATTED_ECLIPSE ) {
 
         if( !m_field_remap.empty() ) {
             rsp.m_solution.reset( new render::GridFieldBridge( m_field_remap.size() ) );
@@ -228,11 +232,12 @@ ASyncReader::handleReadSolution( const Command& cmd )
                                  cmd.m_solution_location.m_location.m_unformatted_eclipse );
         }
     }
-    else if( cmd.m_solution_location.m_reader == dataset::Project<float>::READER_FROM_SOURCE ) {
+    else if( cmd.m_solution_location.m_reader == dataset::Project::READER_FROM_SOURCE ) {
         try {
             rsp.m_solution.reset( new render::GridFieldBridge( cmd.m_project->source()->activeCells() ) );
             cmd.m_project->source()->field( *rsp.m_solution.get(),
-                                            cmd.m_solution_location.m_location.m_source_index );
+                                             cmd.m_solution_location.m_location.m_source_index,
+                                             0 );
             rsp.m_type = Response::SOLUTION;
         }
         catch( std::runtime_error& e ) {

@@ -20,18 +20,26 @@
 #include <list>
 #include <vector>
 #include <memory>
-#include <boost/utility.hpp>
 #include <unordered_map>
+#include "dataset/AbstractDataSource.hpp"
+#include "dataset/PolyhedralDataInterface.hpp"
+#include "dataset/WellDataInterface.hpp"
 #include "eclipse/Eclipse.hpp"
 
 namespace dataset {
     class PolyhedralMeshSource;
 
 
-template<typename REAL>
-class Project : public boost::noncopyable
+    
+class Project
+        : public AbstractDataSource,
+          public WellDataInterace
 {
 public:
+    typedef float REAL;
+    typedef render::GridTessBridge      Tessellation;   ///< Kill when adding Polyhedral inheritance
+    typedef render::GridFieldBridge     Field;          ///< \todo Rename type.
+    
     enum GeometryType {
         GEOMETRY_NONE,
         GEOMETRY_CORNERPOINT_GRID,
@@ -42,6 +50,9 @@ public:
              int refine_i = 1,
              int refine_j = 1,
              int refine_k = 1 );
+    
+    virtual
+    ~Project();
 
 
     GeometryType
@@ -51,39 +62,6 @@ public:
     template<typename Bridge>
     void
     field( Bridge& bridge, const unsigned int solution, const unsigned int step );
-
-    const unsigned int
-    wellCount() const { return m_well_names.size(); }
-
-
-    const std::string&
-    wellName( unsigned int well_ix ) const { return m_well_names[ well_ix ]; }
-
-    const bool
-    wellDefined( const unsigned int report_step_ix,
-                 const unsigned int well_ix ) const;
-
-    const float*
-    wellHeadPosition( const unsigned int report_step_ix,
-                      const unsigned int well_ix ) const
-    {
-        return m_report_steps[ report_step_ix ].m_wells[ well_ix ].m_head;
-    }
-
-    const unsigned int
-    wellBranchCount( const unsigned int report_step_ix,
-                     const unsigned int well_ix ) const
-    {
-        return m_report_steps[ report_step_ix ].m_wells[ well_ix ].m_branches.size();
-    }
-
-    const std::vector<float>&
-    wellBranchPositions( const unsigned int report_step_ix,
-                         const unsigned int well_ix,
-                         const unsigned int branch_ix )
-    {
-        return m_report_steps[ report_step_ix ].m_wells[ well_ix ].m_branches[ branch_ix ];
-    }
 
 
     unsigned int
@@ -129,20 +107,64 @@ public:
     REAL
     cornerPointZScale() const;
 
+    // -------------------------------------------------------------------------
+    /** \name Implementation of PolyhedralDataInterface */
+    /** @{ */
+
+    virtual
+    void
+    tessellation( Tessellation&                                  tessellation,
+                  boost::shared_ptr<tinia::model::ExposedModel>  model,
+                  const std::string&                             progress_description_key,
+                  const std::string&                             progress_counter_key );
+
+    /** @} */
 
     // -------------------------------------------------------------------------
+    /** \name Implementation of WellDataInterface */
+    /** @{ */
     
-    struct Well
-    {
-        bool                                        m_defined;
-        std::string                                 m_name;
-        float                                       m_head[3];
-        std::vector< std::vector<float> >           m_branches;
-    };
+    const unsigned int
+    wellCount() const { return m_well_names.size(); }
 
-    // HACK, will be replaced by bridge API
+
+    const std::string&
+    wellName( unsigned int well_ix ) const { return m_well_names[ well_ix ]; }
+
+    const bool
+    wellDefined( const unsigned int report_step_ix,
+                 const unsigned int well_ix ) const;
+
+    const float*
+    wellHeadPosition( const unsigned int report_step_ix,
+                      const unsigned int well_ix ) const
+    {
+        return m_report_steps[ report_step_ix ].m_wells[ well_ix ].m_head;
+    }
+
+    const unsigned int
+    wellBranchCount( const unsigned int report_step_ix,
+                     const unsigned int well_ix ) const
+    {
+        return m_report_steps[ report_step_ix ].m_wells[ well_ix ].m_branches.size();
+    }
+
+    const std::vector<float>&
+    wellBranchPositions( const unsigned int report_step_ix,
+                         const unsigned int well_ix,
+                         const unsigned int branch_ix )
+    {
+        return m_report_steps[ report_step_ix ].m_wells[ well_ix ].m_branches[ branch_ix ];
+    }
+
     const std::vector<Well>&
     wells( const unsigned int step );
+
+    /** @} */
+    
+    // -------------------------------------------------------------------------
+    
+
 
     // HACK. Public for debug gfx purposes.
 

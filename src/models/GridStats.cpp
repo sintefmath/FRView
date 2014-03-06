@@ -60,13 +60,13 @@ GridStats::~GridStats()
 void
 GridStats::update( )
 {
-    boost::shared_ptr<dataset::Project<float> > project;
+    boost::shared_ptr<dataset::Project > project;
     boost::shared_ptr<render::GridTess> tessellation;
     update( project, tessellation );
 }
 
 void
-GridStats::update( boost::shared_ptr<dataset::Project<float> > project,
+GridStats::update( boost::shared_ptr<dataset::Project > project,
                    boost::shared_ptr<render::GridTess> tessellation )
 {
     int nx = 0;
