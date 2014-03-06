@@ -83,10 +83,10 @@ struct HalfPolygon
 namespace dataset {
 
 void
-PolyhedralMeshSource::tessellation( Tessellation&                                  tessellation,
-                                    boost::shared_ptr<tinia::model::ExposedModel>  model,
-                                    const std::string&                             progress_description_key,
-                                    const std::string&                             progress_counter_key )
+PolyhedralMeshSource::geometry( Tessellation&                                  geometry_bridge,
+                                boost::shared_ptr<tinia::model::ExposedModel>  model,
+                                const std::string&                             progress_description_key,
+                                const std::string&                             progress_counter_key )
 {
     Logger log = getLogger( "dataset.PolyhedralMeshSource.tessellation" );
     
@@ -107,7 +107,7 @@ PolyhedralMeshSource::tessellation( Tessellation&                               
 
     // copy vertices
     for(size_t i=0; i<m_vertices.size(); i+=3 ) {
-        tessellation.addVertex( Real4( m_vertices[i+0],
+        geometry_bridge.addVertex( Real4( m_vertices[i+0],
                                        m_vertices[i+1],
                                        m_vertices[i+2] ) );
     }
@@ -126,7 +126,7 @@ PolyhedralMeshSource::tessellation( Tessellation&                               
     
     // Populate cell_corners and indices
     
-    tessellation.setCellCount( m_cells.size()-1 );
+    geometry_bridge.setCellCount( m_cells.size()-1 );
     for(Index c=0; (c+1)<m_cells.size(); c++ ) {
         Index p_o = m_cells[c];
         Index p_n = m_cells[c+1]-p_o;
@@ -172,7 +172,7 @@ PolyhedralMeshSource::tessellation( Tessellation&                               
         typename std::vector<Index>::iterator it = std::unique( cell_corners.begin(), cell_corners.end() );
         cell_corners.resize( std::distance( cell_corners.begin(), it ) );
         
-        tessellation.setCell( c, c,
+        geometry_bridge.setCell( c, c,
                               cell_corners[0],
                               cell_corners[1 % cell_corners.size() ],
                               cell_corners[2 % cell_corners.size() ],
@@ -215,7 +215,7 @@ PolyhedralMeshSource::tessellation( Tessellation&                               
         glm::vec3 c = glm::make_vec3( m_vertices.data() + 3*half_polygons[j].m_indices[2] );
         glm::vec3 n = glm::normalize( glm::cross( b-a, c-a ) );
 
-        Index n_ix = tessellation.addNormal( Real4( n.x, n.y, n.z ) );
+        Index n_ix = geometry_bridge.addNormal( Real4( n.x, n.y, n.z ) );
         
         Orientation orientation = ORIENTATION_I;
         if( glm::abs(n.y) > glm::abs(n.x) ) {
@@ -250,7 +250,7 @@ PolyhedralMeshSource::tessellation( Tessellation&                               
                 interface = Interface( IllegalIndex, half_polygons[j].m_cell, orientation );
             }
             iface_b++;
-            tessellation.addPolygon( interface, segments.data(), segments.size() );
+            geometry_bridge.addPolygon( interface, segments.data(), segments.size() );
         }
         else if( i == j+2 ) {
             // interior face
@@ -265,7 +265,7 @@ PolyhedralMeshSource::tessellation( Tessellation&                               
                 interface = Interface( half_polygons[j+1].m_cell, half_polygons[j].m_cell, orientation );
             }
             iface_i++;
-            tessellation.addPolygon( interface, segments.data(), segments.size() );
+            geometry_bridge.addPolygon( interface, segments.data(), segments.size() );
         }
         else {
             // non-manifold face

@@ -35,11 +35,11 @@ public:
     /** Extract grid geometry from datasource. */
     virtual
     void
-    tessellation( Tessellation&                                  tessellation,
-                  boost::shared_ptr<tinia::model::ExposedModel>  model,
-                  const std::string&                             progress_description_key,
-                  const std::string&                             progress_counter_key ) = 0;
-
+    geometry( Tessellation&                                  geometry,
+              boost::shared_ptr<tinia::model::ExposedModel>  model,
+              const std::string&                             progress_description_key,
+              const std::string&                             progress_counter_key ) = 0;
+    
     virtual
     void
     field( Field& field,

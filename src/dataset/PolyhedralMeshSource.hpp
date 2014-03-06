@@ -33,11 +33,11 @@ public:
     
 
     void
-    tessellation( Tessellation& tessellation,
-                  boost::shared_ptr<tinia::model::ExposedModel> model,
-                  const std::string&                             progress_description_key,
-                  const std::string&                             progress_counter_key );
-
+    geometry( Tessellation&                                  geometry_bridge,
+              boost::shared_ptr<tinia::model::ExposedModel>  model,
+              const std::string&                             progress_description_key,
+              const std::string&                             progress_counter_key );
+    
     void
     field(  Field& field,
             const size_t field_index,

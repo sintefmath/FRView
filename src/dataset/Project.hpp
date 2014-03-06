@@ -111,12 +111,11 @@ public:
     /** \name Implementation of PolyhedralDataInterface */
     /** @{ */
 
-    virtual
     void
-    tessellation( Tessellation&                                  tessellation,
-                  boost::shared_ptr<tinia::model::ExposedModel>  model,
-                  const std::string&                             progress_description_key,
-                  const std::string&                             progress_counter_key );
+    geometry( Tessellation&                                  geometry_bridge,
+              boost::shared_ptr<tinia::model::ExposedModel>  model,
+              const std::string&                             progress_description_key,
+              const std::string&                             progress_counter_key );
 
     /** @} */
 

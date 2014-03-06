@@ -151,22 +151,17 @@ Project::~Project()
 }
 
 void
-Project::tessellation( Tessellation&                                  tessellation,
-                       boost::shared_ptr<tinia::model::ExposedModel>  model,
-                       const std::string&                             progress_description_key,
-                       const std::string&                             progress_counter_key )
+Project::geometry( Tessellation&                                  geometry_bridge,
+                   boost::shared_ptr<tinia::model::ExposedModel>  model,
+                   const std::string&                             progress_description_key,
+                   const std::string&                             progress_counter_key )
 {
-    cornerpoint::Tessellator< render::GridTessBridge > tessellator( tessellation );
+    cornerpoint::Tessellator< render::GridTessBridge > tessellator( geometry_bridge );
     tessellator.tessellate( model, progress_description_key, progress_counter_key,
                             nx(), ny(), nz(), nr(),
                             cornerPointCoord(),
                             cornerPointZCorn(),
                             cornerPointActNum() );
-    
-    // organize data
-    model->updateElement<std::string>( "asyncreader_what", "Organizing data..." );
-    model->updateElement<int>( "asyncreader_progress", 0 );
-    tessellation.process();
 }
 
 

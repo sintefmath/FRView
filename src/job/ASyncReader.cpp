@@ -143,24 +143,14 @@ ASyncReader::handleReadProject( const Command& cmd )
         if( project->geometryType() == dataset::Project::GEOMETRY_CORNERPOINT_GRID ) {
 
             boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
-
             m_field_remap = project->fieldRemap();
 
-
-            cornerpoint::Tessellator< render::GridTessBridge > tess( *tess_bridge );
-            tess.tessellate( m_model,
-                             progress_description_key,
-                             progress_counter_key,
-                             project->nx(),
-                             project->ny(),
-                             project->nz(),
-                             project->nr(),
-                             project->cornerPointCoord(),
-                             project->cornerPointZCorn(),
-                             project->cornerPointActNum() );
-
-            // organize data
-            m_model->updateElement<std::string>(progress_description_key, "Organizing data..." );
+            project->geometry( *tess_bridge,
+                               m_model,
+                               progress_description_key,
+                               progress_counter_key );
+            
+            m_model->updateElement<std::string>( progress_description_key, "Organizing data..." );
             m_model->updateElement<int>( progress_counter_key, 0 );
             tess_bridge->process();
 
@@ -174,7 +164,11 @@ ASyncReader::handleReadProject( const Command& cmd )
             boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
             m_field_remap = project->fieldRemap();
             
-            project->source()->tessellation( *tess_bridge, m_model, progress_description_key, progress_counter_key );
+            project->source()->geometry( *tess_bridge,
+                                         m_model,
+                                         progress_description_key,
+                                         progress_counter_key );
+            
             m_model->updateElement<std::string>( progress_description_key, "Organizing data..." );
             m_model->updateElement<int>( progress_counter_key, 0 );
             tess_bridge->process();
