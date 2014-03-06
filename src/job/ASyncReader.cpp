@@ -61,12 +61,13 @@ ASyncReader::issueReadProject( const std::string& file,
 
 bool
 ASyncReader::issueReadSolution( const boost::shared_ptr< dataset::Project > project,
-                                const dataset::Project::Solution& solution_location )
+                                size_t solution_index, size_t report_step_index )
 {
     Command cmd;
     cmd.m_type = Command::READ_SOLUTION;
     cmd.m_project = project;
-    cmd.m_solution_location = solution_location;
+    cmd.m_field_index = solution_index;
+    cmd.m_timestep_index = report_step_index;
     postCommand( cmd );
     return true;
 }
@@ -143,7 +144,7 @@ ASyncReader::handleReadProject( const Command& cmd )
         if( project->geometryType() == dataset::Project::GEOMETRY_CORNERPOINT_GRID ) {
 
             boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
-            m_field_remap = project->fieldRemap();
+            //m_field_remap = project->fieldRemap();
 
             project->geometry( *tess_bridge,
                                m_model,
@@ -162,7 +163,7 @@ ASyncReader::handleReadProject( const Command& cmd )
         }
         else if( project->geometryType() == dataset::Project::GEOMETRY_POLYHEDRAL_MESH ) {
             boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
-            m_field_remap = project->fieldRemap();
+            //m_field_remap = project->fieldRemap();
             
             project->source()->geometry( *tess_bridge,
                                          m_model,
@@ -198,49 +199,34 @@ ASyncReader::handleReadSolution( const Command& cmd )
     Logger log = getLogger( package + ".handleReadSolution" );
     m_model->updateElement<std::string>( progress_description_key, "Reading solution..." );
 
-    Response rsp;
-    rsp.m_type = Response::SOLUTION;
-    if( cmd.m_solution_location.m_reader == dataset::Project::READER_UNFORMATTED_ECLIPSE ) {
-
-        if( !m_field_remap.empty() ) {
-            rsp.m_solution.reset( new render::GridFieldBridge( m_field_remap.size() ) );
-
-            std::vector<float> tmp( cmd.m_solution_location.m_location.m_unformatted_eclipse.m_size );
-            eclipse::Reader reader( cmd.m_solution_location.m_path );
-            reader.blockContent( tmp.data(),
-                                 rsp.m_solution->minimum(),
-                                 rsp.m_solution->maximum(),
-                                 cmd.m_solution_location.m_location.m_unformatted_eclipse );
-            for(size_t i=0; i<m_field_remap.size(); i++ ) {
-                rsp.m_solution->values()[i] = tmp[ m_field_remap[i] ];
-            }
-
-        }
-        else {
-            rsp.m_solution.reset( new render::GridFieldBridge( cmd.m_solution_location.m_location.m_unformatted_eclipse.m_size ) );
-
-            eclipse::Reader reader( cmd.m_solution_location.m_path );
-            reader.blockContent( rsp.m_solution->values(),
-                                 rsp.m_solution->minimum(),
-                                 rsp.m_solution->maximum(),
-                                 cmd.m_solution_location.m_location.m_unformatted_eclipse );
-        }
+    // temporary workaround
+    boost::shared_ptr<dataset::AbstractDataSource> source = cmd.m_project->source();
+    if( !source ) {
+        source = cmd.m_project;
     }
-    else if( cmd.m_solution_location.m_reader == dataset::Project::READER_FROM_SOURCE ) {
+        
+    
+    boost::shared_ptr<dataset::PolyhedralDataInterface> polydata =
+            boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source );
+
+    Response rsp;
+    if( polydata != NULL ) {
         try {
-            rsp.m_solution.reset( new render::GridFieldBridge( cmd.m_project->source()->activeCells() ) );
-            cmd.m_project->source()->field( *rsp.m_solution.get(),
-                                             cmd.m_solution_location.m_location.m_source_index,
-                                             0 );
-            rsp.m_type = Response::SOLUTION;
+            rsp.m_solution.reset( new render::GridFieldBridge( ) );
+            polydata->field( rsp.m_solution,
+                             cmd.m_field_index,
+                             cmd.m_timestep_index );
         }
-        catch( std::runtime_error& e ) {
-            LOGGER_ERROR( log, "Caught runtime error: " << e.what() );
+        catch( std::exception& e ) {
+            rsp.m_solution.reset();
+            LOGGER_ERROR( log, "Caught error: " << e.what() );
         }
     }
     else {
-        LOGGER_ERROR( log, "Unsupported solution format" );
+        LOGGER_ERROR( log, "Current data source does not support fields." );
     }
+    rsp.m_type = Response::SOLUTION;
+
     postResponse( cmd, rsp );
 }
 

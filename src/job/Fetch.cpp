@@ -63,19 +63,19 @@ FRViewJob::fetchData()
 
             // --- solution list
             std::list<std::string> solutions;
-            if( m_project->solutions() == 0 ) {
+            if( m_project->fields() == 0 ) {
                 solutions.push_back( "[none]" );
             }
             else {
-                for(unsigned int i=0; i<m_project->solutions(); i++ ) {
-                    solutions.push_back( m_project->solutionName(i) );
+                for(unsigned int i=0; i<m_project->fields(); i++ ) {
+                    solutions.push_back( m_project->fieldName(i) );
                 }
             }
             m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
             m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
 
             // --- report steps
-            int reportstep_max = std::max( 1u, m_project->reportSteps() )-1u;
+            int reportstep_max = std::max( (size_t)1, m_project->timesteps() )-1u;
             m_model->updateConstraints<int>("field_report_step", 0,0,  reportstep_max );
             m_model->updateConstraints<int>( "field_select_report_step", 0, 0, reportstep_max );
 
@@ -167,7 +167,7 @@ FRViewJob::fetchData()
                 m_model->updateElement( "field_info_range", o.str() );
                 o.str("");
                 o << "[not implemented]";
-                m_model->updateElement( "field_info_calendar", m_project->reportStepDate( m_report_step_index ) );
+                m_model->updateElement( "field_info_calendar", m_project->timestepDescription( m_report_step_index ) );
                 m_model->updateElement( "has_field", true );
             }
             else {

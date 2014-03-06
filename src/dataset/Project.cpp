@@ -935,8 +935,8 @@ Project::addSolution( const Solution&     solution,
 }
 
 
-unsigned int
-Project::solutions() const
+size_t
+Project::fields() const
 {
     if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
         if( m_polyhedral_mesh_source ) {
@@ -949,7 +949,7 @@ Project::solutions() const
 }
 
 const std::string&
-Project::solutionName( unsigned int name_index ) const
+Project::fieldName( unsigned int name_index ) const
 {
     if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
         if( m_polyhedral_mesh_source ) {
@@ -962,11 +962,6 @@ Project::solutionName( unsigned int name_index ) const
     return m_solution_names.at( name_index );
 }
 
-unsigned int
-Project::reportSteps() const
-{
-    return m_report_steps.size();
-}
 
 unsigned int
 Project::nx() const
@@ -997,7 +992,7 @@ Project::nz() const
         return m_cornerpoint_geometry.m_rz*m_cornerpoint_geometry.m_nz;
     }
     else {
-        return m_polyhedral_mesh_source->activeCells();
+        return 1;
     }
 }
 
@@ -1014,74 +1009,70 @@ Project::wells( const unsigned int step )
 
 
 
-template<typename Bridge>
 void
-Project::field( Bridge& bridge, const unsigned int solution, const unsigned int step )
+Project::field( boost::shared_ptr<Field>  bridge,
+       const size_t              field_index,
+       const size_t              timestep_index ) const
 {
-    if( solution >= m_solution_names.size()) {
+    if( field_index >= m_solution_names.size()) {
         throw std::runtime_error( "Illegal solution index" );
     }
-    if( step >= m_report_steps.size() ) {
+    if( timestep_index >= m_report_steps.size() ) {
         throw std::runtime_error( "Illegal report step" );
     }
-    Solution& sol = m_report_steps[ step ].m_solutions[ solution ];
-    if( sol.m_reader == READER_UNFORMATTED_ECLIPSE ) {
-        eclipse::Reader reader( sol.m_path );
 
-        if( (m_cornerpoint_geometry.m_rx == 1) &&
-            (m_cornerpoint_geometry.m_ry == 1) &&
-            (m_cornerpoint_geometry.m_rz == 1) )
-        {
-            reader.blockContent( bridge.values(),
-                                 bridge.minimum(),
-                                 bridge.maximum(),
+    const Solution& sol = m_report_steps[ timestep_index ].m_solutions[ field_index ];
+    if( sol.m_reader == READER_UNFORMATTED_ECLIPSE ) {
+
+        if( m_cornerpoint_geometry.m_refine_map_compact.empty() ) {
+            // Data can be read directly
+            bridge->init( sol.m_location.m_unformatted_eclipse.m_size );
+            
+            eclipse::Reader reader( sol.m_path );
+            reader.blockContent( bridge->values(),
+                                 bridge->minimum(),
+                                 bridge->maximum(),
                                  sol.m_location.m_unformatted_eclipse );
-            std::cerr << "BLRAGH\n";
+            std::cerr << "timestep=" << timestep_index << ", field=" << field_index << "\n";
         }
         else {
-            std::vector< REAL > tmp( m_cornerpoint_geometry.m_nx*
-                                     m_cornerpoint_geometry.m_ny*
-                                     m_cornerpoint_geometry.m_ny );
+            // Grid has been refined, we must duplicate entries
+            
+            std::vector<float> tmp( sol.m_location.m_unformatted_eclipse.m_size );
+            eclipse::Reader reader( sol.m_path );
             reader.blockContent( tmp.data(),
-                                 bridge.minimum(),
-                                 bridge.maximum(),
+                                 bridge->minimum(),
+                                 bridge->maximum(),
                                  sol.m_location.m_unformatted_eclipse );
 
+            // duplicate entries as refinement dictates
+            bridge->init( m_cornerpoint_geometry.m_refine_map_compact.size() );
+            REAL* ptr = bridge->values();
             for(size_t i=0; i<m_cornerpoint_geometry.m_refine_map_compact.size(); i++ ) {
-                bridge.values()[i] = tmp[ m_cornerpoint_geometry.m_refine_map_compact[i] ];
+                ptr[i] = tmp[ m_cornerpoint_geometry.m_refine_map_compact[i] ];
             }
-            std::cerr << "MOO " << m_cornerpoint_geometry.m_refine_map_compact.size() << "\n";
-/*
-            uint rx = m_cornerpoint_geometry.m_rx;
-            uint ry = m_cornerpoint_geometry.m_ry;
-            uint rz = m_cornerpoint_geometry.m_rz;
-            uint old_nx = m_cornerpoint_geometry.m_nx;
-            uint old_ny = m_cornerpoint_geometry.m_ny;
-            uint old_nz = m_cornerpoint_geometry.m_nz;
-            uint new_nx = rx*old_nx;
-            uint new_ny = ry*old_ny;
-            uint new_nz = rz*old_nz;
-
-
-            for( int new_k=0; new_k<new_nz; new_k++ ) {
-                uint old_k = new_k/rz;
-                for( int new_j=0; new_j<new_ny; new_j++ ) {
-                    uint old_j = new_j/ry;
-                    for( int new_i=0; new_i<new_nx; new_i++ ) {
-                        uint old_i = new_i/rx;
-                        bridge.values()[ new_nx*new_ny*new_k  + new_nx*new_j + new_i ] =
-                                tmp[ old_nx*old_ny*old_k + old_nx*old_j + old_i ];
-
-                    }
-                }
-            }
-*/
         }
     }
     else {
-        throw std::runtime_error( "No valid field for this solution and report step" );
+        throw std::runtime_error( "No data" );
     }
 }
+
+bool
+Project::validFieldAtTimestep( size_t field_index, size_t timestep_index ) const
+{
+    if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
+        if( field_index >= m_solution_names.size() ) {
+            return false;
+        }
+        if( timestep_index >= m_report_steps.size() ) {
+            return false;
+        }
+        return true;
+    }
+    return false;  
+}
+
 
 bool
 Project::solution( Solution& solution,
@@ -1089,6 +1080,9 @@ Project::solution( Solution& solution,
                          const uint report_step )
 {
     Logger log = getLogger( package + ".solution" );
+    solution.m_field_index = solution_ix;
+    solution.m_timestep_index = report_step;
+    
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         if( solution_ix >= m_solution_names.size() ) {
             LOGGER_ERROR( log, "Illegal solution index " << solution_ix );
@@ -1099,6 +1093,8 @@ Project::solution( Solution& solution,
             return false;
         }
         solution = m_report_steps[ report_step ].m_solutions[ solution_ix ];
+        solution.m_field_index = solution_ix;
+        solution.m_timestep_index = report_step;
         return true;
     }
     else if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
@@ -1107,28 +1103,23 @@ Project::solution( Solution& solution,
                 && (solution_ix < m_polyhedral_mesh_source->fields() ) )
         {
             solution.m_reader = READER_FROM_SOURCE;
-            solution.m_location.m_source_index = solution_ix;
+            solution.m_field_index = solution_ix;
+            solution.m_timestep_index = report_step;
             return true;
         }
     }
     return false;
 }
 
-const std::string&
-Project::reportStepDate( unsigned int step ) const
+const std::string Project::timestepDescription(size_t timestep_index ) const
 {
     static const std::string illegal = "Illegal report step";
-    if( m_report_steps.size() <= step ) {
+    if( m_report_steps.size() <= timestep_index ) {
         return illegal;
     }
     else {
-        return m_report_steps[ step ].m_date;
+        return m_report_steps[ timestep_index ].m_date;
     }
 }
-
-
-//template class Project;
-//template void Project::geometry<GridTessBridge>( GridTessBridge& );
-template void Project::field<render::GridFieldBridge>( render::GridFieldBridge&, const unsigned int, const unsigned int );
 
 } // of namespace dataset

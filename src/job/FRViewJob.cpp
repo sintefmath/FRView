@@ -463,15 +463,14 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     else if( key == "field_solution" && m_project ) {
         string value;
         stateElement->getValue<string>( value );
-        for(unsigned int i=0; i<m_project->solutions(); i++ ) {
-            if( value == m_project->solutionName(i) ) {
+        for(unsigned int i=0; i<m_project->fields(); i++ ) {
+            if( value == m_project->fieldName(i) ) {
                 m_solution_index = i;
                 break;
             }
         }
-        dataset::Project::Solution sol;
-        if( m_project->solution( sol, m_solution_index, m_report_step_index ) ) {
-            if( m_async_reader->issueReadSolution( m_project, sol ) ) {
+        if( m_project->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
+            if( m_async_reader->issueReadSolution( m_project, m_solution_index, m_report_step_index ) ) {
             }
         }
     }
@@ -479,9 +478,8 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         int value;
         stateElement->getValue<int>( value );
         m_report_step_index = value;
-        dataset::Project::Solution sol;
-        if( m_project->solution( sol, m_solution_index, m_report_step_index ) ) {
-            if( m_async_reader->issueReadSolution( m_project, sol ) ) {
+        if( m_project->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
+            if( m_async_reader->issueReadSolution( m_project, m_solution_index, m_report_step_index ) ) {
             }
         }
     }

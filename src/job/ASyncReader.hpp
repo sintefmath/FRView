@@ -47,7 +47,7 @@ public:
 
     bool
     issueReadSolution( const boost::shared_ptr< dataset::Project > project,
-                       const dataset::Project::Solution& solution_location );
+                       size_t solution_index, size_t report_step_index );
 
     bool
     getProject( boost::shared_ptr< dataset::Project >& project,
@@ -74,7 +74,8 @@ protected:
         int                                     m_refine_k;
         bool                                    m_triangulate;
         boost::shared_ptr< dataset::Project >       m_project;
-        dataset::Project::Solution                m_solution_location;
+        size_t                                  m_field_index;
+        size_t                                  m_timestep_index;
     };
 
     struct Response
@@ -82,6 +83,7 @@ protected:
         enum {
             PROJECT,
             SOLUTION
+            // Should have error as well?
         }                                       m_type;
         boost::shared_ptr< dataset::Project >       m_project;
         boost::shared_ptr< render::GridTessBridge >       m_project_grid;
@@ -99,7 +101,7 @@ protected:
 
     std::thread                                 m_worker;
 
-    std::vector<int>                            m_field_remap;
+    //std::vector<int>                            m_field_remap;
 
     void
     handleReadProject( const Command& cmd );

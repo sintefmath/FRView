@@ -38,23 +38,24 @@ public:
               const std::string&                             progress_description_key,
               const std::string&                             progress_counter_key );
     
-    void
-    field(  Field& field,
-            const size_t field_index,
-            const size_t timestep_index ) const;
+    size_t
+    timesteps() const { return 1; }
+
+    const std::string
+    timestepDescription( size_t timestep_index ) const { return "n/a"; }
     
+    void
+    field( boost::shared_ptr<Field>  bridge,
+           const size_t              field_index,
+           const size_t              timestep_index ) const;    
     size_t
     fields() const { return m_cell_field_name.size(); }
 
-    size_t
-    timesteps() const { return 1; }
+    bool
+    validFieldAtTimestep( size_t field_index, size_t timestep_index ) const;
     
     const std::string&
     fieldName( unsigned int name_index ) const { return m_cell_field_name[ name_index ]; }
-    
-    size_t
-    activeCells() const { return (m_cells.empty()?0:m_cells.size()-1); }
-    
     
 protected:
     std::vector<float>                  m_vertices; ///< in R^3.

@@ -282,27 +282,42 @@ PolyhedralMeshSource::geometry( Tessellation&                                  g
 }
 
 
+bool
+PolyhedralMeshSource::validFieldAtTimestep( size_t field_index, size_t timestep_index ) const
+{
+    if( timestep_index == 0 ) {
+        if( field_index < m_cell_field_data.size() ) {
+            return true;
+        }
+    }
+    return false;
+}
 
 void
-PolyhedralMeshSource::field( Field& field,
-                             const size_t field_index,
-                             const size_t timestep_index ) const
+PolyhedralMeshSource::field( boost::shared_ptr<Field>  bridge,
+       const size_t              field_index,
+       const size_t              timestep_index ) const
 {
-    if( field.count() != m_cell_field_data[ field_index ].size() ) {
-        throw std::runtime_error( "element count mismatch" );
-    }
+    bridge->init( m_cell_field_data[ field_index ].size() );
+    
     if( m_cell_field_data[ field_index ].empty() ) {
         // nothing to do
         return;
     }
-    field.minimum() = m_cell_field_data[ field_index ][0];
-    field.maximum() = m_cell_field_data[ field_index ][0];
+    bridge->minimum() = m_cell_field_data[ field_index ][0];
+    bridge->maximum() = m_cell_field_data[ field_index ][0];
+    
+    float* ptr = bridge->values();
+    float minimum = m_cell_field_data[ field_index ][0];
+    float maximum = m_cell_field_data[ field_index ][0];
     for( size_t i=0; i<m_cell_field_data[ field_index ].size(); i++ ) {
-        typename Field::REAL v = m_cell_field_data[ field_index ][i];
-        field.minimum() = std::min( field.minimum(), v );
-        field.maximum() = std::max( field.minimum(), v );
-        field.values()[i] = v;
+        float v = m_cell_field_data[ field_index ][i];
+        minimum = std::min( minimum, v );
+        maximum = std::max( maximum, v );
+        ptr[i] = v;
     }
+    bridge->minimum() = minimum;
+    bridge->maximum() = maximum;
 }
 
 

@@ -33,6 +33,7 @@ namespace dataset {
     
 class Project
         : public AbstractDataSource,
+          public PolyhedralDataInterface,
           public WellDataInterace
 {
 public:
@@ -59,25 +60,10 @@ public:
     geometryType() const
     { return m_geometry_type; }
 
-    template<typename Bridge>
-    void
-    field( Bridge& bridge, const unsigned int solution, const unsigned int step );
 
 
-    unsigned int
-    solutions() const;
 
-    const std::string&
-    solutionName( unsigned int name_index ) const;
 
-    const std::string&
-    reportStepDate( unsigned int step ) const;
-
-    unsigned int
-    reportSteps() const;
-
-    unsigned int
-    reportStepSeqNum( unsigned int step_index ) const;
 
     unsigned int
     nx() const;
@@ -91,14 +77,6 @@ public:
     unsigned int
     nr() const { return m_cornerpoint_geometry.m_nr; }
 
-    const std::vector<REAL>
-    cornerPointCoord() const { return m_cornerpoint_geometry.m_coord; }
-
-    const std::vector<REAL>
-    cornerPointZCorn() const { return m_cornerpoint_geometry.m_zcorn; }
-
-    const std::vector<int>
-    cornerPointActNum() const { return m_cornerpoint_geometry.m_actnum; }
 
 
     REAL
@@ -117,6 +95,30 @@ public:
               const std::string&                             progress_description_key,
               const std::string&                             progress_counter_key );
 
+
+    size_t
+    timesteps() const
+    { return m_report_steps.size(); }
+
+    const std::string
+    timestepDescription( size_t timestep_index ) const;
+
+    void
+    field( boost::shared_ptr<Field>  bridge,
+           const size_t              field_index,
+           const size_t              timestep_index ) const;
+
+    bool
+    validFieldAtTimestep( size_t field_index, size_t timestep_index ) const;
+
+    size_t
+    fields() const;
+
+    const std::string&
+    fieldName( unsigned int name_index ) const;
+    
+
+    
     /** @} */
 
     // -------------------------------------------------------------------------
@@ -167,6 +169,15 @@ public:
 
     // HACK. Public for debug gfx purposes.
 
+
+    boost::shared_ptr<PolyhedralMeshSource>
+    source() { return m_polyhedral_mesh_source; }
+    
+    const boost::shared_ptr<PolyhedralMeshSource>
+    source() const { return m_polyhedral_mesh_source; }
+
+
+private:
     enum SolutionReader {
         READER_NONE,
         READER_UNFORMATTED_ECLIPSE,
@@ -177,16 +188,10 @@ public:
         std::string                                 m_path;
         union {
             eclipse::Block                          m_unformatted_eclipse;
-            size_t                                  m_source_index;
         }                                           m_location;
+        size_t                                      m_field_index;
+        size_t                                      m_timestep_index;
     };
-
-    std::shared_ptr<PolyhedralMeshSource>
-    source() { return m_polyhedral_mesh_source; }
-    
-    const std::shared_ptr<PolyhedralMeshSource>
-    source() const { return m_polyhedral_mesh_source; }
-
     const std::vector<int>&
     fieldRemap() const { return m_cornerpoint_geometry.m_refine_map_compact; }
 
@@ -195,7 +200,6 @@ public:
               const uint solution_ix,
               const uint report_step );
 
-private:
     enum FileType {
         ECLIPSE_EGRID_FILE,
         FOOBAR_GRID_FILE,
@@ -249,8 +253,16 @@ private:
     std::vector<ReportStep>                         m_report_steps;
     std::list<File>                                 m_unprocessed_files;
 
-    std::shared_ptr<PolyhedralMeshSource>   m_polyhedral_mesh_source;
+    boost::shared_ptr<PolyhedralMeshSource>   m_polyhedral_mesh_source;
     
+    const std::vector<REAL>
+    cornerPointCoord() const { return m_cornerpoint_geometry.m_coord; }
+
+    const std::vector<REAL>
+    cornerPointZCorn() const { return m_cornerpoint_geometry.m_zcorn; }
+
+    const std::vector<int>
+    cornerPointActNum() const { return m_cornerpoint_geometry.m_actnum; }
     
     void
     refineCornerpointGeometry( unsigned int rx,
