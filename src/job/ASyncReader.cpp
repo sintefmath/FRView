@@ -137,6 +137,38 @@ ASyncReader::handleReadProject( const Command& cmd )
         m_model->updateElement<std::string>( progress_description_key, "Indexing files..." );
         m_model->updateElement<int>( progress_counter_key, 0 );
 
+        if( cmd.m_project_file.empty() ) {
+            throw std::runtime_error( "Empty file name" );
+        }
+        
+        //struct stat stat_buffer;
+        //stat( cmd.m_project_file.c_str(), &stat_buffer );
+        //if( )
+        
+
+        // Extract suffix in upper case
+        size_t dot = cmd.m_project_file.find_last_of( '.' );
+        if( dot == std::string::npos ) {
+            throw std::runtime_error( "Filename has no suffix" );
+        }
+        std::string suffix = cmd.m_project_file.substr( dot + 1u );
+        for( auto it=suffix.begin(); it!=suffix.end(); ++it ) {
+          *it = std::toupper( *it );
+        }
+        
+        if( suffix == "VTU" ) {
+
+        }
+        else if( suffix == "GTXT" ) {
+            
+        }
+        else if( suffix == "GEOMETRY" ) {
+            
+        }
+        else if( suffix == "EGRID" ) {
+            
+        }
+        
         boost::shared_ptr< dataset::Project > project( new dataset::Project( cmd.m_project_file,
                                                                        cmd.m_refine_i,
                                                                        cmd.m_refine_j,
