@@ -18,36 +18,18 @@
 
 #include <boost/shared_ptr.hpp>
 #include <tinia/model/ExposedModel.hpp>
-#include "render/GridTessBridge.hpp"
-#include "render/GridFieldBridge.hpp"
 
 namespace dataset {
 
-/** Interface that describes polygonal tessellations of volumes. */
-class PolyhedralDataInterface
+/** Interface that describes polygonal tessellations of surfaces. */
+class PolygonDataInterface
 {
 public:
-    typedef render::GridTessBridge      Tessellation;   ///< \todo Rename type.
-    typedef render::GridFieldBridge     Field;          ///< \todo Rename type.
 
     virtual
-    ~PolyhedralDataInterface();
+    ~PolygonDataInterface();
 
-    /** Extract grid geometry from datasource. */
-    virtual
-    void
-    geometry( Tessellation&                                  geometry,
-              boost::shared_ptr<tinia::model::ExposedModel>  model,
-              const std::string&                             progress_description_key,
-              const std::string&                             progress_counter_key ) = 0;
-    
-    /** Extract field from datasource. */
-    virtual
-    void
-    field( boost::shared_ptr<Field>  bridge,
-           const size_t              field_index,
-           const size_t              timestep_index ) const = 0;
-    
+   
     /** Number of fields in datasource. */
     virtual
     size_t

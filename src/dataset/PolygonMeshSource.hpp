@@ -21,16 +21,17 @@
 #include <tinia/model/ExposedModel.hpp>
 #include "render/GridTess.hpp"
 #include "dataset/AbstractDataSource.hpp"
-#include "dataset/PolyhedralDataInterface.hpp"
+#include "dataset/PolygonDataInterface.hpp"
 #include "dataset/CellLayoutInterface.hpp"
 
 namespace dataset {
 
-/** Simple, concrete implementation of PolyhedralDataInterface. */
-class PolyhedralMeshSource
+
+/** Simple, concrete implementation of PolygonDataInterface. */
+class PolygonMeshSource
         : public AbstractDataSource,
           public CellLayoutInterface,
-          public PolyhedralDataInterface
+          public PolygonDataInterface
 {
 public:
     /** Create a polyhedral mesh directly from arrays.
@@ -38,16 +39,17 @@ public:
      * Note that this constructor will take ownership of the contents of the
      * arguments (through vector.swap).
      */
-    PolyhedralMeshSource( std::vector<float>&                 vertices,
-                          std::vector<int>&                   indices,
-                          std::vector<int>&                   polygons,
-                          std::vector<int>&                   cells,
-                          std::vector<std::string>&           cell_field_name,
-                          std::vector< std::vector<float> >&  cell_field_data );
+    PolygonMeshSource( std::vector<float>&                 vertices,
+                       std::vector<int>&                   indices,
+                       std::vector<int>&                   polygons,
+                       std::vector<int>&                   cells,
+                       std::vector<std::string>&           cell_field_name,
+                       std::vector< std::vector<float> >&  cell_field_data );
     
     // -------------------------------------------------------------------------
     /** \name Implementation of PolyhedralDataInterface */
     /** @{ */
+#if 0
     void
     geometry( Tessellation&                                  geometry_bridge,
               boost::shared_ptr<tinia::model::ExposedModel>  model,
@@ -58,7 +60,8 @@ public:
     field( boost::shared_ptr<Field>  bridge,
            const size_t              field_index,
            const size_t              timestep_index ) const;    
-
+#endif
+    
     size_t
     fields() const { return m_cell_field_name.size(); }
 
@@ -73,6 +76,7 @@ public:
     fieldName( unsigned int name_index ) const { return m_cell_field_name[ name_index ]; }
     /** @} */
 
+    
     // -------------------------------------------------------------------------
     /** \name Implementation of CellLayoutInterface */
     /** @{ */
@@ -97,4 +101,4 @@ protected:
 };
 
 
-} // of namespace input
+} // of namespace dataset

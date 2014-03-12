@@ -25,6 +25,7 @@
 #include "utils/Logger.hpp"
 #include "dataset/VTKXMLSourceFactory.hpp"
 #include "dataset/PolyhedralMeshSource.hpp"
+#include "dataset/PolygonMeshSource.hpp"
 
 namespace {
 
@@ -477,7 +478,7 @@ boost::shared_ptr<dataset::AbstractDataSource>
 VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
 {
     // parse XML
-    Logger log = getLogger( "dataset.VTKXMLSource" );
+    Logger log = getLogger( "dataset.VTKXMLSourceFactory" );
     xmlSAXHandler saxf;
     bzero( &saxf, sizeof(saxf ) );
     saxf.startElement = start_element;
@@ -503,18 +504,16 @@ VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
     
     // convert various primitives to polyhedrons
     bool volume_data = false;
-    bool planar_data = false;
+    bool surface_data = false;
     std::vector<int>   indices;
     std::vector<int>   polygons;
     std::vector<int>   cells;
     
     
     for(size_t c=0; c<cd.m_piece_cells_n; c++ ) {
-        
         size_t o = c < 1 ? 0 : cd.m_piece_offsets[c-1];
         size_t n = cd.m_piece_offsets[c] - o;
         
-
         switch( cd.m_piece_types[c] ) {
         case 1: // VTK_VERTEX
         case 2: // VTK_POLY_VERTEX
@@ -526,6 +525,17 @@ VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
             break;
             
         case 5:  // VTK_TRIANGLE
+            surface_data = true;
+            if( n != 3 ) {
+                LOGGER_ERROR( log, "VTK_TRIANGLE expects 3 vertices, got " << n );
+                throw std::runtime_error( "Inconsistency in VTK data" );
+            }
+            cells.push_back( polygons.size() );
+            polygons.push_back( indices.size() );
+            indices.push_back( cd.m_piece_connectivity[o+0] );
+            indices.push_back( cd.m_piece_connectivity[o+1] );
+            indices.push_back( cd.m_piece_connectivity[o+2] );
+            break;
         case 6:  // VTK_TRIANGLE_STRIP
         case 7:  // VTK_POLYGON
         case 9:  // VTK_QUAD
@@ -575,11 +585,11 @@ VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
     polygons.push_back( indices.size() );
 
     boost::shared_ptr<dataset::AbstractDataSource> retval;
-    if( volume_data && planar_data ) {
-        LOGGER_ERROR( log, "Both planar and volumetric data in " << filename );
+    if( volume_data && surface_data ) {
+        LOGGER_ERROR( log, "Both surface and volumetric data in " << filename );
     }
     else if( volume_data ) {
-        LOGGER_DEBUG( log, "created "
+        LOGGER_DEBUG( log, "created volume with "
                       << (cd.m_piece_points.size()/3) << " vertices, "
                       << indices.size() << " indices, "
                       << (polygons.size()-1) << " polygons, and "
@@ -591,7 +601,18 @@ VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
                                                 cd.m_piece_cell_data_name,
                                                 cd.m_piece_cell_data_vals ) );
     }
-    else if( planar_data ) {
+    else if( surface_data ) {
+        LOGGER_DEBUG( log, "created surface with "
+                      << (cd.m_piece_points.size()/3) << " vertices, "
+                      << indices.size() << " indices, "
+                      << (polygons.size()-1) << " polygons, and "
+                      << (cells.size()-1) << " cells." );
+        retval.reset( new PolygonMeshSource( cd.m_piece_points,
+                                                indices,
+                                                polygons,
+                                                cells,
+                                                cd.m_piece_cell_data_name,
+                                                cd.m_piece_cell_data_vals ) );
         
     }
     else {
@@ -600,112 +621,6 @@ VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
     return retval;
 }
 
-#if 0
-VTKXMLSource::VTKXMLSource(const std::string &filename)
-{
-    Logger log = getLogger( "dataset.VTKXMLSource" );
-    xmlSAXHandler saxf;
-    bzero( &saxf, sizeof(saxf ) );
-    saxf.startElement = start_element;
-    saxf.endElement = end_element;
-    saxf.characters = characters_func;
 
-    callback_data cd;
-    cd.m_success = true;
-    cd.m_log = log;
-    cd.m_stack.resize( 1 );
-    cd.m_stack[0].m_type = Tag::TAG_SENTINEL;
-    cd.m_pieces_n = 0;
-    
-    int rv = xmlSAXUserParseFile( &saxf, &cd, filename.c_str() );
-    if( rv != 0 ) {
-        LOGGER_ERROR( log, "xmlSAXUserParseFile returned " << rv );
-        throw std::runtime_error( "Failed to parse XML file" );
-    }
-    if( !cd.m_success ) {
-        throw std::runtime_error( "Failed to interpret XML file" );
-    }
-    
-    // convert various primitives to polyhedrons
-    
-    m_vertices.swap( cd.m_piece_points );
-    
-    for(size_t c=0; c<cd.m_piece_cells_n; c++ ) {
-        
-        size_t o = c < 1 ? 0 : cd.m_piece_offsets[c-1];
-        size_t n = cd.m_piece_offsets[c] - o;
-        
-
-        switch( cd.m_piece_types[c] ) {
-        case 1: // VTK_VERTEX
-        case 2: // VTK_POLY_VERTEX
-        case 3: // VTK_LINE
-        case 4: // VTK_POLY_LINE
-        case 8: // VTK_PIXEL
-        case 11: // VTK_VOXEL
-            LOGGER_WARN( log, "Unsupported type " << cd.m_piece_types[c] );
-            break;
-            
-        case 5:  // VTK_TRIANGLE
-        case 6:  // VTK_TRIANGLE_STRIP
-        case 7:  // VTK_POLYGON
-        case 9:  // VTK_QUAD
-        case 12: // VTK_HEXAHEDRON
-        case 13: // VTK_WEDGE
-        case 14: // VTK_PYRAMID
-            LOGGER_WARN( log, "Unimplemented type " << cd.m_piece_types[c] );
-            break;
-
-        case 10: // VTK_TETRA
-            if( n != 4 ) {
-                LOGGER_ERROR( log, "VTK_TETRA expects 4 vertices, got " << n );
-                throw std::runtime_error( "Inconsistency in VTK data" );
-            }
-            m_cells.push_back( m_polygons.size() );
-
-            m_polygons.push_back( m_indices.size() );
-            m_indices.push_back( cd.m_piece_connectivity[o+0] );
-            m_indices.push_back( cd.m_piece_connectivity[o+3] );
-            m_indices.push_back( cd.m_piece_connectivity[o+2] );
-            
-            m_polygons.push_back( m_indices.size() );
-            m_indices.push_back( cd.m_piece_connectivity[o+1] );
-            m_indices.push_back( cd.m_piece_connectivity[o+3] );
-            m_indices.push_back( cd.m_piece_connectivity[o+0] );
-
-            m_polygons.push_back( m_indices.size() );
-            m_indices.push_back( cd.m_piece_connectivity[o+2] );
-            m_indices.push_back( cd.m_piece_connectivity[o+3] );
-            m_indices.push_back( cd.m_piece_connectivity[o+1] );
-
-            m_polygons.push_back( m_indices.size() );
-            m_indices.push_back( cd.m_piece_connectivity[o+1] );
-            m_indices.push_back( cd.m_piece_connectivity[o+0] );
-            m_indices.push_back( cd.m_piece_connectivity[o+2] );
-
-            break;
- 
-        default:
-            LOGGER_WARN( log, "Unknown type " << cd.m_piece_types[c] );
-            break;
-        }
-    }
-    m_cells.push_back( m_polygons.size() );
-    m_polygons.push_back( m_indices.size() );
-    
-    // Import cell data
-    m_cell_field_name.swap( cd.m_piece_cell_data_name );
-    m_cell_field_data.swap( cd.m_piece_cell_data_vals );
-        
-        
-    
-    LOGGER_DEBUG( log, "created "
-                  << (m_vertices.size()/3) << " vertices, "
-                  << m_indices.size() << " indices, "
-                  << (m_polygons.size()-1) << " polygons, and "
-                  << (m_cells.size()-1) << " cells." );
-
-}
-#endif
 
 } // of namespace dataset
