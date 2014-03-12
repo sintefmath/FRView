@@ -30,7 +30,7 @@
 
 namespace dataset {
     
-class Project
+class CornerpointGrid
         : public AbstractDataSource,
           public CellLayoutInterface,
           public PolyhedralDataInterface,
@@ -39,8 +39,6 @@ class Project
 {
 public:
     typedef float REAL;
-    typedef render::GridTessBridge      Tessellation;   ///< Kill when adding Polyhedral inheritance
-    typedef render::GridFieldBridge     Field;          ///< \todo Rename type.
     
     enum GeometryType {
         GEOMETRY_NONE,
@@ -48,13 +46,13 @@ public:
         GEOMETRY_POLYHEDRAL_MESH
     };
 
-    Project(const std::string filename,
+    CornerpointGrid(const std::string filename,
              int refine_i = 1,
              int refine_j = 1,
              int refine_k = 1 );
     
     virtual
-    ~Project();
+    ~CornerpointGrid();
 
 
     GeometryType

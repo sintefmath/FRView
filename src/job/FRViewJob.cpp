@@ -26,7 +26,7 @@
 #include <tinia/model/GUILayout.hpp>
 //#include <tinia/model/PolicyLock.hpp>
 
-#include "dataset/Project.hpp"
+#include "dataset/CornerpointGrid.hpp"
 #include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
@@ -417,7 +417,7 @@ FRViewJob::loadFile( const std::string& filename,
 
     m_load_geometry = false;
     m_load_color_field = false;
-    m_project = boost::shared_ptr< dataset::Project >();
+    m_project = boost::shared_ptr< dataset::CornerpointGrid >();
     std::list<std::string> solutions = {"none"};
     m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
     m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );

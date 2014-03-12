@@ -15,7 +15,7 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "dataset/Project.hpp"
+#include "dataset/CornerpointGrid.hpp"
 #include "models/GridStats.hpp"
 #include "render/GridTess.hpp"
 
@@ -61,7 +61,7 @@ GridStats::~GridStats()
 void
 GridStats::update( )
 {
-    boost::shared_ptr<dataset::Project > project;
+    boost::shared_ptr<dataset::CornerpointGrid > project;
     boost::shared_ptr<render::GridTess> tessellation;
     update( project, tessellation );
 }

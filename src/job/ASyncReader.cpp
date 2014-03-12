@@ -19,7 +19,7 @@
 #include "ASyncReader.hpp"
 #include "cornerpoint/Tessellator.hpp"
 #include "dataset/VTKXMLSource.hpp"
-#include "dataset/Project.hpp"
+#include "dataset/CornerpointGrid.hpp"
 #include "eclipse/EclipseReader.hpp"
 #include "utils/PerfTimer.hpp"
 
@@ -163,19 +163,19 @@ ASyncReader::handleReadProject( const Command& cmd )
             source.reset( new dataset::VTKXMLSource( cmd.m_project_file ) );
         }
         else if( suffix == "GTXT" ) {
-            source.reset( new dataset::Project( cmd.m_project_file,
+            source.reset( new dataset::CornerpointGrid( cmd.m_project_file,
                                                 cmd.m_refine_i,
                                                 cmd.m_refine_j,
                                                 cmd.m_refine_k ) );            
         }
         else if( suffix == "GEOMETRY" ) {
-            source.reset( new dataset::Project( cmd.m_project_file,
+            source.reset( new dataset::CornerpointGrid( cmd.m_project_file,
                                                 cmd.m_refine_i,
                                                 cmd.m_refine_j,
                                                 cmd.m_refine_k ) );            
         }
         else if( suffix == "EGRID" ) {
-            source.reset( new dataset::Project( cmd.m_project_file,
+            source.reset( new dataset::CornerpointGrid( cmd.m_project_file,
                                                 cmd.m_refine_i,
                                                 cmd.m_refine_j,
                                                 cmd.m_refine_k ) );            

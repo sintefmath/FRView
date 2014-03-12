@@ -23,7 +23,7 @@
 #include <errno.h>
 #include <cstring>
 #include "utils/Logger.hpp"
-#include "Project.hpp"
+#include "dataset/CornerpointGrid.hpp"
 #include "eclipse/EclipseParser.hpp"
 #include "cornerpoint/Tessellator.hpp"
 #include "dataset/FooBarParser.hpp"
@@ -39,7 +39,7 @@ namespace dataset {
 
 static const std::string package = "dataset.Project";
 
-Project::Project(const std::string filename,
+CornerpointGrid::CornerpointGrid(const std::string filename,
                        int refine_i,
                        int refine_j,
                        int refine_k )
@@ -146,12 +146,12 @@ Project::Project(const std::string filename,
     refresh( refine_i, refine_j, refine_k );
 }
 
-Project::~Project()
+CornerpointGrid::~CornerpointGrid()
 {
 }
 
 void
-Project::geometry( Tessellation&                                  geometry_bridge,
+CornerpointGrid::geometry( Tessellation&                                  geometry_bridge,
                    boost::shared_ptr<tinia::model::ExposedModel>  model,
                    const std::string&                             progress_description_key,
                    const std::string&                             progress_counter_key )
@@ -166,7 +166,7 @@ Project::geometry( Tessellation&                                  geometry_bridg
 
 
 void
-Project::addFile( const string& filename )
+CornerpointGrid::addFile( const string& filename )
 {
     Logger log = getLogger( "Project.addFile" );
 
@@ -238,7 +238,7 @@ Project::addFile( const string& filename )
 }
 
 void
-Project::bakeCornerpointGeometry()
+CornerpointGrid::bakeCornerpointGeometry()
 {
     REAL minxy[3];
     REAL maxxy[3];
@@ -309,14 +309,14 @@ Project::bakeCornerpointGeometry()
 }
 
 
-float Project::cornerPointXYScale() const {
+float CornerpointGrid::cornerPointXYScale() const {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_xyscale;
     }
     return 1.f;
 }
 
-float Project::cornerPointZScale() const {
+float CornerpointGrid::cornerPointZScale() const {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_zscale;
     }
@@ -324,7 +324,7 @@ float Project::cornerPointZScale() const {
 }
 
 void
-Project::refineCornerpointGeometry( unsigned int rx,
+CornerpointGrid::refineCornerpointGeometry( unsigned int rx,
                                           unsigned int ry,
                                           unsigned int rz )
 {
@@ -454,7 +454,7 @@ Project::refineCornerpointGeometry( unsigned int rx,
 }
 
 void
-Project::refresh( int rx, int ry, int rz )
+CornerpointGrid::refresh( int rx, int ry, int rz )
 {
     Logger log = getLogger( "Project.refresh" );
 
@@ -643,7 +643,7 @@ Project::refresh( int rx, int ry, int rz )
 }
 
 const bool
-Project::wellDefined(  const unsigned int report_step_ix,
+CornerpointGrid::wellDefined(  const unsigned int report_step_ix,
                              const unsigned int well_ix  ) const
 {
     Logger log = getLogger( package + ".wellDefined" );
@@ -658,7 +658,7 @@ Project::wellDefined(  const unsigned int report_step_ix,
 
 
 void
-Project::addWell( const eclipse::Well& ewell,
+CornerpointGrid::addWell( const eclipse::Well& ewell,
                        const unsigned int sequence_number )
 {
     Logger log = getLogger( "Project.addWell.Eclipse" );
@@ -734,7 +734,7 @@ Project::addWell( const eclipse::Well& ewell,
 }
 
 void
-Project::import( const eclipse::ReportStep& e_step,
+CornerpointGrid::import( const eclipse::ReportStep& e_step,
                        const std::string path )
 {
     Logger log = getLogger( "Project.Eclipse.Reportstep.import" );
@@ -818,7 +818,7 @@ Project::import( const eclipse::ReportStep& e_step,
 
 
 void
-Project::cornerPointCellCentroid( REAL*               p,
+CornerpointGrid::cornerPointCellCentroid( REAL*               p,
                                         const unsigned int  i,
                                         const unsigned int  j,
                                         const unsigned int  k )
@@ -872,7 +872,7 @@ Project::cornerPointCellCentroid( REAL*               p,
 
 
 unsigned int
-Project::getSolutionIndex( const std::string& name )
+CornerpointGrid::getSolutionIndex( const std::string& name )
 {
     auto it = m_solution_name_lut.find( name );
     if( it != m_solution_name_lut.end() ) {
@@ -891,8 +891,8 @@ Project::getSolutionIndex( const std::string& name )
 }
 
 
-typename Project::ReportStep&
-Project::reportStepBySeqNum( unsigned int seqnum )
+typename CornerpointGrid::ReportStep&
+CornerpointGrid::reportStepBySeqNum( unsigned int seqnum )
 {
     for(typename std::vector<ReportStep>::iterator it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
         if( it->m_seqnum == seqnum ) {
@@ -910,7 +910,7 @@ Project::reportStepBySeqNum( unsigned int seqnum )
 
     std::sort( m_report_steps.begin(),
                m_report_steps.end(),
-               Project::compareReportStep);
+               CornerpointGrid::compareReportStep);
 
     for(typename std::vector<ReportStep>::iterator it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
         if( it->m_seqnum == seqnum ) {
@@ -923,7 +923,7 @@ Project::reportStepBySeqNum( unsigned int seqnum )
 
 
 void
-Project::addSolution( const Solution&     solution,
+CornerpointGrid::addSolution( const Solution&     solution,
                             const std::string&  name,
                             const unsigned int  seqnum )
 {
@@ -934,20 +934,20 @@ Project::addSolution( const Solution&     solution,
 
 
 size_t
-Project::fields() const
+CornerpointGrid::fields() const
 {
     return m_solution_names.size();
 }
 
 const std::string
-Project::fieldName( unsigned int name_index ) const
+CornerpointGrid::fieldName( unsigned int name_index ) const
 {
     return m_solution_names.at( name_index );
 }
 
 
 int
-Project::maxIndex( int dimension ) const
+CornerpointGrid::maxIndex( int dimension ) const
 {
     switch( dimension ) {
     case 0:
@@ -969,7 +969,7 @@ Project::maxIndex( int dimension ) const
 
 
 unsigned int
-Project::nx() const
+CornerpointGrid::nx() const
 {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_rx*m_cornerpoint_geometry.m_nx;
@@ -980,7 +980,7 @@ Project::nx() const
 }
 
 unsigned int
-Project::ny() const
+CornerpointGrid::ny() const
 {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_ry*m_cornerpoint_geometry.m_ny;
@@ -991,7 +991,7 @@ Project::ny() const
 }
 
 unsigned int
-Project::nz() const
+CornerpointGrid::nz() const
 {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_rz*m_cornerpoint_geometry.m_nz;
@@ -1003,8 +1003,8 @@ Project::nz() const
 
 
 
-const std::vector<typename Project::Well>&
-Project::wells( const unsigned int step )
+const std::vector<typename CornerpointGrid::Well>&
+CornerpointGrid::wells( const unsigned int step )
 {
     if( step >= m_report_steps.size() ) {
         throw std::runtime_error( "Illegal report step" );
@@ -1015,7 +1015,7 @@ Project::wells( const unsigned int step )
 
 
 void
-Project::field( boost::shared_ptr<Field>  bridge,
+CornerpointGrid::field( boost::shared_ptr<Field>  bridge,
        const size_t              field_index,
        const size_t              timestep_index ) const
 {
@@ -1064,7 +1064,7 @@ Project::field( boost::shared_ptr<Field>  bridge,
 }
 
 bool
-Project::validFieldAtTimestep( size_t field_index, size_t timestep_index ) const
+CornerpointGrid::validFieldAtTimestep( size_t field_index, size_t timestep_index ) const
 {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         if( field_index >= m_solution_names.size() ) {
@@ -1080,7 +1080,7 @@ Project::validFieldAtTimestep( size_t field_index, size_t timestep_index ) const
 
 
 bool
-Project::solution( Solution& solution,
+CornerpointGrid::solution( Solution& solution,
                          const uint solution_ix,
                          const uint report_step )
 {
@@ -1105,7 +1105,7 @@ Project::solution( Solution& solution,
     return false;
 }
 
-const std::string Project::timestepDescription(size_t timestep_index ) const
+const std::string CornerpointGrid::timestepDescription(size_t timestep_index ) const
 {
     static const std::string illegal = "Illegal report step";
     if( m_report_steps.size() <= timestep_index ) {
