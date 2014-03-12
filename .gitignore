@@ -1,4 +1,12 @@
 CMakeLists.txt.user
+CPackConfig.cmake
+CPackSourceConfig.cmake
+buildtools/
+html/
+latex/
+
+# Emacs backup files
+*~
 
 # Compiled Object files
 *.slo
