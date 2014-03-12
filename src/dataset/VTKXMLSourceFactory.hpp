@@ -18,19 +18,25 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "dataset/PolyhedralMeshSource.hpp"
+#include <boost/shared_ptr.hpp>
+#include "dataset/AbstractDataSource.hpp"
 
-class GridTess;
-class GridField;
 
 namespace dataset {
 
-class VTKXMLSource : public dataset::PolyhedralMeshSource
+/** Factory class for processing VTK XML files.
+ *
+ * VTK XML files can contain various types of data, which are handled by
+ * different data sources in FRView.
+ */
+class VTKXMLSourceFactory
 {
 public:
-    
-    VTKXMLSource( const std::string& filename );
 
+    static
+    boost::shared_ptr<dataset::AbstractDataSource>
+    FromVTUFile( const std::string& filename );
+    
 protected:
 
 };

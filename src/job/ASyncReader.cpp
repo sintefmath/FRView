@@ -18,7 +18,7 @@
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "cornerpoint/Tessellator.hpp"
-#include "dataset/VTKXMLSource.hpp"
+#include "dataset/VTKXMLSourceFactory.hpp"
 #include "dataset/CornerpointGrid.hpp"
 #include "eclipse/EclipseReader.hpp"
 #include "utils/PerfTimer.hpp"
@@ -160,7 +160,9 @@ ASyncReader::handleReadProject( const Command& cmd )
 
         boost::shared_ptr<dataset::AbstractDataSource> source;
         if( suffix == "VTU" ) {
-            source.reset( new dataset::VTKXMLSource( cmd.m_project_file ) );
+            source = dataset::VTKXMLSourceFactory::FromVTUFile( cmd.m_project_file );
+            
+//            source.reset( new dataset::VTKXMLSource( cmd.m_project_file ) );
         }
         else if( suffix == "GTXT" ) {
             source.reset( new dataset::CornerpointGrid( cmd.m_project_file,

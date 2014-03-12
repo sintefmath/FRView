@@ -27,7 +27,6 @@
 #include "eclipse/EclipseParser.hpp"
 #include "cornerpoint/Tessellator.hpp"
 #include "dataset/FooBarParser.hpp"
-#include "dataset/VTKXMLSource.hpp"
 #include "render/GridTessBridge.hpp"
 #include "render/GridFieldBridge.hpp"
 

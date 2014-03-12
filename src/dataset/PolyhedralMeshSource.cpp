@@ -82,6 +82,21 @@ struct HalfPolygon
 
 namespace dataset {
 
+PolyhedralMeshSource::PolyhedralMeshSource( std::vector<float>&                 vertices,
+                                            std::vector<int>&                   indices,
+                                            std::vector<int>&                   polygons,
+                                            std::vector<int>&                   cells,
+                                            std::vector<std::string>&           cell_field_name,
+                                            std::vector< std::vector<float> >&  cell_field_data )
+{
+    m_vertices.swap( vertices );
+    m_indices.swap( indices );
+    m_polygons.swap( polygons );
+    m_cells.swap( cells );
+    m_cell_field_name.swap( cell_field_name );
+    m_cell_field_data.swap( cell_field_data );
+}
+
 void
 PolyhedralMeshSource::geometry( Tessellation&                                  geometry_bridge,
                                 boost::shared_ptr<tinia::model::ExposedModel>  model,

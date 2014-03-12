@@ -32,6 +32,17 @@ class PolyhedralMeshSource
           public PolyhedralDataInterface
 {
 public:
+    /** Create a polyhedral mesh directly from arrays.
+     *
+     * Note that this constructor will take ownership of the contents of the
+     * arguments (through vector.swap).
+     */
+    PolyhedralMeshSource( std::vector<float>&                 vertices,
+                          std::vector<int>&                   indices,
+                          std::vector<int>&                   polygons,
+                          std::vector<int>&                   cells,
+                          std::vector<std::string>&           cell_field_name,
+                          std::vector< std::vector<float> >&  cell_field_data );
     
     // -------------------------------------------------------------------------
     /** \name Implementation of PolyhedralDataInterface */
