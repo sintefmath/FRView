@@ -61,19 +61,26 @@ FRViewJob::doCompute()
             m_model->getElementValue( "surface_subset", subset );
             if( subset == "subset_index" ) {
                 if( m_project ) {
-                    int min_i, min_j, min_k, max_i, max_j, max_k;
-                    m_model->getElementValue( "index_range_select_min_i", min_i );
-                    m_model->getElementValue( "index_range_select_min_j", min_j );
-                    m_model->getElementValue( "index_range_select_min_k", min_k );
-                    m_model->getElementValue( "index_range_select_max_i", max_i );
-                    m_model->getElementValue( "index_range_select_max_j", max_j );
-                    m_model->getElementValue( "index_range_select_max_k", max_k );
-                    m_index_selector->apply( m_grid_tess_subset,
-                                             m_grid_tess,
-                                             m_project->nx(), m_project->ny(), m_project->nz(),
-                                             min_i, min_j, min_k,
-                                             max_i, max_j, max_k );
-                    m_render_clip_plane = false;
+                    boost::shared_ptr< dataset::CellLayoutInterface > cell_layout =
+                            boost::dynamic_pointer_cast< dataset::CellLayoutInterface >( m_project );
+                    if( cell_layout ) {
+                        int min_i, min_j, min_k, max_i, max_j, max_k;
+                        m_model->getElementValue( "index_range_select_min_i", min_i );
+                        m_model->getElementValue( "index_range_select_min_j", min_j );
+                        m_model->getElementValue( "index_range_select_min_k", min_k );
+                        m_model->getElementValue( "index_range_select_max_i", max_i );
+                        m_model->getElementValue( "index_range_select_max_j", max_j );
+                        m_model->getElementValue( "index_range_select_max_k", max_k );
+                        m_index_selector->apply( m_grid_tess_subset,
+                                                 m_grid_tess,
+                                                 cell_layout->maxIndex(0),
+                                                 cell_layout->maxIndex(1),
+                                                 cell_layout->maxIndex(2),
+                                                 //nx(), cell_layout->ny(), cell_layout->nz(),
+                                                 min_i, min_j, min_k,
+                                                 max_i, max_j, max_k );
+                        m_render_clip_plane = false;
+                    }
                 }
             }
             else if( subset == "subset_field" ) {

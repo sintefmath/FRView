@@ -18,7 +18,8 @@
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "cornerpoint/Tessellator.hpp"
-#include "dataset/PolyhedralMeshSource.hpp"
+#include "dataset/VTKXMLSource.hpp"
+#include "dataset/Project.hpp"
 #include "eclipse/EclipseReader.hpp"
 #include "utils/PerfTimer.hpp"
 
@@ -60,7 +61,7 @@ ASyncReader::issueReadProject( const std::string& file,
 }
 
 bool
-ASyncReader::issueReadSolution( const boost::shared_ptr< dataset::Project > project,
+ASyncReader::issueReadSolution( const boost::shared_ptr<dataset::AbstractDataSource> project,
                                 size_t solution_index, size_t report_step_index )
 {
     Command cmd;
@@ -74,7 +75,7 @@ ASyncReader::issueReadSolution( const boost::shared_ptr< dataset::Project > proj
 
 
 bool
-ASyncReader::getProject( boost::shared_ptr< dataset::Project >& project,
+ASyncReader::getProject( boost::shared_ptr<dataset::AbstractDataSource> &project,
                          boost::shared_ptr< render::GridTessBridge>&  tess_bridge )
 {
     std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
@@ -156,63 +157,56 @@ ASyncReader::handleReadProject( const Command& cmd )
           *it = std::toupper( *it );
         }
         
-        if( suffix == "VTU" ) {
 
+        boost::shared_ptr<dataset::AbstractDataSource> source;
+        if( suffix == "VTU" ) {
+            source.reset( new dataset::VTKXMLSource( cmd.m_project_file ) );
         }
         else if( suffix == "GTXT" ) {
-            
+            source.reset( new dataset::Project( cmd.m_project_file,
+                                                cmd.m_refine_i,
+                                                cmd.m_refine_j,
+                                                cmd.m_refine_k ) );            
         }
         else if( suffix == "GEOMETRY" ) {
-            
+            source.reset( new dataset::Project( cmd.m_project_file,
+                                                cmd.m_refine_i,
+                                                cmd.m_refine_j,
+                                                cmd.m_refine_k ) );            
         }
         else if( suffix == "EGRID" ) {
-            
+            source.reset( new dataset::Project( cmd.m_project_file,
+                                                cmd.m_refine_i,
+                                                cmd.m_refine_j,
+                                                cmd.m_refine_k ) );            
         }
-        
-        boost::shared_ptr< dataset::Project > project( new dataset::Project( cmd.m_project_file,
-                                                                       cmd.m_refine_i,
-                                                                       cmd.m_refine_j,
-                                                                       cmd.m_refine_k ) );
-        if( project->geometryType() == dataset::Project::GEOMETRY_CORNERPOINT_GRID ) {
 
-            boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
-            //m_field_remap = project->fieldRemap();
-
-            project->geometry( *tess_bridge,
-                               m_model,
-                               progress_description_key,
-                               progress_counter_key );
-            
-            m_model->updateElement<std::string>( progress_description_key, "Organizing data..." );
-            m_model->updateElement<int>( progress_counter_key, 0 );
-            tess_bridge->process();
-
-            Response rsp;
-            rsp.m_type = Response::PROJECT;
-            rsp.m_project = project;
-            rsp.m_project_grid = tess_bridge;
-            postResponse( cmd, rsp );
+        if( source ) {
+            boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
+                    boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source );
+            if( poly_source ) {
+                boost::shared_ptr< render::GridTessBridge > bridge( new render::GridTessBridge( cmd.m_triangulate ) );
+                
+                poly_source->geometry( *bridge,
+                                       m_model,
+                                       progress_description_key,
+                                       progress_counter_key );
+                
+                m_model->updateElement<std::string>( progress_description_key, "Organizing data..." );
+                m_model->updateElement<int>( progress_counter_key, 0 );
+                bridge->process();
+                
+                Response rsp;
+                rsp.m_type = Response::PROJECT;
+                rsp.m_project = source;
+                rsp.m_project_grid = bridge;
+                postResponse( cmd, rsp );
+            }
+            else {
+                m_model->updateElement<std::string>( progress_description_key, "Source is not a polygon source" );
+                sleep(2);
+            }
         }
-        else if( project->geometryType() == dataset::Project::GEOMETRY_POLYHEDRAL_MESH ) {
-            boost::shared_ptr< render::GridTessBridge > tess_bridge( new render::GridTessBridge( cmd.m_triangulate ) );
-            //m_field_remap = project->fieldRemap();
-            
-            project->source()->geometry( *tess_bridge,
-                                         m_model,
-                                         progress_description_key,
-                                         progress_counter_key );
-            
-            m_model->updateElement<std::string>( progress_description_key, "Organizing data..." );
-            m_model->updateElement<int>( progress_counter_key, 0 );
-            tess_bridge->process();
-            
-            Response rsp;
-            rsp.m_type = Response::PROJECT;
-            rsp.m_project = project;
-            rsp.m_project_grid = tess_bridge;
-            postResponse( cmd, rsp );
-        }
-        
         else {
             m_model->updateElement<std::string>( progress_description_key, "Unsupported geometry type" );
             sleep(2);
@@ -231,15 +225,9 @@ ASyncReader::handleReadSolution( const Command& cmd )
     Logger log = getLogger( package + ".handleReadSolution" );
     m_model->updateElement<std::string>( progress_description_key, "Reading solution..." );
 
-    // temporary workaround
-    boost::shared_ptr<dataset::AbstractDataSource> source = cmd.m_project->source();
-    if( !source ) {
-        source = cmd.m_project;
-    }
-        
     
     boost::shared_ptr<dataset::PolyhedralDataInterface> polydata =
-            boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source );
+            boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( cmd.m_project );
 
     Response rsp;
     if( polydata != NULL ) {

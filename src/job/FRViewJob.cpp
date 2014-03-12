@@ -461,25 +461,33 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         }
     }
     else if( key == "field_solution" && m_project ) {
-        string value;
-        stateElement->getValue<string>( value );
-        for(unsigned int i=0; i<m_project->fields(); i++ ) {
-            if( value == m_project->fieldName(i) ) {
-                m_solution_index = i;
-                break;
+        boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
+                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( m_project );
+        if( poly_source ) {
+            string value;
+            stateElement->getValue<string>( value );
+            for(unsigned int i=0; i<poly_source->fields(); i++ ) {
+                if( value == poly_source->fieldName(i) ) {
+                    m_solution_index = i;
+                    break;
+                }
             }
-        }
-        if( m_project->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
-            if( m_async_reader->issueReadSolution( m_project, m_solution_index, m_report_step_index ) ) {
+            if( poly_source->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
+                if( m_async_reader->issueReadSolution( m_project, m_solution_index, m_report_step_index ) ) {
+                }
             }
         }
     }
     else if( key == "field_report_step" && m_project ) {
-        int value;
-        stateElement->getValue<int>( value );
-        m_report_step_index = value;
-        if( m_project->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
-            if( m_async_reader->issueReadSolution( m_project, m_solution_index, m_report_step_index ) ) {
+        boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
+                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( m_project );
+        if( poly_source ) {
+            int value;
+            stateElement->getValue<int>( value );
+            m_report_step_index = value;
+            if( poly_source->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
+                if( m_async_reader->issueReadSolution( m_project, m_solution_index, m_report_step_index ) ) {
+                }
             }
         }
     }
@@ -691,8 +699,13 @@ FRViewJob::updateModelMatrices()
                                    (bbmax.y-bbmin.y) );
 
         float scale_z = m_grid_stats.zScale();
-        if( m_project.get() != NULL ) {
-            scale_z = scale_z*(m_project->cornerPointZScale()/m_project->cornerPointXYScale());
+
+        if( m_project ) {
+            boost::shared_ptr<dataset::ZScaleInterface> zscale_src =
+                    boost::dynamic_pointer_cast<dataset::ZScaleInterface>( m_project );
+            if( zscale_src ) {
+                scale_z = scale_z*(zscale_src->cornerPointZScale()/zscale_src->cornerPointXYScale());
+            }
         }
         m_local_to_world = glm::mat4();
         m_local_to_world = glm::translate( m_local_to_world, glm::vec3(0.5f ) );

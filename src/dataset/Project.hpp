@@ -24,16 +24,17 @@
 #include "dataset/AbstractDataSource.hpp"
 #include "dataset/PolyhedralDataInterface.hpp"
 #include "dataset/WellDataInterface.hpp"
+#include "dataset/CellLayoutInterface.hpp"
+#include "dataset/ZScaleInterface.hpp"
 #include "eclipse/Eclipse.hpp"
 
 namespace dataset {
-    class PolyhedralMeshSource;
-
-
     
 class Project
         : public AbstractDataSource,
+          public CellLayoutInterface,
           public PolyhedralDataInterface,
+          public ZScaleInterface,
           public WellDataInterace
 {
 public:
@@ -78,13 +79,30 @@ public:
     nr() const { return m_cornerpoint_geometry.m_nr; }
 
 
-
-    REAL
+    // -------------------------------------------------------------------------
+    /** \name Implementation of ZScaleInterface */
+    /** @{ */
+    
+    float
     cornerPointXYScale() const;
 
-    REAL
+    float
     cornerPointZScale() const;
 
+    /** @} */
+
+    // -------------------------------------------------------------------------
+    /** \name Implementation of CellLayoutInterface */
+    /** @{ */
+
+    int
+    indexDim() const { return 4; }
+
+    int
+    maxIndex( int dimension ) const;
+    
+    /** @} */
+    
     // -------------------------------------------------------------------------
     /** \name Implementation of PolyhedralDataInterface */
     /** @{ */
@@ -114,7 +132,7 @@ public:
     size_t
     fields() const;
 
-    const std::string&
+    const std::string
     fieldName( unsigned int name_index ) const;
     
 
@@ -166,15 +184,6 @@ public:
     // -------------------------------------------------------------------------
     
 
-
-    // HACK. Public for debug gfx purposes.
-
-
-    boost::shared_ptr<PolyhedralMeshSource>
-    source() { return m_polyhedral_mesh_source; }
-    
-    const boost::shared_ptr<PolyhedralMeshSource>
-    source() const { return m_polyhedral_mesh_source; }
 
 
 private:
@@ -253,7 +262,6 @@ private:
     std::vector<ReportStep>                         m_report_steps;
     std::list<File>                                 m_unprocessed_files;
 
-    boost::shared_ptr<PolyhedralMeshSource>   m_polyhedral_mesh_source;
     
     const std::vector<REAL>
     cornerPointCoord() const { return m_cornerpoint_geometry.m_coord; }

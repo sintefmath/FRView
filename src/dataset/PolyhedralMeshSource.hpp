@@ -22,40 +22,56 @@
 #include "render/GridTess.hpp"
 #include "dataset/AbstractDataSource.hpp"
 #include "dataset/PolyhedralDataInterface.hpp"
+#include "dataset/CellLayoutInterface.hpp"
 
 namespace dataset {
 
 class PolyhedralMeshSource
         : public AbstractDataSource,
+          public CellLayoutInterface,
           public PolyhedralDataInterface
 {
 public:
     
-
+    // -------------------------------------------------------------------------
+    /** \name Implementation of PolyhedralDataInterface */
+    /** @{ */
     void
     geometry( Tessellation&                                  geometry_bridge,
               boost::shared_ptr<tinia::model::ExposedModel>  model,
               const std::string&                             progress_description_key,
               const std::string&                             progress_counter_key );
     
-    size_t
-    timesteps() const { return 1; }
-
-    const std::string
-    timestepDescription( size_t timestep_index ) const { return "n/a"; }
-    
     void
     field( boost::shared_ptr<Field>  bridge,
            const size_t              field_index,
            const size_t              timestep_index ) const;    
+
     size_t
     fields() const { return m_cell_field_name.size(); }
 
     bool
     validFieldAtTimestep( size_t field_index, size_t timestep_index ) const;
+
+    size_t
+    timesteps() const { return 1; }
+
     
-    const std::string&
+    const std::string
     fieldName( unsigned int name_index ) const { return m_cell_field_name[ name_index ]; }
+
+    // -------------------------------------------------------------------------
+    /** \name Implementation of CellLayoutInterface */
+    /** @{ */
+
+    int
+    indexDim() const;
+
+    int
+    maxIndex( int dimension ) const;
+    
+    /** @} */
+
     
 protected:
     std::vector<float>                  m_vertices; ///< in R^3.

@@ -1,3 +1,4 @@
+#pragma once
 /* Copyright STIFTELSEN SINTEF 2013
  * 
  * This file is part of FRView.
@@ -14,31 +15,33 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include <sstream>
-#include "dataset/PolyhedralDataInterface.hpp"
+#include <string>
 
 namespace dataset {
 
-PolyhedralDataInterface::~PolyhedralDataInterface()
+/** Interface used to describe the logical layout of cells. */
+class CellLayoutInterface
 {
-}
+public:
+    virtual
+    ~CellLayoutInterface();
+    
+    /** Dimensionality of indexing (i.e., 2D, 3D) */
+    virtual
+    int
+    indexDim() const = 0;
 
-const std::string
-PolyhedralDataInterface::timestepDescription( size_t timestep_index ) const
-{
-    std::stringstream o;
-    o << timestep_index;
-    return o.str();
-}
-
-const std::string
-PolyhedralDataInterface::fieldName( unsigned int name_index ) const
-{
-    std::stringstream o;
-    o << name_index;
-    return o.str();
-}
+    /** Minimum index inclusive for a dimension. */    
+    virtual
+    int
+    minIndex( int dimension ) const { return 0; }
+    
+    /** Maximum index exclusive for a given dimension. */
+    virtual
+    int
+    maxIndex( int dimension ) const = 0;
+    
+};
 
 
-} // of namespace dataset
+} // of namespace input

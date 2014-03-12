@@ -1,3 +1,4 @@
+#pragma once
 /* Copyright STIFTELSEN SINTEF 2013
  * 
  * This file is part of FRView.
@@ -14,31 +15,25 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include <sstream>
-#include "dataset/PolyhedralDataInterface.hpp"
+#include <string>
 
 namespace dataset {
 
-PolyhedralDataInterface::~PolyhedralDataInterface()
+class ZScaleInterface
 {
-}
+public:
+    virtual
+    ~ZScaleInterface();
 
-const std::string
-PolyhedralDataInterface::timestepDescription( size_t timestep_index ) const
-{
-    std::stringstream o;
-    o << timestep_index;
-    return o.str();
-}
+    virtual
+    float
+    cornerPointXYScale() const = 0;
 
-const std::string
-PolyhedralDataInterface::fieldName( unsigned int name_index ) const
-{
-    std::stringstream o;
-    o << name_index;
-    return o.str();
-}
+    virtual
+    float
+    cornerPointZScale() const = 0;
+
+};
 
 
-} // of namespace dataset
+} // of namespace input

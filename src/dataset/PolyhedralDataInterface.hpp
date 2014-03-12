@@ -61,14 +61,21 @@ public:
     size_t
     timesteps() const = 0;
 
-    /** Describes a timestep (elapsed seconds, date, etc). */
+    /** Describes a timestep (elapsed seconds, date, etc).
+     *
+     * Default implementation just returns timestep_index as a string.
+     */
     virtual
     const std::string
-    timestepDescription( size_t timestep_index ) const = 0;
+    timestepDescription( size_t timestep_index ) const;
     
+    /** Returns a descriptive name of a field.
+     *
+     * Default implementation returns name_index as a string.
+     */
     virtual
-    const std::string&
-    fieldName( unsigned int name_index ) const = 0;
+    const std::string
+    fieldName( unsigned int name_index ) const;
     
 };
 

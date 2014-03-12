@@ -20,6 +20,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "dataset/Project.hpp"
+#include "dataset/PolyhedralDataInterface.hpp"
 #include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
@@ -39,8 +40,8 @@ FRViewJob::fetchData()
 
     // import geometry
     if( m_load_geometry ) {
-
-        boost::shared_ptr< dataset::Project > project;
+        
+        boost::shared_ptr< dataset::AbstractDataSource > project;
         boost::shared_ptr< render::GridTessBridge > tess_bridge;
         if( m_async_reader->getProject( project, tess_bridge ) ) {
             if( !m_has_pipeline ) {
@@ -60,40 +61,58 @@ FRViewJob::fetchData()
 
             // --- update model variables --------------------------------------
             m_model->updateElement<bool>("has_project", true );
+            
+            boost::shared_ptr< dataset::PolyhedralDataInterface > polydata =
+                    boost::dynamic_pointer_cast< dataset::PolyhedralDataInterface >( m_project );
 
-            // --- solution list
             std::list<std::string> solutions;
-            if( m_project->fields() == 0 ) {
-                solutions.push_back( "[none]" );
-            }
-            else {
-                for(unsigned int i=0; i<m_project->fields(); i++ ) {
-                    solutions.push_back( m_project->fieldName(i) );
+            int timestep_max = 0;
+            if( polydata ) {
+                for(unsigned int i=0; i<polydata->fields(); i++ ) {
+                    solutions.push_back( polydata->fieldName(i) );
                 }
+                timestep_max = std::max( (int)1, (int)polydata->timesteps() )-1;
+            }
+
+            if( solutions.empty() ) {
+                solutions.push_back( "[none]" );
             }
             m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
             m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
+            m_model->updateConstraints<int>("field_report_step", 0,0,  timestep_max );
+            m_model->updateConstraints<int>( "field_select_report_step", 0, 0, timestep_max );
 
-            // --- report steps
-            int reportstep_max = std::max( (size_t)1, m_project->timesteps() )-1u;
-            m_model->updateConstraints<int>("field_report_step", 0,0,  reportstep_max );
-            m_model->updateConstraints<int>( "field_select_report_step", 0, 0, reportstep_max );
-
-            const unsigned int nx = m_project->nx();
-            const unsigned int ny = m_project->ny();
-            const unsigned int nz = m_project->nz();
-            int nx_max = std::max( 1u, nx ) - 1u;
-            int ny_max = std::max( 1u, ny ) - 1u;
-            int nz_max = std::max( 1u, nz ) - 1u;
-            m_model->updateConstraints<int>( "index_range_select_min_i", 0, 0, nx_max );
-            m_model->updateConstraints<int>( "index_range_select_max_i", nx_max, 0, nx_max );
-            m_model->updateConstraints<int>( "index_range_select_min_j", 0, 0, ny_max );
-            m_model->updateConstraints<int>( "index_range_select_max_j", ny_max, 0, ny_max );
-            m_model->updateConstraints<int>( "index_range_select_min_k", 0, 0, nz_max );
-            m_model->updateConstraints<int>( "index_range_select_max_k", nz_max, 0, nz_max );
+            int nx_min = 0;
+            int nx_max = 0;
+            int ny_min = 0;
+            int ny_max = 0;
+            int nz_min = 0;
+            int nz_max = 0;
+            boost::shared_ptr< dataset::CellLayoutInterface > cell_layout =
+                    boost::dynamic_pointer_cast< dataset::CellLayoutInterface >( m_project );
+            if( cell_layout ) {
+                int dim = cell_layout->indexDim();
+                if( dim > 0 ) {
+                    nx_min = cell_layout->minIndex(0);
+                    nx_max = std::max( 1, cell_layout->maxIndex(0) ) - 1u;
+                    if( dim > 1 ) {
+                        ny_min = cell_layout->minIndex(1);
+                        ny_max = std::max( 1, cell_layout->maxIndex(1) ) - 1u;
+                        if( dim > 2 ) {
+                            nz_min = cell_layout->minIndex(2);
+                            nz_max = std::max( 1, cell_layout->maxIndex(2) ) - 1u;
+                        }
+                    }
+                }
+            }
+            m_model->updateConstraints<int>( "index_range_select_min_i", nx_min, nx_min, nx_max );
+            m_model->updateConstraints<int>( "index_range_select_max_i", nx_max, nx_min, nx_max );
+            m_model->updateConstraints<int>( "index_range_select_min_j", ny_min, ny_min, ny_max );
+            m_model->updateConstraints<int>( "index_range_select_max_j", ny_max, ny_min, ny_max );
+            m_model->updateConstraints<int>( "index_range_select_min_k", nz_min, nz_min, nz_max );
+            m_model->updateConstraints<int>( "index_range_select_max_k", nz_max, nz_min, nz_max );
 
             m_grid_stats.update( m_project, m_grid_tess );
-
 
             m_do_update_subset = true;
 
@@ -124,32 +143,36 @@ FRViewJob::fetchData()
 
             m_wells->clear();
             if( m_appearance.renderWells() ) {
-                std::vector<float> colors;
-                std::vector<float> positions;
-                for( unsigned int w=0; w<m_project->wellCount(); w++ ) {
-                    if( !m_project->wellDefined( m_report_step_index, w ) ) {
-                        continue;
-                    }
-                    m_wells->addWellHead( m_project->wellName(w),
-                                          m_project->wellHeadPosition( m_report_step_index, w ) );
-
-                    positions.clear();
-                    colors.clear();
-                    const unsigned int bN = m_project->wellBranchCount( m_report_step_index, w );
-                    for( unsigned int b=0; b<bN; b++ ) {
-                        const std::vector<float>& p = m_project->wellBranchPositions( m_report_step_index, w, b );
-                        if( p.empty() ) {
+                boost::shared_ptr< dataset::WellDataInterace > well_source =
+                        boost::dynamic_pointer_cast< dataset::WellDataInterace >( m_project );
+                if( well_source ) {
+                    std::vector<float> colors;
+                    std::vector<float> positions;
+                    for( unsigned int w=0; w<well_source->wellCount(); w++ ) {
+                        if( !well_source->wellDefined( m_report_step_index, w ) ) {
                             continue;
                         }
-                        for( size_t i=0; i<p.size(); i+=3 ) {
-                            positions.push_back( p[i+0] );
-                            positions.push_back( p[i+1] );
-                            positions.push_back( p[i+2] );
-                            colors.push_back( ((i & 0x1) == 0) ? 1.f : 0.5f );
-                            colors.push_back( ((i & 0x2) == 0) ? 1.f : 0.5f );
-                            colors.push_back( ((i & 0x4) == 0) ? 1.f : 0.5f );
+                        m_wells->addWellHead( well_source->wellName(w),
+                                              well_source->wellHeadPosition( m_report_step_index, w ) );
+                        
+                        positions.clear();
+                        colors.clear();
+                        const unsigned int bN = well_source->wellBranchCount( m_report_step_index, w );
+                        for( unsigned int b=0; b<bN; b++ ) {
+                            const std::vector<float>& p = well_source->wellBranchPositions( m_report_step_index, w, b );
+                            if( p.empty() ) {
+                                continue;
+                            }
+                            for( size_t i=0; i<p.size(); i+=3 ) {
+                                positions.push_back( p[i+0] );
+                                positions.push_back( p[i+1] );
+                                positions.push_back( p[i+2] );
+                                colors.push_back( ((i & 0x1) == 0) ? 1.f : 0.5f );
+                                colors.push_back( ((i & 0x2) == 0) ? 1.f : 0.5f );
+                                colors.push_back( ((i & 0x4) == 0) ? 1.f : 0.5f );
+                            }
+                            m_wells->addSegments( positions, colors );
                         }
-                        m_wells->addSegments( positions, colors );
                     }
                 }
             }
@@ -161,20 +184,26 @@ FRViewJob::fetchData()
                 m_model->updateElement<double>( "field_range_min", m_grid_field->minValue() );
                 m_model->updateElement<double>( "field_range_max", m_grid_field->maxValue() );
             }
+            bool has_field = false;
             if( m_has_color_field && m_project ) {
-                std::stringstream o;
-                o << "[ " << m_grid_field->minValue() << ", " << m_grid_field->maxValue() << " ]";
-                m_model->updateElement( "field_info_range", o.str() );
-                o.str("");
-                o << "[not implemented]";
-                m_model->updateElement( "field_info_calendar", m_project->timestepDescription( m_report_step_index ) );
-                m_model->updateElement( "has_field", true );
+                boost::shared_ptr<dataset::PolyhedralDataInterface> poly_data =
+                        boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( m_project );
+                if( poly_data ) {
+                    has_field = true;
+                    std::stringstream o;
+                    o << "[ " << m_grid_field->minValue() << ", " << m_grid_field->maxValue() << " ]";
+                    m_model->updateElement( "field_info_range", o.str() );
+                    o.str("");
+                    o << "[not implemented]";
+                    m_model->updateElement( "field_info_calendar", poly_data->timestepDescription( m_report_step_index ) );
+                }
             }
-            else {
+            if( !has_field ) {
                 m_model->updateElement( "field_info_range", "[not available]" );
                 m_model->updateElement( "field_info_calendar", "[not available]" );
-                m_model->updateElement( "has_field", false );
             }
+            m_model->updateElement( "has_field", has_field );
+            
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
             }

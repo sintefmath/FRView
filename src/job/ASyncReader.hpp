@@ -21,7 +21,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <tinia/model/ExposedModel.hpp>
-#include "dataset/Project.hpp"
+#include "dataset/AbstractDataSource.hpp"
 #include "render/GridTessBridge.hpp"
 #include "render/GridFieldBridge.hpp"
 
@@ -46,11 +46,11 @@ public:
                       const bool triangulate = false );
 
     bool
-    issueReadSolution( const boost::shared_ptr< dataset::Project > project,
+    issueReadSolution( const boost::shared_ptr< dataset::AbstractDataSource > project,
                        size_t solution_index, size_t report_step_index );
 
     bool
-    getProject( boost::shared_ptr< dataset::Project >& project,
+    getProject( boost::shared_ptr< dataset::AbstractDataSource >& project,
                 boost::shared_ptr< render::GridTessBridge>&  tess_bridge );
 
 
@@ -73,7 +73,7 @@ protected:
         int                                     m_refine_j;
         int                                     m_refine_k;
         bool                                    m_triangulate;
-        boost::shared_ptr< dataset::Project >       m_project;
+        boost::shared_ptr< dataset::AbstractDataSource >       m_project;
         size_t                                  m_field_index;
         size_t                                  m_timestep_index;
     };
@@ -85,7 +85,7 @@ protected:
             SOLUTION
             // Should have error as well?
         }                                       m_type;
-        boost::shared_ptr< dataset::Project >       m_project;
+        boost::shared_ptr< dataset::AbstractDataSource >       m_project;
         boost::shared_ptr< render::GridTessBridge >       m_project_grid;
         boost::shared_ptr< render::GridFieldBridge >      m_solution;
     };

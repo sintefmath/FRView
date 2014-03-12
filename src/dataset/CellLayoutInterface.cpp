@@ -15,30 +15,12 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sstream>
-#include "dataset/PolyhedralDataInterface.hpp"
+#include "dataset/CellLayoutInterface.hpp"
 
 namespace dataset {
 
-PolyhedralDataInterface::~PolyhedralDataInterface()
+CellLayoutInterface::~CellLayoutInterface()
 {
 }
 
-const std::string
-PolyhedralDataInterface::timestepDescription( size_t timestep_index ) const
-{
-    std::stringstream o;
-    o << timestep_index;
-    return o.str();
-}
-
-const std::string
-PolyhedralDataInterface::fieldName( unsigned int name_index ) const
-{
-    std::stringstream o;
-    o << name_index;
-    return o.str();
-}
-
-
-} // of namespace dataset
+} // of namespace input

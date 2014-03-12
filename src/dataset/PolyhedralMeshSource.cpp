@@ -321,4 +321,22 @@ PolyhedralMeshSource::field( boost::shared_ptr<Field>  bridge,
 }
 
 
+int
+PolyhedralMeshSource::indexDim() const
+{
+    return 1;
+}
+
+int
+PolyhedralMeshSource::maxIndex( int dimension ) const
+{
+    if( dimension == 0 ) {
+        return std::max(1,(int)m_cells.size())-1;
+    }
+    else {
+        return 0;
+    }
+}
+
+
 } // of namespace input

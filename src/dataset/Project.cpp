@@ -309,16 +309,14 @@ Project::bakeCornerpointGeometry()
 }
 
 
-Project::REAL
-Project::cornerPointXYScale() const {
+float Project::cornerPointXYScale() const {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_xyscale;
     }
     return 1.f;
 }
 
-Project::REAL
-Project::cornerPointZScale() const {
+float Project::cornerPointZScale() const {
     if( m_geometry_type == GEOMETRY_CORNERPOINT_GRID ) {
         return m_cornerpoint_geometry.m_zscale;
     }
@@ -565,30 +563,30 @@ Project::refresh( int rx, int ry, int rz )
 //                m_geometry_set = true;
                 break;
             }
-            else if( it->m_filetype == VTK_XML_VTU_FILE ) {
-                try {
+//            else if( it->m_filetype == VTK_XML_VTU_FILE ) {
+//                try {
                     
-                    m_polyhedral_mesh_source.reset( new VTKXMLSource( it->m_path ) );
-                    m_geometry_type = GEOMETRY_POLYHEDRAL_MESH;
+//                    //m_polyhedral_mesh_source.reset( new VTKXMLSource( it->m_path ) );
+//                    //m_geometry_type = GEOMETRY_POLYHEDRAL_MESH;
 
-                    /*std::vector<float>  vertices;
-                    std::vector<int>    tetrahedra;
+//                    /*std::vector<float>  vertices;
+//                    std::vector<int>    tetrahedra;
                     
-                    VtkXmlParser::parse( vertices, tetrahedra, it->m_path );
+//                    VtkXmlParser::parse( vertices, tetrahedra, it->m_path );
                     
-                    LOGGER_DEBUG( log, "Parsed VTU file Nv=" << (vertices.size()/3) 
-                                  << ", Nt=" << (tetrahedra.size()/4) );
+//                    LOGGER_DEBUG( log, "Parsed VTU file Nv=" << (vertices.size()/3) 
+//                                  << ", Nt=" << (tetrahedra.size()/4) );
 
-                    m_tetrahedral_geometry.m_vertices.swap( vertices );
-                    m_tetrahedral_geometry.m_tetrahedra.swap( tetrahedra );
-                    */
-                }
-                catch( const std::runtime_error& e ) {
-                    LOGGER_ERROR( log, it->m_path << ": Parse error: " << e.what() );
-                }
-                m_unprocessed_files.erase( it );
-                break;
-            }
+//                    m_tetrahedral_geometry.m_vertices.swap( vertices );
+//                    m_tetrahedral_geometry.m_tetrahedra.swap( tetrahedra );
+//                    */
+//                }
+//                catch( const std::runtime_error& e ) {
+//                    LOGGER_ERROR( log, it->m_path << ": Parse error: " << e.what() );
+//                }
+//                m_unprocessed_files.erase( it );
+//                break;
+//            }
             
         }
     }
@@ -938,28 +936,35 @@ Project::addSolution( const Solution&     solution,
 size_t
 Project::fields() const
 {
-    if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
-        if( m_polyhedral_mesh_source ) {
-            Logger log = getLogger( "FOOBARZ" );
-            LOGGER_DEBUG( log,m_polyhedral_mesh_source->fields() );
-            return m_polyhedral_mesh_source->fields();
-        }
-    }
     return m_solution_names.size();
 }
 
-const std::string&
+const std::string
 Project::fieldName( unsigned int name_index ) const
 {
-    if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
-        if( m_polyhedral_mesh_source ) {
-            Logger log = getLogger( "FOOBART" );
-            LOGGER_DEBUG( log,m_polyhedral_mesh_source->fieldName( name_index ));
-            
-            return m_polyhedral_mesh_source->fieldName( name_index );
-        }
-    }
     return m_solution_names.at( name_index );
+}
+
+
+int
+Project::maxIndex( int dimension ) const
+{
+    switch( dimension ) {
+    case 0:
+        return m_cornerpoint_geometry.m_rx*m_cornerpoint_geometry.m_nx;
+        break;
+    case 1:
+        return m_cornerpoint_geometry.m_ry*m_cornerpoint_geometry.m_ny;
+        break;
+    case 2:
+        return m_cornerpoint_geometry.m_rz*m_cornerpoint_geometry.m_nz;
+        break;
+    case 3:
+        return m_cornerpoint_geometry.m_nr;
+        break;
+    default:
+        return 0;
+    }
 }
 
 
@@ -1096,17 +1101,6 @@ Project::solution( Solution& solution,
         solution.m_field_index = solution_ix;
         solution.m_timestep_index = report_step;
         return true;
-    }
-    else if( m_geometry_type == GEOMETRY_POLYHEDRAL_MESH ) {
-        if( m_polyhedral_mesh_source
-                && (report_step == 0)
-                && (solution_ix < m_polyhedral_mesh_source->fields() ) )
-        {
-            solution.m_reader = READER_FROM_SOURCE;
-            solution.m_field_index = solution_ix;
-            solution.m_timestep_index = report_step;
-            return true;
-        }
     }
     return false;
 }
