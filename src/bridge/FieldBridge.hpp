@@ -22,44 +22,47 @@
 namespace render {
     class GridTess;
     class GridField;
+}
+
+namespace bridge {
 
     
 /** Bridge between field source and GPU representation.    
  *
  * \note When source populates values, it must also set min and max value.
  */
-class GridFieldBridge : public boost::noncopyable
+class FieldBridge : public boost::noncopyable
 {
     friend class GridField;
 public:
-    typedef float REAL;
+    typedef float Real;
 
-    GridFieldBridge();
+    FieldBridge();
 
 
-    ~GridFieldBridge();
+    ~FieldBridge();
 
     void
     init( size_t count );
     
-    REAL*
+    Real*
     values();
 
     size_t
     count() const { return m_count; }
 
-    REAL&
+    Real&
     minimum() { return m_min_value; }
 
-    REAL&
+    Real&
     maximum() { return m_max_value; }
 
 protected:
     size_t                      m_count;
     std::vector<unsigned char>  m_values;
-    REAL*                       m_memory;
-    REAL                        m_min_value;
-    REAL                        m_max_value;
+    Real*                       m_memory;
+    Real                        m_min_value;
+    Real                        m_max_value;
 };
 
-} // of namespace render
+} // of namespace bridge

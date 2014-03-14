@@ -22,8 +22,8 @@
 #include <condition_variable>
 #include <tinia/model/ExposedModel.hpp>
 #include "dataset/AbstractDataSource.hpp"
-#include "render/GridTessBridge.hpp"
-#include "render/GridFieldBridge.hpp"
+#include "bridge/PolyhedralMeshBridge.hpp"
+#include "bridge/FieldBridge.hpp"
 
 class ASyncReader
 {
@@ -51,11 +51,11 @@ public:
 
     bool
     getProject( boost::shared_ptr< dataset::AbstractDataSource >& project,
-                boost::shared_ptr< render::GridTessBridge>&  tess_bridge );
+                boost::shared_ptr< bridge::PolyhedralMeshBridge>&  tess_bridge );
 
 
     bool
-    getSolution( boost::shared_ptr< render::GridFieldBridge >& field_bridge );
+    getSolution( boost::shared_ptr< bridge::FieldBridge >& field_bridge );
 
 
 protected:
@@ -86,8 +86,8 @@ protected:
             // Should have error as well?
         }                                       m_type;
         boost::shared_ptr< dataset::AbstractDataSource >       m_project;
-        boost::shared_ptr< render::GridTessBridge >       m_project_grid;
-        boost::shared_ptr< render::GridFieldBridge >      m_solution;
+        boost::shared_ptr< bridge::PolyhedralMeshBridge >       m_project_grid;
+        boost::shared_ptr< bridge::FieldBridge >      m_solution;
     };
 
     Ticket                                      m_ticket_counter;

@@ -18,49 +18,20 @@
 #pragma once
 #include <vector>
 #include <list>
-#include <boost/utility.hpp>
 #include "utils/Logger.hpp"
+#include "bridge/AbstractMeshBridge.hpp"
 
 namespace render {
     class GridTess;
+}
 
-class GridTessBridge : public boost::noncopyable
+namespace bridge {
+
+class PolyhedralMeshBridge
+        : public AbstractMeshBridge
 {
-    friend class GridTess;
+    friend class render::GridTess;
 public:
-    /** Basic floating-point type for triangulation. */
-    typedef float Real;
-
-    /** Basic index type for triangulation. */
-    typedef unsigned int Index;
-
-    /** Helper struct used for polygon tessellation.
-      *
-      * Everything is currently encoded as an uint32, where the two upper bits
-      * are used to signal the presence of a cell boundary, used for line
-      * drawing. Maximum vertex index is thus restricted to 2^30-1.
-      */
-    struct Segment {
-        inline Segment() {}
-        inline Segment( Index normal, Index vertex, Index flags )
-            : m_normal( normal ), m_value( vertex | (flags<<30u) )
-        {}
-
-        //inline Segment( Index vertex ) : m_value( vertex ) {}
-        //inline Segment( Index vertex, bool edge_a, bool edge_b )
-        //    : m_value( vertex | (edge_a?(1u<<30u):0) | (edge_b?(1u<<31u):0) )
-        //{}
-
-        inline void clearEdges() { m_value = m_value & (~(3u<<30u)); }
-        inline void setEdges(bool edge_a, bool edge_b ) { m_value = (m_value & (~(3u<<30u))) | (edge_a?(1u<<30u):0) | (edge_b?(1u<<31u):0); }
-        inline Index normal() const { return m_normal; }
-        inline Index vertex() const { return m_value & (~(3u<<30u)); }
-        inline bool edgeA() const { return (m_value & (1u<<30u)) != 0u; }
-        inline bool edgeB() const { return (m_value & (1u<<31u)) != 0u; }
-        unsigned int    m_normal;
-        unsigned int    m_value;
-    };
-
     /** Explicit edge.
      *
      * \invariant m_cp[0] and m_cp[1] is not equal and are valid corner-point
@@ -78,22 +49,7 @@ public:
         Index   m_cp[2];    ///< Corner-point indices for edge end-points.
         Index   m_cells[4]; ///< Cell indices for the four cells surrounding the edge.
     };
-
-    /** Type for describing points in R^3. */
-    struct Real4 {
-        inline Real4() {}
-        inline Real4( const Real x, const Real y, const Real z, const Real w=1.f ) { v[0]=x; v[1]=y; v[2]=z; v[3]=w; }
-        inline const Real& x() const { return v[0]; }
-        inline const Real& y() const { return v[1]; }
-        inline const Real& z() const { return v[2]; }
-        inline const Real& w() const { return v[3]; }
-        inline Real& x() { return v[0]; }
-        inline Real& y() { return v[1]; }
-        inline Real& z() { return v[2]; }
-        inline Real& w() { return v[3]; }
-        Real v[4];
-    } __attribute__((aligned(16)));
-
+    
     /** Enum to keep track of which logical face direction a polygon has. */
     enum Orientation {
         ORIENTATION_I = 0, ///< Polygon oriented in logical JK-plane.
@@ -122,9 +78,9 @@ public:
     };
 
 
-    GridTessBridge( bool triangulate );
+    PolyhedralMeshBridge( bool triangulate );
 
-    ~GridTessBridge();
+    ~PolyhedralMeshBridge();
 
     void
     reserveVertices( Index N );
@@ -233,4 +189,4 @@ protected:
 
 };
 
-} // of namespace render
+} // of namespace bridge

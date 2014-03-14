@@ -22,10 +22,13 @@
 #include <boost/utility.hpp>
 #include "ManagedGL.hpp"
 
+namespace bridge {
+    class PolyhedralMeshBridge;
+}
+
 namespace render {
     class GridField;
     class CellSelector;
-    class GridTessBridge;
     namespace subset {
         class Representation;
     }
@@ -180,7 +183,7 @@ public:
 
     /** Pull data from bridge. */
     void
-    update( GridTessBridge& bridge );
+    update( bridge::PolyhedralMeshBridge& bridge );
 
 protected:
     /** @{ */
@@ -228,23 +231,23 @@ protected:
 
     /** Pull vertex data from bridge. */
     void
-    updateVertices( GridTessBridge& bridge );
+    updateVertices( bridge::PolyhedralMeshBridge& bridge );
 
     /** Pull normal vectors from bridge. */
     void
-    updateNormals( GridTessBridge& bridge );
+    updateNormals( bridge::PolyhedralMeshBridge& bridge );
 
     /** Calculate bounding box from bridge vertex positions. */
     void
-    updateBoundingBox( GridTessBridge& bridge );
+    updateBoundingBox( bridge::PolyhedralMeshBridge& bridge );
 
     /** Pull cell data from bridge. */
     void
-    updateCells( GridTessBridge& bridge );
+    updateCells( bridge::PolyhedralMeshBridge& bridge );
 
 
     void
-    updatePolygons( GridTessBridge& bridge );
+    updatePolygons( bridge::PolyhedralMeshBridge& bridge );
 
 };
 

@@ -20,9 +20,9 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <tuple>
-#include "GridTess.hpp"
-#include "GridField.hpp"
-#include "GridTessBridge.hpp"
+#include "bridge/PolyhedralMeshBridge.hpp"
+#include "render/GridTess.hpp"
+#include "render/GridField.hpp"
 #include "render/subset/Builder.hpp"
 #include "render/subset/Representation.hpp"
 #include "utils/Logger.hpp"
@@ -73,7 +73,7 @@ GridTess::~GridTess()
 }
 
 void
-GridTess::update( GridTessBridge& bridge )
+GridTess::update( bridge::PolyhedralMeshBridge& bridge )
 {
     Logger log = getLogger( "GridTess.import" );
 
@@ -88,7 +88,7 @@ GridTess::update( GridTessBridge& bridge )
 }
 
 void
-GridTess::updatePolygons( GridTessBridge& bridge )
+GridTess::updatePolygons( bridge::PolyhedralMeshBridge& bridge )
 {
     Logger log = getLogger( "GridTess.updatePolygons" );
     m_polygons_N = bridge.m_polygon_info.size()/2;
@@ -233,7 +233,7 @@ GridTess::checkTopology() const
 }
 
 void
-GridTess::updateBoundingBox( GridTessBridge& bridge )
+GridTess::updateBoundingBox( bridge::PolyhedralMeshBridge& bridge )
 {
     Logger log = getLogger( "GridTess.setCornerPointBoundingBox" );
 
@@ -265,7 +265,7 @@ GridTess::updateBoundingBox( GridTessBridge& bridge )
 }
 
 void
-GridTess::updateVertices( GridTessBridge& bridge )
+GridTess::updateVertices( bridge::PolyhedralMeshBridge& bridge )
 {
     m_vertices_num = bridge.m_vertices.size();
     if( m_vertices_num > 0 ) {
@@ -299,7 +299,7 @@ GridTess::updateVertices( GridTessBridge& bridge )
 }
 
 void
-GridTess::updateNormals( GridTessBridge& bridge )
+GridTess::updateNormals( bridge::PolyhedralMeshBridge& bridge )
 {
     // Normal vectors
     m_normals_num = bridge.m_normals.size();
@@ -328,7 +328,7 @@ GridTess::updateNormals( GridTessBridge& bridge )
 }
 
 void
-GridTess::updateCells( GridTessBridge& bridge )
+GridTess::updateCells( bridge::PolyhedralMeshBridge& bridge )
 {
     m_cells_num = bridge.m_cell_index.size();
 

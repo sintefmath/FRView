@@ -18,8 +18,8 @@
 
 #include <boost/shared_ptr.hpp>
 #include <tinia/model/ExposedModel.hpp>
-#include "render/GridTessBridge.hpp"
-#include "render/GridFieldBridge.hpp"
+#include "bridge/PolyhedralMeshBridge.hpp"
+#include "bridge/FieldBridge.hpp"
 
 namespace dataset {
 
@@ -27,8 +27,8 @@ namespace dataset {
 class PolyhedralDataInterface
 {
 public:
-    typedef render::GridTessBridge      Tessellation;   ///< \todo Rename type.
-    typedef render::GridFieldBridge     Field;          ///< \todo Rename type.
+    typedef bridge::PolyhedralMeshBridge      Tessellation;   ///< \todo Rename type.
+    typedef bridge::FieldBridge     Field;          ///< \todo Rename type.
 
     virtual
     ~PolyhedralDataInterface();

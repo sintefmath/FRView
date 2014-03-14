@@ -76,7 +76,7 @@ ASyncReader::issueReadSolution( const boost::shared_ptr<dataset::AbstractDataSou
 
 bool
 ASyncReader::getProject( boost::shared_ptr<dataset::AbstractDataSource> &project,
-                         boost::shared_ptr< render::GridTessBridge>&  tess_bridge )
+                         boost::shared_ptr< bridge::PolyhedralMeshBridge>&  tess_bridge )
 {
     std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
     for(auto it = m_rsp_queue.begin(); it!=m_rsp_queue.end(); ++it ) {
@@ -91,7 +91,7 @@ ASyncReader::getProject( boost::shared_ptr<dataset::AbstractDataSource> &project
 }
 
 bool
-ASyncReader::getSolution( boost::shared_ptr< render::GridFieldBridge >& field_bridge )
+ASyncReader::getSolution( boost::shared_ptr< bridge::FieldBridge >& field_bridge )
 {
     // We kill of all but the latest request of correct type
     bool found_any = false;
@@ -187,7 +187,7 @@ ASyncReader::handleReadProject( const Command& cmd )
             boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
                     boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source );
             if( poly_source ) {
-                boost::shared_ptr< render::GridTessBridge > bridge( new render::GridTessBridge( cmd.m_triangulate ) );
+                boost::shared_ptr< bridge::PolyhedralMeshBridge > bridge( new bridge::PolyhedralMeshBridge( cmd.m_triangulate ) );
                 
                 poly_source->geometry( *bridge,
                                        m_model,
@@ -234,7 +234,7 @@ ASyncReader::handleReadSolution( const Command& cmd )
     Response rsp;
     if( polydata != NULL ) {
         try {
-            rsp.m_solution.reset( new render::GridFieldBridge( ) );
+            rsp.m_solution.reset( new bridge::FieldBridge( ) );
             polydata->field( rsp.m_solution,
                              cmd.m_field_index,
                              cmd.m_timestep_index );

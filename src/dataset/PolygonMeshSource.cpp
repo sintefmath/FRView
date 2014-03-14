@@ -20,8 +20,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "dataset/PolygonMeshSource.hpp"
-#include "render/GridTessBridge.hpp"
-#include "render/GridFieldBridge.hpp"
+#include "bridge/PolyhedralMeshBridge.hpp"
+#include "bridge/FieldBridge.hpp"
 
 namespace {
 

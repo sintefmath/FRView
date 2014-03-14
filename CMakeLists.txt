@@ -152,6 +152,7 @@ ENDMACRO( WRAP_SHADERS )
 
 
 FILE( GLOB frview_core_SRC "src/models/*.cpp"
+                           "src/bridge/*.cpp"
                            "src/render/*.cpp"
                            "src/render/wells/*.cpp"
                            "src/render/rlgen/*.cpp"
@@ -164,6 +165,7 @@ FILE( GLOB frview_core_SRC "src/models/*.cpp"
                            "src/utils/*.cpp"
                            "src/dataset/*.cpp" )
 FILE( GLOB frview_core_HDR "src/models/*.hpp"
+                           "src/bridge/*.hpp"
                            "src/render/*.hpp"
                            "src/render/wells/*.hpp"
                            "src/render/rlgen/*.hpp"

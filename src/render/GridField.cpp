@@ -18,9 +18,9 @@
 #include <GL/glew.h>
 #include <iostream>
 #include "utils/Logger.hpp"
-#include "GridTess.hpp"
-#include "GridField.hpp"
-#include "GridFieldBridge.hpp"
+#include "render/GridTess.hpp"
+#include "render/GridField.hpp"
+#include "bridge/PolyhedralMeshBridge.hpp"
 
 namespace render {
 
@@ -35,7 +35,7 @@ GridField::GridField(boost::shared_ptr<GridTess> grid )
 
 
 void
-GridField::import( GridFieldBridge& bridge )
+GridField::import( bridge::FieldBridge& bridge )
 {
     Logger log = getLogger( "GridField.import" );
 

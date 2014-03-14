@@ -22,8 +22,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include "utils/Logger.hpp"
-#include "GridTess.hpp"
-#include "GridTessBridge.hpp"
 #include "utils/PerfTimer.hpp"
 #ifdef __SSE2__
 #include <xmmintrin.h>
@@ -32,14 +30,18 @@
 #include <smmintrin.h>
 #endif
 #ifdef CHECK_INVARIANTS
-#include "CellSanityChecker.hpp"
+#include "render/CellSanityChecker.hpp"
 #endif
+#include "bridge/PolyhedralMeshBridge.hpp"
 
-namespace render {
+namespace {
+    const std::string package = "bridge.PolyhedralMeshBridge";
+}
 
-static const std::string package = "GridTessBridge";
+namespace bridge {
 
-GridTessBridge::GridTessBridge( bool triangulate )
+
+PolyhedralMeshBridge::PolyhedralMeshBridge( bool triangulate )
     : m_triangulate( triangulate ),
       m_tri_N( 0u ),
       m_tri_chunk_N( 0u ),
@@ -52,7 +54,7 @@ GridTessBridge::GridTessBridge( bool triangulate )
 }
 
 void
-GridTessBridge::allocTriangleChunks()
+PolyhedralMeshBridge::allocTriangleChunks()
 {
     m_tri_nrm_ix = new Index[ 3*(m_chunk_size+1) ];
     m_tri_nrm_ix_chunks.push_back( m_tri_nrm_ix );
@@ -66,7 +68,7 @@ GridTessBridge::allocTriangleChunks()
     m_tri_chunk_N = 0u;
 }
 
-GridTessBridge::~GridTessBridge()
+PolyhedralMeshBridge::~PolyhedralMeshBridge()
 {
     for(auto it=m_tri_info_chunks.begin(); it!=m_tri_info_chunks.end(); ++it ) {
         delete *it;
@@ -77,41 +79,41 @@ GridTessBridge::~GridTessBridge()
 }
 
 void
-GridTessBridge::reserveVertices( unsigned int N )
+PolyhedralMeshBridge::reserveVertices( unsigned int N )
 {
     m_vertices.reserve( N );
 }
 
 void
-GridTessBridge::reserveEdges( Index N )
+PolyhedralMeshBridge::reserveEdges( Index N )
 {
 }
 
 void
-GridTessBridge::reserveTriangles( Index N )
+PolyhedralMeshBridge::reserveTriangles( Index N )
 {
     //m_triangle_info.reserve( 3*N ); // ??
     //m_triangles.reserve( 3*N );
 }
 
 void
-GridTessBridge::reserveCells( GridTessBridge::Index N )
+PolyhedralMeshBridge::reserveCells( PolyhedralMeshBridge::Index N )
 {
     m_cell_index.resize( N );
     m_cell_corner.resize( 8*N );
 }
 
 
-GridTessBridge::Index
-GridTessBridge::addVertex( const Real4 pos  )
+PolyhedralMeshBridge::Index
+PolyhedralMeshBridge::addVertex( const Real4 pos  )
 {
     Index r = m_vertices.size();
     m_vertices.push_back( pos );
     return r;
 }
 
-GridTessBridge::Index
-GridTessBridge::addNormal( const Real4 dir )
+PolyhedralMeshBridge::Index
+PolyhedralMeshBridge::addNormal( const Real4 dir )
 {
     Logger log = getLogger( package + ".addNormal" );
 
@@ -124,19 +126,19 @@ GridTessBridge::addNormal( const Real4 dir )
 
 
 unsigned int
-GridTessBridge::vertices() const
+PolyhedralMeshBridge::vertices() const
 {
     return m_vertices.size();
 }
 
 unsigned int
-GridTessBridge::cellCount() const
+PolyhedralMeshBridge::cellCount() const
 {
     return m_cell_index.size();
 }
 
 void
-GridTessBridge::setCellCount( const GridTessBridge::Index N )
+PolyhedralMeshBridge::setCellCount( const PolyhedralMeshBridge::Index N )
 {
     m_cell_index.resize( N );
     m_cell_corner.resize( 8*N );
@@ -144,16 +146,16 @@ GridTessBridge::setCellCount( const GridTessBridge::Index N )
 
 
 void
-GridTessBridge::setCell( const GridTessBridge::Index index,
-                         const GridTessBridge::Index global_index,
-                         const GridTessBridge::Index vertex_0,
-                         const GridTessBridge::Index vertex_1,
-                         const GridTessBridge::Index vertex_2,
-                         const GridTessBridge::Index vertex_3,
-                         const GridTessBridge::Index vertex_4,
-                         const GridTessBridge::Index vertex_5,
-                         const GridTessBridge::Index vertex_6,
-                         const GridTessBridge::Index vertex_7 )
+PolyhedralMeshBridge::setCell( const PolyhedralMeshBridge::Index index,
+                         const PolyhedralMeshBridge::Index global_index,
+                         const PolyhedralMeshBridge::Index vertex_0,
+                         const PolyhedralMeshBridge::Index vertex_1,
+                         const PolyhedralMeshBridge::Index vertex_2,
+                         const PolyhedralMeshBridge::Index vertex_3,
+                         const PolyhedralMeshBridge::Index vertex_4,
+                         const PolyhedralMeshBridge::Index vertex_5,
+                         const PolyhedralMeshBridge::Index vertex_6,
+                         const PolyhedralMeshBridge::Index vertex_7 )
 {
     m_cell_index[ index ] = global_index;
     m_cell_corner[ 8*index + 0 ] = vertex_0;
@@ -303,7 +305,7 @@ foo(  )
 }
 
 void
-GridTessBridge::addPolygon( const Interface interface,
+PolyhedralMeshBridge::addPolygon( const Interface interface,
                             const Segment* segments,
                             const Index no )
 {
@@ -493,7 +495,7 @@ GridTessBridge::addPolygon( const Interface interface,
 
 
 void
-GridTessBridge::addTriangle( const Interface interface,
+PolyhedralMeshBridge::addTriangle( const Interface interface,
                              const Segment s0, const Segment s1, const Segment s2 )
 {
     Logger log = getLogger( package + ".foo" );
@@ -573,7 +575,7 @@ GridTessBridge::addTriangle( const Interface interface,
 
 
 void
-GridTessBridge::boundingBox( Real4& minimum, Real4& maximum ) const
+PolyhedralMeshBridge::boundingBox( Real4& minimum, Real4& maximum ) const
 {
     Logger log = getLogger( package + ".boundingBox" );
     LOGGER_DEBUG( log, "Calculating bounding box... " );
@@ -614,7 +616,7 @@ GridTessBridge::boundingBox( Real4& minimum, Real4& maximum ) const
 }
 
 void
-GridTessBridge::addEdge( const Index ix0, const Index ix1,
+PolyhedralMeshBridge::addEdge( const Index ix0, const Index ix1,
          const Index cell_a, const Index cell_b,
          const Index cell_c, const Index cell_d )
 {
@@ -651,7 +653,7 @@ GridTessBridge::addEdge( const Index ix0, const Index ix1,
 
 
 void
-GridTessBridge::process()
+PolyhedralMeshBridge::process()
 {
     Logger log = getLogger( package + ".process" );
 
@@ -694,4 +696,4 @@ GridTessBridge::process()
 
 }
 
-} // of namespace render
+} // of namespace bridge

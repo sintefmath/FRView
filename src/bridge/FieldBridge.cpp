@@ -17,23 +17,22 @@
 
 #include <stdexcept>
 #include "utils/Logger.hpp"
-#include "GridField.hpp"
-#include "GridFieldBridge.hpp"
+#include "bridge/FieldBridge.hpp"
 
-namespace render {
+namespace bridge {
 
-GridFieldBridge::GridFieldBridge()
+FieldBridge::FieldBridge()
     : m_count( 0 )
 {
     m_memory = (REAL*)0xDEADBEEF;
 }
 
-GridFieldBridge::~GridFieldBridge()
+FieldBridge::~FieldBridge()
 {
 }
 
 void
-GridFieldBridge::init( size_t count )
+FieldBridge::init( size_t count )
 {
     m_count = count;
     m_values.clear();
@@ -43,8 +42,8 @@ GridFieldBridge::init( size_t count )
 }
 
 
-GridFieldBridge::REAL*
-GridFieldBridge::values()
+FieldBridge::REAL*
+FieldBridge::values()
 {
     if( m_memory == (REAL*)0xDEADBEEF ) {
         throw std::runtime_error( "GridFieldBridge has not been initialized!" );
@@ -57,4 +56,4 @@ GridFieldBridge::values()
 
 
 
-} // of namespace render
+} // of namespace bridge

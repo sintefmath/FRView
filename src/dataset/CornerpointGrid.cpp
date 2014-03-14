@@ -27,8 +27,8 @@
 #include "eclipse/EclipseParser.hpp"
 #include "cornerpoint/Tessellator.hpp"
 #include "dataset/FooBarParser.hpp"
-#include "render/GridTessBridge.hpp"
-#include "render/GridFieldBridge.hpp"
+#include "bridge/PolyhedralMeshBridge.hpp"
+#include "bridge/FieldBridge.hpp"
 
 using std::vector;
 using std::string;
@@ -155,7 +155,7 @@ CornerpointGrid::geometry( Tessellation&                                  geomet
                    const std::string&                             progress_description_key,
                    const std::string&                             progress_counter_key )
 {
-    cornerpoint::Tessellator< render::GridTessBridge > tessellator( geometry_bridge );
+    cornerpoint::Tessellator< bridge::PolyhedralMeshBridge > tessellator( geometry_bridge );
     tessellator.tessellate( model, progress_description_key, progress_counter_key,
                             nx(), ny(), nz(), nr(),
                             cornerPointCoord(),

@@ -22,7 +22,7 @@
 #include <string>
 #include "render/ManagedGL.hpp"
 #include "render/GridTess.hpp"
-#include "render/GridFieldBridge.hpp"
+#include "bridge/FieldBridge.hpp"
 
 namespace render {
     class GridTess;
@@ -54,7 +54,7 @@ public:
     hasData() const { return m_has_data; }
 
     void
-    import( GridFieldBridge& bridge );
+    import( bridge::FieldBridge& bridge );
 
 protected:
     boost::shared_ptr<GridTess>   m_grid;

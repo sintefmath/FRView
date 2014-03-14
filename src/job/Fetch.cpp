@@ -27,7 +27,7 @@
 #include "eclipse/EclipseReader.hpp"
 #include "render/GridTess.hpp"
 #include "render/GridField.hpp"
-#include "render/GridTessBridge.hpp"
+#include "bridge/PolyhedralMeshBridge.hpp"
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/wells/Representation.hpp"
@@ -42,7 +42,7 @@ FRViewJob::fetchData()
     if( m_load_geometry ) {
         
         boost::shared_ptr< dataset::AbstractDataSource > project;
-        boost::shared_ptr< render::GridTessBridge > tess_bridge;
+        boost::shared_ptr< bridge::PolyhedralMeshBridge > tess_bridge;
         if( m_async_reader->getProject( project, tess_bridge ) ) {
             if( !m_has_pipeline ) {
                 if(!setupPipeline()) {
@@ -128,7 +128,7 @@ FRViewJob::fetchData()
     if( m_has_pipeline && m_load_color_field && m_project ) {
         m_has_color_field = false;
 
-        boost::shared_ptr<render::GridFieldBridge> bridge;
+        boost::shared_ptr<bridge::FieldBridge> bridge;
         if( m_async_reader->getSolution( bridge ) ) {
 
             if( bridge ) {
