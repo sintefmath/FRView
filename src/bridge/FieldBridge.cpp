@@ -24,7 +24,7 @@ namespace bridge {
 FieldBridge::FieldBridge()
     : m_count( 0 )
 {
-    m_memory = (REAL*)0xDEADBEEF;
+    m_memory = (Real*)0xDEADBEEF;
 }
 
 FieldBridge::~FieldBridge()
@@ -36,16 +36,16 @@ FieldBridge::init( size_t count )
 {
     m_count = count;
     m_values.clear();
-    m_values.resize( sizeof(REAL)*count + 16 );
-    m_memory = reinterpret_cast<REAL*>( 16*((reinterpret_cast<size_t>(m_values.data())+15)/16) );
+    m_values.resize( sizeof(Real)*count + 16 );
+    m_memory = reinterpret_cast<Real*>( 16*((reinterpret_cast<size_t>(m_values.data())+15)/16) );
     
 }
 
 
-FieldBridge::REAL*
+FieldBridge::Real*
 FieldBridge::values()
 {
-    if( m_memory == (REAL*)0xDEADBEEF ) {
+    if( m_memory == (Real*)0xDEADBEEF ) {
         throw std::runtime_error( "GridFieldBridge has not been initialized!" );
     }
     
