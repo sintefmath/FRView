@@ -58,7 +58,7 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
     updateModelMatrices();
     doCompute();
 
-    if( m_project && m_has_pipeline ) {
+    if( currentSourceItemValid() && m_has_pipeline ) {
         if( m_renderlist_state == RENDERLIST_CHANGED_CLIENTS_NOTIFIED ) {
             m_renderlist_state = RENDERLIST_SENT;
 
@@ -66,10 +66,19 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
                 m_under_the_hood.proxyGenerateTimer().beginQuery();
             }
 
-            m_grid_voxelizer->build( m_grid_tess,
-                                     m_grid_tess_subset,
-                                     glm::value_ptr( m_local_to_world ) );
-            m_voxel_surface->build( m_grid_voxelizer, m_grid_field );
+            for( size_t i=0; i<m_source_items.size(); i++ ) {
+                SourceItem& source_item = m_source_items[i];
+                
+                // FIXME: Needs to add support for multi-object
+                m_grid_voxelizer->build( source_item.m_grid_tess,
+                                         source_item.m_grid_tess_subset,
+                                         glm::value_ptr( m_local_to_world ) );
+                
+                // FIXME: coloring should be part of splatting and surface
+                // extraction should be moved outside of loop (independent on
+                // geometries).
+                m_voxel_surface->build( m_grid_voxelizer, source_item.m_grid_field );
+            }
             if( m_under_the_hood.profilingEnabled() ) {
                 m_under_the_hood.proxyGenerateTimer().endQuery();
             }
@@ -195,10 +204,13 @@ FRViewJob::updateRenderList( )
             ->drawOrderAdd( "solid_white" )
             ->drawOrderAdd( "wire_cube_draw" );
 
-    if( m_render_clip_plane ) {
+    if( m_render_clip_plane && currentSourceItemValid() ) {
+        SourceItem& source_item = currentSourceItem();
+        
         // vertex positions of line loop
         std::vector<float> vertices;
-        m_clip_plane->getLineLoop( vertices );
+        source_item.m_clip_plane->getLineLoop( vertices );
+
         m_renderlist_db.castedItemByName<rl::Buffer*>( "clip_plane_pos" )
                 ->set( vertices.data(), vertices.size() );
         // update draw command

@@ -59,11 +59,12 @@ public:
 
     bool
     getSource( boost::shared_ptr< dataset::AbstractDataSource >&  source,
-               boost::shared_ptr<bridge::AbstractMeshBridge>&     bridge );
+               boost::shared_ptr<bridge::AbstractMeshBridge>&     mesh_bridge );
 
 
     bool
-    getField( boost::shared_ptr< bridge::FieldBridge >& field_bridge );
+    getField( boost::shared_ptr< dataset::AbstractDataSource >&  source,
+              boost::shared_ptr< bridge::FieldBridge >& field_bridge );
 
     /** Check if there are any responses pending, and if so, return type of the oldest. */
     ResponseType

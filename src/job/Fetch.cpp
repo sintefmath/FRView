@@ -31,6 +31,16 @@
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/wells/Representation.hpp"
+#include "render/GridField.hpp"
+#include "render/ClipPlane.hpp"
+#include "render/GridCubeRenderer.hpp"
+#include "render/TextRenderer.hpp"
+#include "render/wells/Representation.hpp"
+#include "render/wells/Renderer.hpp"
+#include "render/CoordSysRenderer.hpp"
+#include "render/surface/GridTessSurf.hpp"
+#include "render/surface/GridTessSurfBuilder.hpp"
+#include "render/subset/Representation.hpp"
 
 namespace {
 const std::string package = "FRViewJob";
@@ -39,6 +49,7 @@ const std::string package = "FRViewJob";
 void
 FRViewJob::handleFetchSource()
 {
+    Logger log = getLogger( package + ".handleFetchSource" );
     // Try to get source
     boost::shared_ptr< dataset::AbstractDataSource > source;
     boost::shared_ptr< bridge::AbstractMeshBridge > mesh_bridge;
@@ -46,13 +57,33 @@ FRViewJob::handleFetchSource()
         return; // Nothing.
     }
     
+    SourceItem source_item;
+    source_item.m_source = source;
+    source_item.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
+    source_item.m_grid_tess.reset( new render::GridTess );
+    source_item.m_faults_surface.reset( new render::surface::GridTessSurf );
+    source_item.m_subset_surface.reset( new render::surface::GridTessSurf );
+    source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
+    source_item.m_grid_tess_subset.reset( new render::subset::Representation );
+    source_item.m_wells.reset( new render::wells::Representation );
+    source_item.m_grid_field.reset(  new render::GridField( source_item.m_grid_tess ) );
 
-    m_project = source;
+    
+    addSourceItem( source_item );
+    if( !m_has_pipeline ) {
+        if(!setupPipeline()) {
+            return;
+        }
+    }
+
     boost::shared_ptr<bridge::PolyhedralMeshBridge> polyhedral_bridge =
             boost::dynamic_pointer_cast<bridge::PolyhedralMeshBridge>( mesh_bridge );
     if( polyhedral_bridge ) {
-        m_grid_tess->update( *polyhedral_bridge );
+        source_item.m_grid_tess->update( *polyhedral_bridge );
+        LOGGER_DEBUG( log, "Updated grid tess" );
     }
+
+    LOGGER_DEBUG( log, "currentSourceItemValid()=" << currentSourceItemValid() );
     
     // update state variables
     m_do_update_subset = true;
@@ -63,7 +94,7 @@ FRViewJob::handleFetchSource()
     m_model->updateElement<bool>("has_project", true );
     
     boost::shared_ptr< dataset::PolyhedralDataInterface > polydata =
-            boost::dynamic_pointer_cast< dataset::PolyhedralDataInterface >( m_project );
+            boost::dynamic_pointer_cast< dataset::PolyhedralDataInterface >( source_item.m_source );
     
     std::list<std::string> solutions;
     int timestep_max = 0;
@@ -89,7 +120,7 @@ FRViewJob::handleFetchSource()
     int nz_min = 0;
     int nz_max = 0;
     boost::shared_ptr< dataset::CellLayoutInterface > cell_layout =
-            boost::dynamic_pointer_cast< dataset::CellLayoutInterface >( m_project );
+            boost::dynamic_pointer_cast< dataset::CellLayoutInterface >( source_item.m_source );
     if( cell_layout ) {
         int dim = cell_layout->indexDim();
         if( dim > 0 ) {
@@ -112,7 +143,7 @@ FRViewJob::handleFetchSource()
     m_model->updateConstraints<int>( "index_range_select_min_k", nz_min, nz_min, nz_max );
     m_model->updateConstraints<int>( "index_range_select_max_k", nz_max, nz_min, nz_max );
     
-    m_grid_stats.update( m_project, m_grid_tess );
+    m_grid_stats.update( source_item.m_source, source_item.m_grid_tess );
     
     m_do_update_subset = true;
     
@@ -129,93 +160,73 @@ FRViewJob::handleFetchField()
 {
     m_has_color_field = false;
 
+    boost::shared_ptr<dataset::AbstractDataSource> source;
     boost::shared_ptr<bridge::FieldBridge> bridge;
-    if( !m_async_reader->getField( bridge ) ) {
+    if( !m_async_reader->getField( source, bridge ) ) {
         return; // Nothing
     }
     
-    if( !m_project ) {
-        return; // No associated source
-    }
-
-    if( bridge ) {
-        m_grid_field->import( *bridge );
-        m_has_color_field = true;
-    }
-    else {
-        m_has_color_field = false;
-    }
-    m_load_color_field = false;
-
-    //m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
-
-    m_wells->clear();
-    if( m_appearance.renderWells() ) {
-        boost::shared_ptr< dataset::WellDataInterace > well_source =
-                boost::dynamic_pointer_cast< dataset::WellDataInterace >( m_project );
-        if( well_source ) {
-            std::vector<float> colors;
-            std::vector<float> positions;
-            for( unsigned int w=0; w<well_source->wellCount(); w++ ) {
-                if( !well_source->wellDefined( m_report_step_index, w ) ) {
-                    continue;
-                }
-                m_wells->addWellHead( well_source->wellName(w),
-                                      well_source->wellHeadPosition( m_report_step_index, w ) );
-                
-                positions.clear();
-                colors.clear();
-                const unsigned int bN = well_source->wellBranchCount( m_report_step_index, w );
-                for( unsigned int b=0; b<bN; b++ ) {
-                    const std::vector<float>& p = well_source->wellBranchPositions( m_report_step_index, w, b );
-                    if( p.empty() ) {
-                        continue;
+    for( size_t i=0; i<m_source_items.size(); i++ ) {
+        
+        // find the corresponding source and update
+        if( m_source_items[i].m_source == source ) {
+            SourceItem& source_item = m_source_items[i];
+            
+            if( bridge ) {
+                source_item.m_grid_field->import( *bridge );
+                m_has_color_field = true;
+            }
+            else {
+                m_has_color_field = false;
+            }
+            m_load_color_field = false;
+            
+            //m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
+            
+            source_item.m_wells->clear();
+            if( m_appearance.renderWells() ) {
+                boost::shared_ptr< dataset::WellDataInterace > well_source =
+                        boost::dynamic_pointer_cast< dataset::WellDataInterace >( source_item.m_source );
+                if( well_source ) {
+                    std::vector<float> colors;
+                    std::vector<float> positions;
+                    for( unsigned int w=0; w<well_source->wellCount(); w++ ) {
+                        if( !well_source->wellDefined( m_report_step_index, w ) ) {
+                            continue;
+                        }
+                        source_item.m_wells->addWellHead( well_source->wellName(w),
+                                              well_source->wellHeadPosition( m_report_step_index, w ) );
+                        
+                        positions.clear();
+                        colors.clear();
+                        const unsigned int bN = well_source->wellBranchCount( m_report_step_index, w );
+                        for( unsigned int b=0; b<bN; b++ ) {
+                            const std::vector<float>& p = well_source->wellBranchPositions( m_report_step_index, w, b );
+                            if( p.empty() ) {
+                                continue;
+                            }
+                            for( size_t i=0; i<p.size(); i+=3 ) {
+                                positions.push_back( p[i+0] );
+                                positions.push_back( p[i+1] );
+                                positions.push_back( p[i+2] );
+                                colors.push_back( ((i & 0x1) == 0) ? 1.f : 0.5f );
+                                colors.push_back( ((i & 0x2) == 0) ? 1.f : 0.5f );
+                                colors.push_back( ((i & 0x4) == 0) ? 1.f : 0.5f );
+                            }
+                            source_item.m_wells->addSegments( positions, colors );
+                        }
                     }
-                    for( size_t i=0; i<p.size(); i+=3 ) {
-                        positions.push_back( p[i+0] );
-                        positions.push_back( p[i+1] );
-                        positions.push_back( p[i+2] );
-                        colors.push_back( ((i & 0x1) == 0) ? 1.f : 0.5f );
-                        colors.push_back( ((i & 0x2) == 0) ? 1.f : 0.5f );
-                        colors.push_back( ((i & 0x4) == 0) ? 1.f : 0.5f );
-                    }
-                    m_wells->addSegments( positions, colors );
                 }
             }
+            updateCurrentFieldData();
+            
+            if( m_renderlist_state == RENDERLIST_SENT ) {
+                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+            }
+            //            m_renderlist_rethink = true;
+            
         }
     }
-    
-    // -- update policy elements
-    bool fix;
-    m_model->getElementValue( "field_range_enable", fix );
-    if( !fix ) {
-        m_model->updateElement<double>( "field_range_min", m_grid_field->minValue() );
-        m_model->updateElement<double>( "field_range_max", m_grid_field->maxValue() );
-    }
-    bool has_field = false;
-    if( m_has_color_field && m_project ) {
-        boost::shared_ptr<dataset::PolyhedralDataInterface> poly_data =
-                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( m_project );
-        if( poly_data ) {
-            has_field = true;
-            std::stringstream o;
-            o << "[ " << m_grid_field->minValue() << ", " << m_grid_field->maxValue() << " ]";
-            m_model->updateElement( "field_info_range", o.str() );
-            o.str("");
-            o << "[not implemented]";
-            m_model->updateElement( "field_info_calendar", poly_data->timestepDescription( m_report_step_index ) );
-        }
-    }
-    if( !has_field ) {
-        m_model->updateElement( "field_info_range", "[not available]" );
-        m_model->updateElement( "field_info_calendar", "[not available]" );
-    }
-    m_model->updateElement( "has_field", has_field );
-    
-    if( m_renderlist_state == RENDERLIST_SENT ) {
-        m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-    }
-    //            m_renderlist_rethink = true;
 }
 
 
@@ -223,6 +234,9 @@ void
 FRViewJob::fetchData()
 {
     Logger log = getLogger( package + ".fetchData" );
+    if( !m_has_context ) {
+        return;
+    }
     
     if( m_check_async_reader ) {    // replace with while 
         
@@ -232,11 +246,7 @@ FRViewJob::fetchData()
             m_check_async_reader = false;
             break;
         case ASyncReader::RESPONSE_SOURCE:
-            if( !m_has_pipeline ) {
-                if(!setupPipeline()) {
-                    return;
-                }
-            }
+            
             handleFetchSource();
             break;
         case ASyncReader::RESPONSE_FIELD:

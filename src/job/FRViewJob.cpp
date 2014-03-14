@@ -53,9 +53,16 @@
 using std::string;
 using std::stringstream;
 
+namespace {
+    const std::string package = "FRViewJob";
+    const std::string current_source_item_key = "current_item";
+
+}
+
 
 FRViewJob::FRViewJob( const std::list<string>& files )
     : tinia::jobcontroller::OpenGLJob(),
+      m_current_item( ~0 ),
       m_file( m_model, *this ),
       m_source_selector( m_model ),
       m_under_the_hood( m_model, *this ),
@@ -71,7 +78,9 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_renderlist_state( RENDERLIST_SENT ),
       m_has_pipeline( false )
 {
-
+    m_model->addElement<int>( current_source_item_key, m_current_item );
+    m_model->addStateListener( current_source_item_key, this);
+    
     m_load_color_field = false;
     m_has_color_field = false;
     m_render_clip_plane = false;
@@ -158,7 +167,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     }
 
 
-
+    
     // Viewer
     m_model->addElement("viewer", viewer );
     m_model->addElement<string>( "boundingbox", "-0.1 -0.1 -0.1 1.1 1.1 1.1" );
@@ -383,6 +392,59 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     }
 }
 
+
+const std::string&
+FRViewJob::currentSourceItemKey() const
+{
+    return current_source_item_key;
+}
+
+// Returns true if there is a valid source item
+bool
+FRViewJob::currentSourceItemValid() const
+{
+    return m_current_item < m_source_items.size();
+}
+
+
+SourceItem&
+FRViewJob::currentSourceItem()
+{
+    if( !currentSourceItemValid() ) {
+        throw std::runtime_error( "No selected item" );
+    }
+    return m_source_items[ m_current_item ];
+}
+
+const SourceItem&
+FRViewJob::currentSourceItem() const
+{
+    if( !currentSourceItemValid() ) {
+        throw std::runtime_error( "No selected item" );
+    }
+    return m_source_items[ m_current_item ];
+}
+
+void
+FRViewJob::releaseSourceItems()
+{
+    m_source_items.clear();
+    m_model->updateElement<int>( current_source_item_key, ~0);
+}
+
+void
+FRViewJob::addSourceItem( SourceItem& item )
+{
+    Logger log = getLogger( package + ".addSourceItem" );
+    
+    m_source_items.push_back( item );
+    if(!currentSourceItemValid()) {
+        m_model->updateElement<int>( current_source_item_key, 0);
+    }
+    LOGGER_DEBUG( log, "m_source_items.size()=" << m_source_items.size() );
+}
+
+
 bool
 FRViewJob::init()
 {
@@ -407,6 +469,69 @@ FRViewJob::handleButtonClick( tinia::model::StateElement *stateElement )
 }
 
 void
+FRViewJob::updateCurrentMeshData()
+{
+    if( currentSourceItemValid() ) {
+        
+    }
+    else {
+        std::list<std::string> solutions = {"none"};
+        m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
+        m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
+        m_model->updateConstraints<int>("field_report_step", 0, 0, 0 );
+        m_model->updateConstraints<int>( "field_select_report_step", 0, 0, 0 );
+        m_model->updateConstraints<int>( "index_range_select_min_i", 0, 0, 0 );
+        m_model->updateConstraints<int>( "index_range_select_max_i", 0, 0, 0 );
+        m_model->updateConstraints<int>( "index_range_select_min_j", 0, 0, 0 );
+        m_model->updateConstraints<int>( "index_range_select_max_j", 0, 0, 0 );
+        m_model->updateConstraints<int>( "index_range_select_min_k", 0, 0, 0 );
+        m_model->updateConstraints<int>( "index_range_select_max_k", 0, 0, 0 );
+        m_grid_stats.update();
+    }
+}
+
+void
+FRViewJob::updateCurrentFieldData()
+{
+    bool has_field = false;
+
+    if( currentSourceItemValid() ) {
+        SourceItem& source_item = currentSourceItem();
+        
+        // -- update policy elements
+        bool fix;
+        m_model->getElementValue( "field_range_enable", fix );
+        if( !fix ) {
+            m_model->updateElement<double>( "field_range_min", source_item.m_grid_field->minValue() );
+            m_model->updateElement<double>( "field_range_max", source_item.m_grid_field->maxValue() );
+        }
+        if( m_has_color_field  ) {
+            boost::shared_ptr<dataset::PolyhedralDataInterface> poly_data =
+                    boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item.m_source );
+            if( poly_data ) {
+                has_field = true;
+                std::stringstream o;
+                o << "[ " << source_item.m_grid_field->minValue()
+                  << ", " << source_item.m_grid_field->maxValue() << " ]";
+                m_model->updateElement( "field_info_range", o.str() );
+                o.str("");
+                o << "[not implemented]";
+                m_model->updateElement( "field_info_calendar", poly_data->timestepDescription( m_report_step_index ) );
+            }
+        }
+    }
+    else {
+        
+    }
+    if( !has_field ) {
+        m_model->updateElement( "field_info_range", "[not available]" );
+        m_model->updateElement( "field_info_calendar", "[not available]" );
+    }
+    m_model->updateElement( "has_field", has_field );
+}
+
+
+void
 FRViewJob::loadFile( const std::string& filename,
                      int refine_i,
                      int refine_j,
@@ -416,19 +541,9 @@ FRViewJob::loadFile( const std::string& filename,
     m_file.setFileName( filename );
 
     m_load_color_field = false;
-    m_project = boost::shared_ptr< dataset::CornerpointGrid >();
-    std::list<std::string> solutions = {"none"};
-    m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
-    m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
-    m_model->updateConstraints<int>("field_report_step", 0, 0, 0 );
-    m_model->updateConstraints<int>( "field_select_report_step", 0, 0, 0 );
-    m_model->updateConstraints<int>( "index_range_select_min_i", 0, 0, 0 );
-    m_model->updateConstraints<int>( "index_range_select_max_i", 0, 0, 0 );
-    m_model->updateConstraints<int>( "index_range_select_min_j", 0, 0, 0 );
-    m_model->updateConstraints<int>( "index_range_select_max_j", 0, 0, 0 );
-    m_model->updateConstraints<int>( "index_range_select_min_k", 0, 0, 0 );
-    m_model->updateConstraints<int>( "index_range_select_max_k", 0, 0, 0 );
-    m_grid_stats.update();
+    releaseSourceItems();
+    updateCurrentMeshData();
+    updateCurrentFieldData();
 
     releasePipeline();
     m_async_reader->issueOpenSource( filename,
@@ -451,17 +566,19 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
 
     const string& key = stateElement->getKey();
 
+    if( key == current_source_item_key ) {
+        int value;
+        stateElement->getValue<int>( value );
+        m_current_item = value;
+        LOGGER_DEBUG( log, "m_current_item=" << m_current_item );
+    }
     if( key == "asyncreader_ticket" ) { // Async job is finished
         m_check_async_reader = true;
-        if( !m_project ) {
-        }
-        else {
-            m_load_color_field = true;
-        }
     }
-    else if( key == "field_solution" && m_project ) {
+    else if( currentSourceItemValid() && (key == "field_solution") ) {
+        SourceItem& source_item = currentSourceItem();
         boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
-                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( m_project );
+                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item.m_source );
         if( poly_source ) {
             string value;
             stateElement->getValue<string>( value );
@@ -472,27 +589,28 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
                 }
             }
             if( poly_source->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
-                if( m_async_reader->issueFetchField( m_project, m_solution_index, m_report_step_index ) ) {
+                if( m_async_reader->issueFetchField( source_item.m_source, m_solution_index, m_report_step_index ) ) {
                 }
             }
         }
     }
-    else if( key == "field_report_step" && m_project ) {
+    else if( currentSourceItemValid() && (key == "field_report_step") ) {
+        SourceItem& source_item = currentSourceItem();
         boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
-                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( m_project );
+                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item.m_source );
         if( poly_source ) {
             int value;
             stateElement->getValue<int>( value );
             m_report_step_index = value;
             if( poly_source->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
-                if( m_async_reader->issueFetchField( m_project, m_solution_index, m_report_step_index ) ) {
+                if( m_async_reader->issueFetchField(source_item.m_source, m_solution_index, m_report_step_index ) ) {
                 }
             }
         }
     }
     else if( key == "plane_select_PX" && handleButtonClick(stateElement) ) {
-        if( m_clip_plane.get() != NULL ) {
-            m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, -0.1*M_PI_4 ) ) );
+        if( currentSourceItemValid() ) {
+            currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, -0.1*M_PI_4 ) ) );
             m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
@@ -500,8 +618,8 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         }
     }
     else if( key == "plane_select_NX"  && handleButtonClick(stateElement) ) {
-        if( m_clip_plane.get() != NULL ) {
-            m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, 0.1*M_PI_4 ) ) );
+        if(  currentSourceItemValid() ) {
+            currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, 0.1*M_PI_4 ) ) );
             m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
@@ -509,8 +627,8 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         }
     }
     else if( key == "plane_select_PY"  && handleButtonClick(stateElement) ) {
-        if( m_clip_plane.get() != NULL ) {
-            m_clip_plane->rotate( glm::quat( glm::vec3( 0.1*M_PI_4, 0.f, 0.f ) ) );
+        if(  currentSourceItemValid() ) {
+            currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( 0.1*M_PI_4, 0.f, 0.f ) ) );
             m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
@@ -518,8 +636,8 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         }
     }
     else if( key == "plane_select_NY"  && handleButtonClick(stateElement) ) {
-        if( m_clip_plane.get() != NULL ) {
-            m_clip_plane->rotate( glm::quat( glm::vec3( -0.1*M_PI_4, 0.f, 0.f ) ) );
+        if(  currentSourceItemValid() ) {
+            currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( -0.1*M_PI_4, 0.f, 0.f ) ) );
             m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
@@ -529,8 +647,8 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     else if( key == "plane_select_shift" ) {
         int value;
         stateElement->getValue<int>( value );
-        if( m_clip_plane.get() != NULL ) {
-            m_clip_plane->setOffset( (1.7f/1000.f)*(value) );
+        if(  currentSourceItemValid() ) {
+            currentSourceItem().m_clip_plane->setOffset( (1.7f/1000.f)*(value) );
             m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
@@ -661,12 +779,13 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
     }
-    else if( key == "field_range_enable" ) {
+    else if( key == "field_range_enable" && currentSourceItemValid() ) {
+        
         bool value;
         stateElement->getValue( value );
-        if( !value && m_grid_field.get() != NULL ) {
-            m_model->updateElement<double>( "field_range_min", m_grid_field->minValue() );
-            m_model->updateElement<double>( "field_range_max", m_grid_field->maxValue() );
+        if( !value && currentSourceItem().m_grid_field ) {
+            m_model->updateElement<double>( "field_range_min", currentSourceItem().m_grid_field->minValue() );
+            m_model->updateElement<double>( "field_range_max", currentSourceItem().m_grid_field->maxValue() );
         }
     }
     else if( key == "tess_flip_orientation" ) {
@@ -690,18 +809,29 @@ FRViewJob::triggerRedraw( const string& viewer_key )
 void
 FRViewJob::updateModelMatrices()
 {
+    glm::vec3 bbmin( 0.f );
+    glm::vec3 bbmax( 1.f );
+    glm::vec3 shift;
+    float scale_xy = 1.f;
+    float scale_z  = 1.f;
+
     if( m_has_pipeline ) {
-        glm::vec3 bbmin( m_grid_tess->minBBox()[0], m_grid_tess->minBBox()[1], m_grid_tess->minBBox()[2] );
-        glm::vec3 bbmax( m_grid_tess->maxBBox()[0], m_grid_tess->maxBBox()[1], m_grid_tess->maxBBox()[2] );
-        glm::vec3 shift = -0.5f*( bbmin + bbmax );
-        float scale_xy = std::max( (bbmax.x-bbmin.x),
-                                   (bbmax.y-bbmin.y) );
-
-        float scale_z = m_grid_stats.zScale();
-
-        if( m_project ) {
+        if( currentSourceItemValid() ) {
+            SourceItem& source_item = currentSourceItem();
+            bbmin = glm::vec3( source_item.m_grid_tess->minBBox()[0],
+                               source_item.m_grid_tess->minBBox()[1],
+                               source_item.m_grid_tess->minBBox()[2] );
+            bbmax = glm::vec3( source_item.m_grid_tess->maxBBox()[0],
+                               source_item.m_grid_tess->maxBBox()[1],
+                               source_item.m_grid_tess->maxBBox()[2] );
+            shift = -0.5f*( bbmin + bbmax );
+            scale_xy = std::max( (bbmax.x-bbmin.x),
+                                 (bbmax.y-bbmin.y) );
+            
+            scale_z = m_grid_stats.zScale();
+            
             boost::shared_ptr<dataset::ZScaleInterface> zscale_src =
-                    boost::dynamic_pointer_cast<dataset::ZScaleInterface>( m_project );
+                    boost::dynamic_pointer_cast<dataset::ZScaleInterface>( currentSourceItem().m_source );
             if( zscale_src ) {
                 scale_z = scale_z*(zscale_src->cornerPointZScale()/zscale_src->cornerPointXYScale());
             }
@@ -820,9 +950,6 @@ FRViewJob::initGL()
 
     }
     m_has_context = true;
-    if( m_project.get() != NULL ) {
-        setupPipeline();
-    }
     return true;
 }
 
@@ -832,21 +959,13 @@ FRViewJob::releasePipeline()
     if( !m_has_context ) {
         return;
     }
-    m_clip_plane = boost::shared_ptr<render::ClipPlane>();
-    m_grid_tess = boost::shared_ptr<render::GridTess>();
-    m_faults_surface = boost::shared_ptr<render::surface::GridTessSurf>();
-    m_subset_surface = boost::shared_ptr<render::surface::GridTessSurf>();
-    m_boundary_surface = boost::shared_ptr<render::surface::GridTessSurf>();
     m_grid_tess_surf_builder = boost::shared_ptr<render::surface::GridTessSurfBuilder>();
-    m_grid_field = boost::shared_ptr<render::GridField>();
     m_all_selector = boost::shared_ptr<render::subset::BuilderSelectAll>();
     m_field_selector = boost::shared_ptr<render::subset::BuilderSelectByFieldValue>();
     m_index_selector = boost::shared_ptr<render::subset::BuilderSelectByIndex>();
     m_plane_selector = boost::shared_ptr<render::subset::BuilderSelectOnPlane>();
     m_half_plane_selector = boost::shared_ptr<render::subset::BuilderSelectInsideHalfplane>();
-    m_grid_tess_subset = boost::shared_ptr<render::subset::Representation>();
     m_grid_cube_renderer = boost::shared_ptr<render::GridCubeRenderer>();
-    m_wells = boost::shared_ptr<render::wells::Representation>();
     m_coordsys_renderer = boost::shared_ptr<render::CoordSysRenderer>();
     m_grid_voxelizer = boost::shared_ptr<render::rlgen::GridVoxelization>();
     m_voxel_surface = boost::shared_ptr<render::rlgen::VoxelSurface>();
@@ -859,21 +978,13 @@ bool FRViewJob::setupPipeline()
         return false;
     }
     try {
-        m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
-        m_grid_tess.reset( new render::GridTess );
-        m_faults_surface.reset( new render::surface::GridTessSurf );
-        m_subset_surface.reset( new render::surface::GridTessSurf );
-        m_boundary_surface.reset( new render::surface::GridTessSurf );
         m_grid_tess_surf_builder.reset( new render::surface::GridTessSurfBuilder );
-        m_grid_field.reset(  new render::GridField( m_grid_tess ) );
         m_all_selector.reset( new render::subset::BuilderSelectAll );
         m_field_selector.reset( new render::subset::BuilderSelectByFieldValue );
         m_index_selector.reset( new render::subset::BuilderSelectByIndex );
         m_plane_selector.reset( new render::subset::BuilderSelectOnPlane );
         m_half_plane_selector.reset( new render::subset::BuilderSelectInsideHalfplane );
-        m_grid_tess_subset.reset( new render::subset::Representation );
         m_grid_cube_renderer.reset( new render::GridCubeRenderer );
-        m_wells.reset( new render::wells::Representation );
         m_coordsys_renderer.reset( new render::CoordSysRenderer );
         m_grid_voxelizer.reset( new render::rlgen::GridVoxelization );
         m_voxel_surface.reset( new render::rlgen::VoxelSurface );

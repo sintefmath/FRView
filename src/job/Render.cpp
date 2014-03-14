@@ -103,85 +103,87 @@ FRViewJob::render( const float*  projection,
         if( field_map.length() >= 3 && field_map.substr(0, 3) == "Log" ) {
             log_map = true;
         }
-
-        if( m_render_clip_plane && m_appearance.clipPlaneVisible() ) {
-            glBindFramebuffer( GL_FRAMEBUFFER, fbo );
-            glUseProgram( 0 );
-            glColor4fv( glm::value_ptr( m_appearance.clipPlaneColor() ) );
-            m_clip_plane->render( projection, modelview );
-        }
-
-
+        
         glBindFramebuffer( GL_FRAMEBUFFER, fbo );
         std::vector<render::RenderItem> items;
-        
-        if( m_appearance.renderWells() ) {
-            items.resize( items.size() + 1 );
-            items.back().m_renderer = render::RenderItem::RENDERER_WELL;
-            items.back().m_well = m_wells;
-        }
 
+        if( currentSourceItemValid() && m_render_clip_plane && m_appearance.clipPlaneVisible()) {
+            if( m_render_clip_plane && m_appearance.clipPlaneVisible() ) {
+                glBindFramebuffer( GL_FRAMEBUFFER, fbo );
+                glUseProgram( 0 );
+                glColor4fv( glm::value_ptr( m_appearance.clipPlaneColor() ) );
+                currentSourceItem().m_clip_plane->render( projection, modelview );
+            }
+        }
         
+        for(size_t i=0; i<m_source_items.size(); i++ ) {
+            SourceItem& source_item = m_source_items[i];
         
-        if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS )  {
-            const glm::vec4& fc = m_appearance.faultsFillColor();
-            const glm::vec4& oc = m_appearance.faultsOutlineColor();
-            items.resize( items.size() + 1 );
-            items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
-            items.back().m_surf = m_faults_surface;
-            items.back().m_field = false;
-            items.back().m_line_thickness = m_appearance.lineThickness();
-            items.back().m_edge_color[0] = oc.r;
-            items.back().m_edge_color[1] = oc.g;
-            items.back().m_edge_color[2] = oc.b;
-            items.back().m_edge_color[3] = oc.a;
-            items.back().m_face_color[0] = fc.r;
-            items.back().m_face_color[1] = fc.g;
-            items.back().m_face_color[2] = fc.b;
-            items.back().m_face_color[3] = fc.a;
+            if( m_appearance.renderWells() ) {
+                items.resize( items.size() + 1 );
+                items.back().m_renderer = render::RenderItem::RENDERER_WELL;
+                items.back().m_well = source_item.m_wells;
+            }
+            
+            if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS )  {
+                const glm::vec4& fc = m_appearance.faultsFillColor();
+                const glm::vec4& oc = m_appearance.faultsOutlineColor();
+                items.resize( items.size() + 1 );
+                items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
+                items.back().m_surf = source_item.m_faults_surface;
+                items.back().m_field = false;
+                items.back().m_line_thickness = m_appearance.lineThickness();
+                items.back().m_edge_color[0] = oc.r;
+                items.back().m_edge_color[1] = oc.g;
+                items.back().m_edge_color[2] = oc.b;
+                items.back().m_edge_color[3] = oc.a;
+                items.back().m_face_color[0] = fc.r;
+                items.back().m_face_color[1] = fc.g;
+                items.back().m_face_color[2] = fc.b;
+                items.back().m_face_color[3] = fc.a;
+            }
+            if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_SUBSET ) {
+                const glm::vec4& fc = m_appearance.subsetFillColor();
+                const glm::vec4& oc = m_appearance.subsetOutlineColor();
+                items.resize( items.size() + 1 );
+                items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
+                items.back().m_surf = source_item.m_subset_surface;
+                items.back().m_field = m_has_color_field;
+                items.back().m_field_log_map = log_map;
+                items.back().m_field_min = min;
+                items.back().m_field_max = max;
+                items.back().m_line_thickness =m_appearance.lineThickness();
+                items.back().m_edge_color[0] = oc.r;
+                items.back().m_edge_color[1] = oc.g;
+                items.back().m_edge_color[2] = oc.b;
+                items.back().m_edge_color[3] = oc.a;
+                items.back().m_face_color[0] = fc.r;
+                items.back().m_face_color[1] = fc.g;
+                items.back().m_face_color[2] = fc.b;
+                items.back().m_face_color[3] = fc.a;
+            }
+            if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_BOUNDARY ) {
+                const glm::vec4& fc = m_appearance.boundaryFillColor();
+                const glm::vec4& oc = m_appearance.boundaryOutlineColor();
+                items.resize( items.size() + 1 );
+                items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
+                items.back().m_surf = source_item.m_boundary_surface;
+                items.back().m_field = m_has_color_field;
+                items.back().m_field_log_map = log_map;
+                items.back().m_field_min = min;
+                items.back().m_field_max = max;
+                items.back().m_line_thickness = m_appearance.lineThickness();
+                items.back().m_edge_color[0] = oc.r;
+                items.back().m_edge_color[1] = oc.g;
+                items.back().m_edge_color[2] = oc.b;
+                items.back().m_edge_color[3] = oc.a;
+                items.back().m_face_color[0] = fc.r;
+                items.back().m_face_color[1] = fc.g;
+                items.back().m_face_color[2] = fc.b;
+                items.back().m_face_color[3] = fc.a;
+            }
+            
         }
-        if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_SUBSET ) {
-            const glm::vec4& fc = m_appearance.subsetFillColor();
-            const glm::vec4& oc = m_appearance.subsetOutlineColor();
-            items.resize( items.size() + 1 );
-            items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
-            items.back().m_surf = m_subset_surface;
-            items.back().m_field = m_has_color_field;
-            items.back().m_field_log_map = log_map;
-            items.back().m_field_min = min;
-            items.back().m_field_max = max;
-            items.back().m_line_thickness =m_appearance.lineThickness();
-            items.back().m_edge_color[0] = oc.r;
-            items.back().m_edge_color[1] = oc.g;
-            items.back().m_edge_color[2] = oc.b;
-            items.back().m_edge_color[3] = oc.a;
-            items.back().m_face_color[0] = fc.r;
-            items.back().m_face_color[1] = fc.g;
-            items.back().m_face_color[2] = fc.b;
-            items.back().m_face_color[3] = fc.a;
-        }
-        if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_BOUNDARY ) {
-            const glm::vec4& fc = m_appearance.boundaryFillColor();
-            const glm::vec4& oc = m_appearance.boundaryOutlineColor();
-            items.resize( items.size() + 1 );
-            items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
-            items.back().m_surf = m_boundary_surface;
-            items.back().m_field = m_has_color_field;
-            items.back().m_field_log_map = log_map;
-            items.back().m_field_min = min;
-            items.back().m_field_max = max;
-            items.back().m_line_thickness = m_appearance.lineThickness();
-            items.back().m_edge_color[0] = oc.r;
-            items.back().m_edge_color[1] = oc.g;
-            items.back().m_edge_color[2] = oc.b;
-            items.back().m_edge_color[3] = oc.a;
-            items.back().m_face_color[0] = fc.r;
-            items.back().m_face_color[1] = fc.g;
-            items.back().m_face_color[2] = fc.b;
-            items.back().m_face_color[3] = fc.a;
-        }
-
-
 
         switch ( m_appearance.renderQuality() ) {
         case 0:
@@ -226,16 +228,17 @@ FRViewJob::render( const float*  projection,
             }
             break;
         }
-        m_screen_manager->render( fbo,
-                                  width,
-                                  height,
-                                  glm::value_ptr( m_local_to_world ),
-                                  glm::value_ptr( mv ),
-                                  projection,
-                                  m_grid_tess,
-                                  m_grid_field,
-                                  items);
-        
+        if( currentSourceItemValid() ) {
+            m_screen_manager->render( fbo,
+                                      width,
+                                      height,
+                                      glm::value_ptr( m_local_to_world ),
+                                      glm::value_ptr( mv ),
+                                      projection,
+                                      currentSourceItem().m_grid_tess,  // move into render item
+                                      currentSourceItem().m_grid_field, // move into render item
+                                      items);
+        }
 
         glViewport( 0, 0, 0.1*width, 0.1*height );
         m_coordsys_renderer->render( glm::value_ptr( mv ), 0.1*width, 0.1*height);
