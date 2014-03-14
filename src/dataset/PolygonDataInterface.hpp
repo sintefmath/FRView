@@ -19,6 +19,10 @@
 #include <boost/shared_ptr.hpp>
 #include <tinia/model/ExposedModel.hpp>
 
+namespace bridge {
+    class PolygonMeshBridge;
+}
+
 namespace dataset {
 
 /** Interface that describes polygonal tessellations of surfaces. */
@@ -29,6 +33,13 @@ public:
     virtual
     ~PolygonDataInterface();
 
+    /** Extract grid geometry from datasource. */
+    virtual
+    void
+    geometry( boost::shared_ptr<bridge::PolygonMeshBridge>   mesh_bridge,
+              boost::shared_ptr<tinia::model::ExposedModel>  model,
+              const std::string&                             progress_description_key,
+              const std::string&                             progress_counter_key ) = 0;
    
     /** Number of fields in datasource. */
     virtual

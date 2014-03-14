@@ -18,8 +18,10 @@
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "cornerpoint/Tessellator.hpp"
+#include "bridge/PolygonMeshBridge.hpp"
 #include "dataset/VTKXMLSourceFactory.hpp"
 #include "dataset/CornerpointGrid.hpp"
+#include "dataset/PolygonDataInterface.hpp"
 #include "eclipse/EclipseReader.hpp"
 #include "utils/PerfTimer.hpp"
 
@@ -199,15 +201,19 @@ ASyncReader::handleOpenSource( const Command& cmd )
         }
 
         if( source ) {
-            boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
+            boost::shared_ptr<dataset::PolyhedralDataInterface> polyhedron_source =
                     boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source );
-            if( poly_source ) {
+
+            boost::shared_ptr<dataset::PolygonDataInterface> polygon_source =
+                    boost::dynamic_pointer_cast<dataset::PolygonDataInterface>( source );
+            
+            if( polyhedron_source ) {
                 boost::shared_ptr< bridge::PolyhedralMeshBridge > bridge( new bridge::PolyhedralMeshBridge( cmd.m_triangulate ) );
                 
-                poly_source->geometry( *bridge,
-                                       m_model,
-                                       progress_description_key,
-                                       progress_counter_key );
+                polyhedron_source->geometry( *bridge,
+                                             m_model,
+                                             progress_description_key,
+                                             progress_counter_key );
                 
                 m_model->updateElement<std::string>( progress_description_key, "Organizing data..." );
                 m_model->updateElement<int>( progress_counter_key, 0 );
@@ -219,8 +225,26 @@ ASyncReader::handleOpenSource( const Command& cmd )
                 rsp.m_mesh_bridge = bridge;
                 postResponse( cmd, rsp );
             }
+            else if( polygon_source ) {
+                
+                boost::shared_ptr< bridge::PolygonMeshBridge > bridge( new bridge::PolygonMeshBridge( cmd.m_triangulate ) );
+                
+                polygon_source->geometry( bridge,
+                                          m_model,
+                                          progress_description_key,
+                                          progress_counter_key );
+                m_model->updateElement<std::string>( progress_description_key, "Organizing data..." );
+                m_model->updateElement<int>( progress_counter_key, 0 );
+                bridge->process();
+                
+                Response rsp;
+                rsp.m_type = RESPONSE_SOURCE;
+                rsp.m_source = source;
+                rsp.m_mesh_bridge = bridge;
+                postResponse( cmd, rsp );
+            }
             else {
-                m_model->updateElement<std::string>( progress_description_key, "Source is not a polygon source" );
+                m_model->updateElement<std::string>( progress_description_key, "Unhandled source type" );
                 sleep(2);
             }
         }

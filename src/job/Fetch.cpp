@@ -59,30 +59,31 @@ FRViewJob::handleFetchSource()
     
     SourceItem source_item;
     source_item.m_source = source;
-    source_item.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
-    source_item.m_grid_tess.reset( new render::GridTess );
-    source_item.m_faults_surface.reset( new render::surface::GridTessSurf );
-    source_item.m_subset_surface.reset( new render::surface::GridTessSurf );
-    source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
-    source_item.m_grid_tess_subset.reset( new render::subset::Representation );
-    source_item.m_wells.reset( new render::wells::Representation );
-    source_item.m_grid_field.reset(  new render::GridField( source_item.m_grid_tess ) );
-
-    
-    addSourceItem( source_item );
-    if( !m_has_pipeline ) {
-        if(!setupPipeline()) {
-            return;
-        }
-    }
 
     boost::shared_ptr<bridge::PolyhedralMeshBridge> polyhedral_bridge =
             boost::dynamic_pointer_cast<bridge::PolyhedralMeshBridge>( mesh_bridge );
     if( polyhedral_bridge ) {
+        source_item.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
+        source_item.m_grid_tess.reset( new render::GridTess );
+        source_item.m_faults_surface.reset( new render::surface::GridTessSurf );
+        source_item.m_subset_surface.reset( new render::surface::GridTessSurf );
+        source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
+        source_item.m_grid_tess_subset.reset( new render::subset::Representation );
+        source_item.m_wells.reset( new render::wells::Representation );
+        source_item.m_grid_field.reset(  new render::GridField( source_item.m_grid_tess ) );
+        
         source_item.m_grid_tess->update( *polyhedral_bridge );
         LOGGER_DEBUG( log, "Updated grid tess" );
-    }
 
+        addSourceItem( source_item );
+        if( !m_has_pipeline ) {
+            if(!setupPipeline()) {
+                return;
+            }
+        }
+    }
+    
+    
     LOGGER_DEBUG( log, "currentSourceItemValid()=" << currentSourceItemValid() );
     
     // update state variables

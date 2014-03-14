@@ -24,6 +24,7 @@
 #include "dataset/PolygonDataInterface.hpp"
 #include "dataset/CellLayoutInterface.hpp"
 
+
 namespace dataset {
 
 
@@ -47,8 +48,13 @@ public:
                        std::vector< std::vector<float> >&  cell_field_data );
     
     // -------------------------------------------------------------------------
-    /** \name Implementation of PolyhedralDataInterface */
+    /** \name Implementation of PolygonDataInterface */
     /** @{ */
+    void
+    geometry( boost::shared_ptr<bridge::PolygonMeshBridge>   mesh_bridge,
+              boost::shared_ptr<tinia::model::ExposedModel>  model,
+              const std::string&                             progress_description_key,
+              const std::string&                             progress_counter_key );
 #if 0
     void
     geometry( Tessellation&                                  geometry_bridge,
