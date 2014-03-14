@@ -126,6 +126,7 @@ private:
     /** True if job initGL has been called, and glew is set up. */
     bool                                            m_has_context;
     boost::shared_ptr<ASyncReader>                    m_async_reader;
+    bool                                            m_check_async_reader;
 
     /** True if we want to enable OpenGL debug messages ourselves. */
     bool                                            m_enable_gl_debug;
@@ -180,7 +181,6 @@ private:
     /** @} */
 
 
-    bool                                            m_load_geometry;
     bool                                            m_load_color_field;
     bool                                            m_has_color_field;
     bool                                            m_do_update_subset;
@@ -209,6 +209,12 @@ private:
     /** Fetches data, if needed. */
     void
     fetchData();
+    
+    void
+    handleFetchSource();
+    
+    void
+    handleFetchField();
 
     /** Performs the GPGPU passes, if needed. */
     void

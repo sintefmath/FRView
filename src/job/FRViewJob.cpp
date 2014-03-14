@@ -65,11 +65,11 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_grid_stats( m_model, *this ),
       m_has_context( false ),
       m_async_reader( new ASyncReader( m_model ) ),
+      m_check_async_reader( false ),
       m_enable_gl_debug( false ),
       m_renderlist_initialized( false ),
       m_renderlist_state( RENDERLIST_SENT ),
-      m_has_pipeline( false ),
-      m_load_geometry( false )
+      m_has_pipeline( false )
 {
 
     m_load_color_field = false;
@@ -415,7 +415,6 @@ FRViewJob::loadFile( const std::string& filename,
 {
     m_file.setFileName( filename );
 
-    m_load_geometry = false;
     m_load_color_field = false;
     m_project = boost::shared_ptr< dataset::CornerpointGrid >();
     std::list<std::string> solutions = {"none"};
@@ -453,8 +452,8 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     const string& key = stateElement->getKey();
 
     if( key == "asyncreader_ticket" ) { // Async job is finished
+        m_check_async_reader = true;
         if( !m_project ) {
-            m_load_geometry = true;
         }
         else {
             m_load_color_field = true;
