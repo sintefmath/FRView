@@ -432,7 +432,7 @@ FRViewJob::loadFile( const std::string& filename,
     m_grid_stats.update();
 
     releasePipeline();
-    m_async_reader->issueReadProject( filename,
+    m_async_reader->issueOpenSource( filename,
                                       refine_i,
                                       refine_j,
                                       refine_k,
@@ -473,7 +473,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
                 }
             }
             if( poly_source->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
-                if( m_async_reader->issueReadSolution( m_project, m_solution_index, m_report_step_index ) ) {
+                if( m_async_reader->issueFetchField( m_project, m_solution_index, m_report_step_index ) ) {
                 }
             }
         }
@@ -486,7 +486,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             stateElement->getValue<int>( value );
             m_report_step_index = value;
             if( poly_source->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
-                if( m_async_reader->issueReadSolution( m_project, m_solution_index, m_report_step_index ) ) {
+                if( m_async_reader->issueFetchField( m_project, m_solution_index, m_report_step_index ) ) {
                 }
             }
         }

@@ -42,16 +42,16 @@ ASyncReader::ASyncReader( boost::shared_ptr<tinia::model::ExposedModel> model )
 }
 
 bool
-ASyncReader::issueReadProject( const std::string& file,
-                               const int refine_i,
-                               const int refine_j,
-                               const int refine_k,
-                               const bool triangulate)
+ASyncReader::issueOpenSource( const std::string& file,
+                              int refine_i,
+                              int refine_j,
+                              int refine_k,
+                              bool triangulate)
 {
     Logger log = getLogger( package + ".read" );
     Command cmd;
-    cmd.m_type = Command::READ_PROJECT;
-    cmd.m_project_file = file;
+    cmd.m_type = COMMAND_OPEN_SOURCE;
+    cmd.m_source_file = file;
     cmd.m_refine_i = refine_i;
     cmd.m_refine_j = refine_j;
     cmd.m_refine_k = refine_k;
@@ -61,28 +61,41 @@ ASyncReader::issueReadProject( const std::string& file,
 }
 
 bool
-ASyncReader::issueReadSolution( const boost::shared_ptr<dataset::AbstractDataSource> project,
-                                size_t solution_index, size_t report_step_index )
+ASyncReader::issueFetchField( const boost::shared_ptr<dataset::AbstractDataSource>  source,
+                              size_t                                                field_index,
+                              size_t                                                timestep_index )
 {
     Command cmd;
-    cmd.m_type = Command::READ_SOLUTION;
-    cmd.m_project = project;
-    cmd.m_field_index = solution_index;
-    cmd.m_timestep_index = report_step_index;
+    cmd.m_type = COMMAND_FETCH_FIELD;
+    cmd.m_source = source;
+    cmd.m_field_index = field_index;
+    cmd.m_timestep_index = timestep_index;
     postCommand( cmd );
     return true;
 }
 
+ASyncReader::ResponseType
+ASyncReader::checkForResponse()
+{
+    std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
+    if( m_rsp_queue.empty() ) {
+        return RESPONSE_NONE;
+    }
+    else {
+        return m_rsp_queue.begin()->m_type;
+    }
+}
+
 
 bool
-ASyncReader::getProject( boost::shared_ptr<dataset::AbstractDataSource> &project,
-                         boost::shared_ptr< bridge::PolyhedralMeshBridge>&  tess_bridge )
+ASyncReader::getSource( boost::shared_ptr<dataset::AbstractDataSource> &source,
+                        boost::shared_ptr<bridge::AbstractMeshBridge>  &bridge )
 {
     std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
     for(auto it = m_rsp_queue.begin(); it!=m_rsp_queue.end(); ++it ) {
-        if( it->m_type == Response::PROJECT ) {
-            project = it->m_project;
-            tess_bridge = it->m_project_grid;
+        if( it->m_type == RESPONSE_SOURCE ) {
+            source = it->m_source;
+            bridge = it->m_mesh_bridge;
             m_rsp_queue.erase( it );
             return true;
         }
@@ -91,15 +104,15 @@ ASyncReader::getProject( boost::shared_ptr<dataset::AbstractDataSource> &project
 }
 
 bool
-ASyncReader::getSolution( boost::shared_ptr< bridge::FieldBridge >& field_bridge )
+ASyncReader::getField( boost::shared_ptr< bridge::FieldBridge >& field_bridge )
 {
     // We kill of all but the latest request of correct type
     bool found_any = false;
     std::list<Response> keep;
     std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
     for(auto it = m_rsp_queue.begin(); it!=m_rsp_queue.end(); ++it ) {
-        if( it->m_type == Response::SOLUTION ) {
-            field_bridge = it->m_solution;
+        if( it->m_type == RESPONSE_FIELD ) {
+            field_bridge = it->m_field_bridge;
             found_any = true;
         }
         else {
@@ -130,7 +143,7 @@ ASyncReader::getCommand( Command& cmd )
 }
 
 void
-ASyncReader::handleReadProject( const Command& cmd )
+ASyncReader::handleOpenSource( const Command& cmd )
 {
     Logger log = getLogger( package + ".handleReadProject" );
     m_model->updateElement<bool>( "asyncreader_working", true );
@@ -138,7 +151,7 @@ ASyncReader::handleReadProject( const Command& cmd )
         m_model->updateElement<std::string>( progress_description_key, "Indexing files..." );
         m_model->updateElement<int>( progress_counter_key, 0 );
 
-        if( cmd.m_project_file.empty() ) {
+        if( cmd.m_source_file.empty() ) {
             throw std::runtime_error( "Empty file name" );
         }
         
@@ -148,11 +161,11 @@ ASyncReader::handleReadProject( const Command& cmd )
         
 
         // Extract suffix in upper case
-        size_t dot = cmd.m_project_file.find_last_of( '.' );
+        size_t dot = cmd.m_source_file.find_last_of( '.' );
         if( dot == std::string::npos ) {
             throw std::runtime_error( "Filename has no suffix" );
         }
-        std::string suffix = cmd.m_project_file.substr( dot + 1u );
+        std::string suffix = cmd.m_source_file.substr( dot + 1u );
         for( auto it=suffix.begin(); it!=suffix.end(); ++it ) {
           *it = std::toupper( *it );
         }
@@ -160,24 +173,24 @@ ASyncReader::handleReadProject( const Command& cmd )
 
         boost::shared_ptr<dataset::AbstractDataSource> source;
         if( suffix == "VTU" ) {
-            source = dataset::VTKXMLSourceFactory::FromVTUFile( cmd.m_project_file );
+            source = dataset::VTKXMLSourceFactory::FromVTUFile( cmd.m_source_file );
             
 //            source.reset( new dataset::VTKXMLSource( cmd.m_project_file ) );
         }
         else if( suffix == "GTXT" ) {
-            source.reset( new dataset::CornerpointGrid( cmd.m_project_file,
+            source.reset( new dataset::CornerpointGrid( cmd.m_source_file,
                                                 cmd.m_refine_i,
                                                 cmd.m_refine_j,
                                                 cmd.m_refine_k ) );            
         }
         else if( suffix == "GEOMETRY" ) {
-            source.reset( new dataset::CornerpointGrid( cmd.m_project_file,
+            source.reset( new dataset::CornerpointGrid( cmd.m_source_file,
                                                 cmd.m_refine_i,
                                                 cmd.m_refine_j,
                                                 cmd.m_refine_k ) );            
         }
         else if( suffix == "EGRID" ) {
-            source.reset( new dataset::CornerpointGrid( cmd.m_project_file,
+            source.reset( new dataset::CornerpointGrid( cmd.m_source_file,
                                                 cmd.m_refine_i,
                                                 cmd.m_refine_j,
                                                 cmd.m_refine_k ) );            
@@ -199,9 +212,9 @@ ASyncReader::handleReadProject( const Command& cmd )
                 bridge->process();
                 
                 Response rsp;
-                rsp.m_type = Response::PROJECT;
-                rsp.m_project = source;
-                rsp.m_project_grid = bridge;
+                rsp.m_type = RESPONSE_SOURCE;
+                rsp.m_source = source;
+                rsp.m_mesh_bridge = bridge;
                 postResponse( cmd, rsp );
             }
             else {
@@ -229,25 +242,25 @@ ASyncReader::handleReadSolution( const Command& cmd )
 
     
     boost::shared_ptr<dataset::PolyhedralDataInterface> polydata =
-            boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( cmd.m_project );
+            boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( cmd.m_source );
 
     Response rsp;
     if( polydata != NULL ) {
         try {
-            rsp.m_solution.reset( new bridge::FieldBridge( ) );
-            polydata->field( rsp.m_solution,
+            rsp.m_field_bridge.reset( new bridge::FieldBridge( ) );
+            polydata->field( rsp.m_field_bridge,
                              cmd.m_field_index,
                              cmd.m_timestep_index );
         }
         catch( std::exception& e ) {
-            rsp.m_solution.reset();
+            rsp.m_field_bridge.reset();
             LOGGER_ERROR( log, "Caught error: " << e.what() );
         }
     }
     else {
         LOGGER_ERROR( log, "Current data source does not support fields." );
     }
-    rsp.m_type = Response::SOLUTION;
+    rsp.m_type = RESPONSE_FIELD;
 
     postResponse( cmd, rsp );
 }
@@ -263,13 +276,13 @@ ASyncReader::worker( ASyncReader* that )
         Command cmd;
         if( that->getCommand( cmd ) ) {
             switch( cmd.m_type ) {
-            case Command::READ_PROJECT:
-                that->handleReadProject( cmd );
+            case COMMAND_OPEN_SOURCE:
+                that->handleOpenSource( cmd );
                 break;
-            case Command::READ_SOLUTION:
+            case COMMAND_FETCH_FIELD:
                 that->handleReadSolution( cmd );
                 break;
-            case Command::DIE:
+            case COMMAND_DIE:
                 keep_going = false;
                 break;
             }

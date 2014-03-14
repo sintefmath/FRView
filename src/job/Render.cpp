@@ -63,10 +63,10 @@ FRViewJob::render( const float*  projection,
     }
 
     // create object space to model space matrix
-    glm::mat4 p = glm::mat4( projection[0],  projection[1],  projection[2],  projection[3],
-                             projection[4],  projection[5],  projection[6],  projection[7],
-                             projection[8],  projection[9],  projection[10], projection[11],
-                             projection[12], projection[13], projection[14], projection[15] );
+//    glm::mat4 p = glm::mat4( projection[0],  projection[1],  projection[2],  projection[3],
+//                             projection[4],  projection[5],  projection[6],  projection[7],
+//                             projection[8],  projection[9],  projection[10], projection[11],
+//                             projection[12], projection[13], projection[14], projection[15] );
 
     glm::mat4 mv = glm::mat4( modelview[0], modelview[1],  modelview[2],  modelview[3],
                               modelview[4], modelview[5],  modelview[6],  modelview[7],

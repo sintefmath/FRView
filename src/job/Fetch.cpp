@@ -41,17 +41,22 @@ FRViewJob::fetchData()
     // import geometry
     if( m_load_geometry ) {
         
-        boost::shared_ptr< dataset::AbstractDataSource > project;
-        boost::shared_ptr< bridge::PolyhedralMeshBridge > tess_bridge;
-        if( m_async_reader->getProject( project, tess_bridge ) ) {
+        boost::shared_ptr< dataset::AbstractDataSource > source;
+        boost::shared_ptr< bridge::AbstractMeshBridge > mesh_bridge;
+        if( m_async_reader->getSource( source, mesh_bridge ) ) {
             if( !m_has_pipeline ) {
                 if(!setupPipeline()) {
                     return;
                 }
             }
             m_load_geometry = false;
-            m_project = project;
-            m_grid_tess->update( *tess_bridge );
+            m_project = source;
+            
+            boost::shared_ptr<bridge::PolyhedralMeshBridge> polyhedral_bridge =
+                    boost::dynamic_pointer_cast<bridge::PolyhedralMeshBridge>( mesh_bridge );
+            if( polyhedral_bridge ) {
+                m_grid_tess->update( *polyhedral_bridge );
+            }
 
             // update state variables
             m_load_geometry = false;
@@ -129,7 +134,7 @@ FRViewJob::fetchData()
         m_has_color_field = false;
 
         boost::shared_ptr<bridge::FieldBridge> bridge;
-        if( m_async_reader->getSolution( bridge ) ) {
+        if( m_async_reader->getField( bridge ) ) {
 
             if( bridge ) {
                 m_grid_field->import( *bridge );

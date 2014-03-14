@@ -31,80 +31,87 @@ public:
     typedef uint    Ticket;
     static const Ticket IllegalTicket = ~0u;
 
+    enum ResponseType {
+        RESPONSE_NONE,
+        RESPONSE_SOURCE,
+        RESPONSE_FIELD
+    };
+    
+    
     ASyncReader( boost::shared_ptr<tinia::model::ExposedModel> model );
 
-    /** Asynchronously read files and create project object.
+    /** Asynchronously open source and get geometry
      *
      * creates and updates 'asyncreader_progress' which is used to notify
      * progress and that reading is finished.
      */
     bool
-    issueReadProject( const std::string& file,
-                      const int refine_i = 1,
-                      const int refine_j = 1,
-                      const int refine_k = 1,
-                      const bool triangulate = false );
+    issueOpenSource( const std::string&  file,
+                     int                 refine_i = 1,
+                     int                 refine_j = 1,
+                     int                 refine_k = 1,
+                     bool                triangulate = false );
+    
+    bool
+    issueFetchField( const boost::shared_ptr<dataset::AbstractDataSource> source,
+                     size_t                                               field_index,
+                     size_t                                               timestep_index );
 
     bool
-    issueReadSolution( const boost::shared_ptr< dataset::AbstractDataSource > project,
-                       size_t solution_index, size_t report_step_index );
-
-    bool
-    getProject( boost::shared_ptr< dataset::AbstractDataSource >& project,
-                boost::shared_ptr< bridge::PolyhedralMeshBridge>&  tess_bridge );
+    getSource( boost::shared_ptr< dataset::AbstractDataSource >&  source,
+               boost::shared_ptr<bridge::AbstractMeshBridge>&     bridge );
 
 
     bool
-    getSolution( boost::shared_ptr< bridge::FieldBridge >& field_bridge );
+    getField( boost::shared_ptr< bridge::FieldBridge >& field_bridge );
 
+    /** Check if there are any responses pending, and if so, return type of the oldest. */
+    ResponseType
+    checkForResponse();
+    
 
 protected:
-
+    enum CommandType {
+        COMMAND_OPEN_SOURCE,
+        COMMAND_FETCH_FIELD,
+        COMMAND_DIE
+    };
+    
     struct Command
     {
-        enum {
-            READ_PROJECT,
-            READ_SOLUTION,
-            DIE
-        }                                       m_type;
-        Ticket                                  m_ticket;
-        std::string                             m_project_file;
-        int                                     m_refine_i;
-        int                                     m_refine_j;
-        int                                     m_refine_k;
-        bool                                    m_triangulate;
-        boost::shared_ptr< dataset::AbstractDataSource >       m_project;
-        size_t                                  m_field_index;
-        size_t                                  m_timestep_index;
+        CommandType                                     m_type;
+        Ticket                                          m_ticket;
+        std::string                                     m_source_file;
+        int                                             m_refine_i;
+        int                                             m_refine_j;
+        int                                             m_refine_k;
+        bool                                            m_triangulate;
+        boost::shared_ptr<dataset::AbstractDataSource>  m_source;
+        size_t                                          m_field_index;
+        size_t                                          m_timestep_index;
     };
 
     struct Response
     {
-        enum {
-            PROJECT,
-            SOLUTION
-            // Should have error as well?
-        }                                       m_type;
-        boost::shared_ptr< dataset::AbstractDataSource >       m_project;
-        boost::shared_ptr< bridge::PolyhedralMeshBridge >       m_project_grid;
-        boost::shared_ptr< bridge::FieldBridge >      m_solution;
+        ResponseType                                    m_type;
+        boost::shared_ptr<dataset::AbstractDataSource>  m_source;
+        boost::shared_ptr<bridge::AbstractMeshBridge>   m_mesh_bridge;
+        boost::shared_ptr<bridge::FieldBridge>          m_field_bridge;
     };
 
-    Ticket                                      m_ticket_counter;
-    boost::shared_ptr<tinia::model::ExposedModel> m_model;
-    std::list<Command>                          m_cmd_queue;
-    std::mutex                                  m_cmd_queue_lock;
-    std::condition_variable                     m_cmd_queue_wait;
+    Ticket                                         m_ticket_counter;
+    boost::shared_ptr<tinia::model::ExposedModel>  m_model;
+    std::list<Command>                             m_cmd_queue;
+    std::mutex                                     m_cmd_queue_lock;
+    std::condition_variable                        m_cmd_queue_wait;
 
-    std::list<Response>                         m_rsp_queue;
-    std::mutex                                  m_rsp_queue_lock;
+    std::list<Response>                            m_rsp_queue;
+    std::mutex                                     m_rsp_queue_lock;
 
-    std::thread                                 m_worker;
-
-    //std::vector<int>                            m_field_remap;
+    std::thread                                    m_worker;
 
     void
-    handleReadProject( const Command& cmd );
+    handleOpenSource( const Command& cmd );
 
     void
     handleReadSolution( const Command& cmd );
