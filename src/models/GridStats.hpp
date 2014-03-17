@@ -26,7 +26,9 @@ namespace dataset {
     class AbstractDataSource;
 }
 namespace render {
-    class GridTess;
+    namespace mesh {
+        class AbstractMesh;
+    }
 } // of namespace render
 
 namespace models {
@@ -53,7 +55,7 @@ public:
 
     void
     update( boost::shared_ptr<dataset::AbstractDataSource > project,
-            boost::shared_ptr<render::GridTess> tessellation );
+            boost::shared_ptr<render::mesh::AbstractMesh> tessellation );
 
 protected:
     boost::shared_ptr<tinia::model::ExposedModel> m_model;

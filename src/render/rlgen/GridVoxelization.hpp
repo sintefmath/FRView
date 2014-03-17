@@ -21,7 +21,10 @@
 #include <boost/utility.hpp>
 
 namespace render {
-    class GridTess;
+    namespace mesh {
+        class CellSetInterface;
+    }
+    
     namespace subset {
         class Representation;
     }
@@ -47,9 +50,9 @@ public:
 
     /** Populate the voxel set. */
     void
-    build( boost::shared_ptr<const GridTess> tess,
-           boost::shared_ptr<const subset::Representation> subset,
-           const GLfloat* local_from_world );
+    build(boost::shared_ptr<const mesh::CellSetInterface> cell_set,
+           boost::shared_ptr<const subset::Representation> cell_subset,
+           const GLfloat*                                  world_from_local );
 
 protected:
     GLsizei     m_resolution;

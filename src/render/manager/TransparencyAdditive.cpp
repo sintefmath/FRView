@@ -149,13 +149,13 @@ TransparencyAdditive::resize( const GLsizei width, const GLsizei height )
 }
 
 void
-TransparencyAdditive::render( GLuint                              fbo,
+TransparencyAdditive::render(GLuint                              fbo,
                               const GLsizei                       width,
                               const GLsizei                       height,
                               const GLfloat*                      local_to_world,
                               const GLfloat*                      modelview,
                               const GLfloat*                      projection,
-                              boost::shared_ptr<const GridTess>   tess,
+                              boost::shared_ptr<const mesh::AbstractMesh> gpu_mesh,
                               boost::shared_ptr<const GridField>  field,
                               const std::vector<RenderItem>&      items )
 {
@@ -192,7 +192,7 @@ TransparencyAdditive::render( GLuint                              fbo,
                              projection,
                              m_width,
                              m_height,
-                             tess, field, m_color_map, items );
+                             gpu_mesh, field, m_color_map, items );
     renderMiscellaneous( width, height,
                          local_to_world, modelview, projection,
                          items );
@@ -211,7 +211,7 @@ TransparencyAdditive::render( GLuint                              fbo,
                              projection,
                              m_width,
                              m_height,
-                             tess, field, m_color_map, items );
+                             gpu_mesh, field, m_color_map, items );
 
     glDepthMask( GL_TRUE );
     glDisable( GL_BLEND );

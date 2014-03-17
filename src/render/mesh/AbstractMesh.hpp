@@ -1,4 +1,5 @@
-/* Copyright STIFTELSEN SINTEF 2013
+#pragma once
+/* Copyright STIFTELSEN SINTEF 2014
  * 
  * This file is part of FRView.
  * FRView is free software: you can redistribute it and/or modify
@@ -14,32 +15,23 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include "render/mesh/CellSetInterface.hpp"
-#include "render/subset/Representation.hpp"
-#include "render/subset/BuilderSelectAll.hpp"
-
+#include <GL/glew.h>
+#include <boost/utility.hpp>
 
 namespace render {
-    namespace subset {
-        namespace glsl {
-            extern std::string BuilderSelectAll_vs;
-        }
+namespace mesh {
 
-BuilderSelectAll::BuilderSelectAll()
-    : Builder( glsl::BuilderSelectAll_vs )
+class AbstractMesh : public boost::noncopyable
 {
-}
-
-void
-BuilderSelectAll::apply( boost::shared_ptr<Representation> cell_subset,
-                         boost::shared_ptr<const mesh::CellSetInterface> cell_set)
-{
-    glUseProgram( m_program );
-    cell_subset->populateBuffer( cell_set );
-    glUseProgram( 0 );
-}
+public:
+    virtual
+    ~AbstractMesh();
+    
+protected:
+    
+    
+};
 
 
-    } // of namespace subset
+} // of namespace mesh
 } // of namespace render

@@ -22,7 +22,10 @@
 #include "render/ManagedGL.hpp"
 
 namespace render {
-    class GridTess;
+    class PolyhedralRepresentation;
+    namespace mesh {
+        class PolyhedralRepresentation;
+    }
     namespace subset {
         class Representation;
     }
@@ -41,7 +44,7 @@ public:
                    boost::shared_ptr<GridTessSurf>            surf_subset_boundary,
                    boost::shared_ptr<GridTessSurf>            surf_faults,
                    boost::shared_ptr<const subset::Representation>    subset,
-                   boost::shared_ptr<const GridTess>          tess,
+                   boost::shared_ptr<const mesh::PolyhedralRepresentation>  mesh,
                    bool                     flip_faces );
 
 protected:

@@ -22,7 +22,7 @@
 #include "render/ManagedGL.hpp"
 
 namespace render {
-    class GridTess;
+    //class GridTess;
     namespace subset {
         class Representation;
     }
@@ -75,16 +75,15 @@ public:
      * \param tri_cell_index     Transform feedback binding point index.
      * \param tri_indices_index  Transform feedback binding point index.
      */
+#if 0
     void
     populateTriangleBuffer( const GridTess*        tess,
                             GLuint                 tri_cell_index    = 0u,
                             GLuint                 tri_indices_index = 1u );
-
+#endif
+    
     void
-    populatePolygonBuffer( const GridTess*        tess,
-                           GLsizei                N,
-                            GLuint                 tri_cell_index    = 0u,
-                            GLuint                 tri_indices_index = 1u );
+    populatePolygonBuffer( GLsizei                N);
 
     /** Sets the triangle count for this surface.
      *

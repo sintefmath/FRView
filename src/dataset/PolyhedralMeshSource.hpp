@@ -19,7 +19,6 @@
 #include <memory>
 #include <vector>
 #include <tinia/model/ExposedModel.hpp>
-#include "render/GridTess.hpp"
 #include "dataset/AbstractDataSource.hpp"
 #include "dataset/PolyhedralDataInterface.hpp"
 #include "dataset/CellLayoutInterface.hpp"

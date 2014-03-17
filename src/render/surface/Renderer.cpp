@@ -17,12 +17,18 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "render/GridTess.hpp"
+#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/VertexPositionInterface.hpp"
+#include "render/mesh/NormalVectorInterface.hpp"
 #include "render/GridField.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/Renderer.hpp"
 #include "utils/Logger.hpp"
 #include "utils/GLSLTools.hpp"
+
+namespace {
+    const std::string package = "render.surface.Renderer";
+}
 
 namespace render {
     namespace surface {
@@ -31,7 +37,6 @@ namespace render {
             extern const std::string Renderer_gs;
             extern const std::string Renderer_fs;
         }
-        static const std::string package = "render.surface.Renderer";
 
     
 Renderer::Renderer( const std::string& defines, const std::string& fragment_source )
@@ -67,16 +72,27 @@ Renderer::Renderer( const std::string& defines, const std::string& fragment_sour
 
     
 void
-Renderer::draw( const GLfloat*                            modelview,
+Renderer::draw(const GLfloat*                            modelview,
                 const GLfloat*                            projection,
                 const GLsizei                             width,
                 const GLsizei                             height,
-                const boost::shared_ptr<const GridTess>   tess,
+                const boost::shared_ptr<const mesh::AbstractMesh> mesh,
                 const boost::shared_ptr<const GridField>  field,
                 GLTexture&                                color_map,
                 const std::vector<RenderItem>&            render_items )
 {
-
+    Logger log = getLogger( package + ".draw" );
+    
+    boost::shared_ptr<const mesh::VertexPositionInterface> vertices = 
+            boost::dynamic_pointer_cast<const mesh::VertexPositionInterface>( mesh );
+    
+    boost::shared_ptr<const mesh::NormalVectorInterface> normals = 
+            boost::dynamic_pointer_cast<const mesh::NormalVectorInterface>( mesh );
+    
+    if( !vertices || !normals ) {
+        LOGGER_ERROR( log, "Abstract mesh descendent without assummed interfaces." );
+        return;
+    }
     
     
     glm::mat4 M(modelview[0], modelview[1], modelview[ 2], modelview[3],
@@ -104,7 +120,7 @@ Renderer::draw( const GLfloat*                            modelview,
 
     // bind normal vector texture
     glActiveTexture( GL_TEXTURE1 );
-    glBindTexture( GL_TEXTURE_BUFFER, tess->normalVectorsAsBufferTexture() );
+    glBindTexture( GL_TEXTURE_BUFFER, normals->normalVectorsAsBufferTexture() );
 
     // bind field values, if available
     glActiveTexture( GL_TEXTURE2 );
@@ -118,7 +134,7 @@ Renderer::draw( const GLfloat*                            modelview,
     glBindTexture( GL_TEXTURE_1D, color_map.get() );
 
     // Bind vertex position VAO
-    glBindVertexArray( tess->vertexPositonsAsVertexArrayObject() );
+    glBindVertexArray( vertices->vertexPositonsAsVertexArrayObject() );
    
     for( size_t i = 0; i<render_items.size(); i++) {
         const RenderItem& item = render_items[i];

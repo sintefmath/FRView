@@ -17,7 +17,7 @@
 
 #include "utils/Logger.hpp"
 #include "utils/GLSLTools.hpp"
-#include "render/GridTess.hpp"
+#include "render/mesh/CellSetInterface.hpp"
 #include "render/GridField.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/subset/Builder.hpp"

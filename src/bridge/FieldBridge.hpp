@@ -20,7 +20,7 @@
 #include <boost/utility.hpp>
 
 namespace render {
-    class GridTess;
+    class PolyhedralRepresentation;
     class GridField;
 }
 

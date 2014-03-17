@@ -22,7 +22,9 @@
 #include "bridge/AbstractMeshBridge.hpp"
 
 namespace render {
-    class GridTess;
+    namespace mesh {
+        class PolyhedralRepresentation;
+    }
 }
 
 namespace bridge {
@@ -30,7 +32,7 @@ namespace bridge {
 class PolyhedralMeshBridge
         : public AbstractMeshBridge
 {
-    friend class render::GridTess;
+    friend class render::mesh::PolyhedralRepresentation;
 public:
     /** Explicit edge.
      *

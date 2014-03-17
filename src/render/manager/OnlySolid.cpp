@@ -46,7 +46,7 @@ TransparencyNone::render( GLuint                              fbo,
                           const GLfloat*                      local_to_world,
                           const GLfloat*                      modelview,
                           const GLfloat*                      projection,
-                          boost::shared_ptr<const GridTess>   tess,
+                          boost::shared_ptr<const mesh::AbstractMesh>  gpu_mesh,
                           boost::shared_ptr<const GridField>  field,
                           const std::vector<RenderItem>&      items )
 {
@@ -66,7 +66,7 @@ TransparencyNone::render( GLuint                              fbo,
     
     m_surface_renderer.draw( glm::value_ptr( M ), projection,
                              m_width, m_height,
-                             tess, field, m_color_map, items );
+                             gpu_mesh, field, m_color_map, items );
     renderMiscellaneous( width, height,
                          local_to_world, modelview, projection,
                          items );

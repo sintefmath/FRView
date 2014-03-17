@@ -16,7 +16,6 @@
  */
 
 #include "utils/Logger.hpp"
-#include "render/GridTess.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 
@@ -74,10 +73,9 @@ GridTessSurf::setTriangleCount( const GLsizei count )
 }
 
 void
-GridTessSurf::populatePolygonBuffer( const GridTess*        tess,
-                                     GLsizei                N,
+GridTessSurf::populatePolygonBuffer(GLsizei                N /*,
                                      GLuint                 tri_cell_index,
-                                     GLuint                 tri_indices_index )
+                                     GLuint                 tri_indices_index*/ )
 {
     Logger log = getLogger( "GridTessSurf.populateTriangleBuffer" );
 
@@ -119,6 +117,7 @@ GridTessSurf::populatePolygonBuffer( const GridTess*        tess,
 
 }
 
+#if 0
 void
 GridTessSurf::populateTriangleBuffer( const GridTess*  tess,
                                       GLuint           tri_cell_index,
@@ -165,6 +164,7 @@ GridTessSurf::populateTriangleBuffer( const GridTess*  tess,
     glBindTexture( GL_TEXTURE_BUFFER, 0 );
 */
 }
+#endif
 
     } // of namespace surface
 } // of namespace render

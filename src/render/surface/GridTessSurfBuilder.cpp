@@ -17,7 +17,7 @@
 
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
-#include "render/GridTess.hpp"
+#include "render/mesh/PolyhedralRepresentation.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
@@ -142,11 +142,11 @@ GridTessSurfBuilder::rebuildTriangulationProgram( GLsizei max_vertices )
 
 
 void
-GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
+GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
                                     boost::shared_ptr<GridTessSurf> surf_subset_boundary,
                                     boost::shared_ptr<GridTessSurf> surf_faults,
                                     boost::shared_ptr<const subset::Representation> subset,
-                                    boost::shared_ptr<const GridTess> tess,
+                                    boost::shared_ptr<const mesh::PolyhedralRepresentation> mesh,
                                     bool                     flip_faces )
 {
     Logger log = getLogger( "GridTessSurfBuilder.buildSurfaces" );
@@ -155,7 +155,7 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
     surfaces[ SURFACE_SUBSET_BOUNDARY ] = surf_subset_boundary.get();
     surfaces[ SURFACE_FAULT ]           = surf_faults.get();
 
-    if( tess->polygonCount() == 0 ) {
+    if( mesh->polygonCount() == 0 ) {
         for( int i=0; i< SURFACE_N; i++ ) {
             if( surfaces[i] != NULL ) {
                 surfaces[i]->setTriangleCount( 0 );
@@ -166,8 +166,8 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
 
     // Late shader builing; we don't know the max output until the tessellation
     // has been built.
-    if( m_triangulate_count != tess->polygonMaxPolygonSize() ) {
-        rebuildTriangulationProgram( tess->polygonMaxPolygonSize() );
+    if( m_triangulate_count != mesh->polygonMaxPolygonSize() ) {
+        rebuildTriangulationProgram( mesh->polygonMaxPolygonSize() );
     }
 
 
@@ -181,9 +181,9 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
     else {
         glBindTexture( GL_TEXTURE_BUFFER, 0 );
     }
-    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, tess->polygonNormalIndexTexture() );
-    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, tess->polygonVertexIndexTexture() );
-    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, tess->vertexPositionsAsBufferTexture() );
+    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, mesh->polygonNormalIndexTexture() );
+    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, mesh->polygonVertexIndexTexture() );
+    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, mesh->vertexPositionsAsBufferTexture() );
 
     glEnable( GL_RASTERIZER_DISCARD );
 
@@ -194,7 +194,7 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
 
         // --- try to extract all triangles that should be part of the surfaces
         if( redo_meta ) {
-            glBindVertexArray( tess->polygonVertexArray() );
+            glBindVertexArray( mesh->polygonVertexArray() );
             glUseProgram( m_meta_prog.get() );
             glUniform1i( m_meta_loc_flip, flip_faces ? GL_TRUE : GL_FALSE );
 
@@ -207,7 +207,7 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
                 // overflows.
                 glBeginQueryIndexed( GL_PRIMITIVES_GENERATED, i, m_meta_query[i].get() );
             }
-            glDrawArrays( GL_POINTS, 0, tess->polygonCount() );
+            glDrawArrays( GL_POINTS, 0, mesh->polygonCount() );
             for( uint i=0; i<SURFACE_N; i++ ) {
                 glEndQueryIndexed( GL_PRIMITIVES_GENERATED, i );
             }

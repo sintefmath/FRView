@@ -16,7 +16,7 @@
  */
 
 #include "utils/Logger.hpp"
-#include "render/GridTess.hpp"
+#include "render/mesh/CellSetInterface.hpp"
 #include "render/subset/Representation.hpp"
 
 namespace render {
@@ -45,14 +45,14 @@ Representation::~Representation()
 }
 
 void
-Representation::populateBuffer( boost::shared_ptr<const GridTess> tess,
+Representation::populateBuffer( boost::shared_ptr<const mesh::CellSetInterface> cell_set,
                                 GLuint transform_feedback_index )
 {
-    if( tess->cellCount() == 0 ) {
+    if( cell_set->cellCount() == 0 ) {
         return;
     }
-    if( m_cells_total != (GLsizei)tess->cellCount() ) {
-        m_cells_total = tess->cellCount();
+    if( m_cells_total != (GLsizei)cell_set->cellCount() ) {
+        m_cells_total = cell_set->cellCount();
         glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_subset_buffer.get() );
         glBufferData( GL_TRANSFORM_FEEDBACK_BUFFER,
                       sizeof(GLuint)*((m_cells_total+31)/32),

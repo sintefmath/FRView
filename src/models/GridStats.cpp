@@ -17,7 +17,9 @@
 
 #include "dataset/CornerpointGrid.hpp"
 #include "models/GridStats.hpp"
-#include "render/GridTess.hpp"
+#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/CellSetInterface.hpp"
+#include "render/mesh/PolyhedralRepresentation.hpp"
 
 namespace models {
     using std::string;
@@ -62,13 +64,13 @@ void
 GridStats::update( )
 {
     boost::shared_ptr<dataset::CornerpointGrid > project;
-    boost::shared_ptr<render::GridTess> tessellation;
-    update( project, tessellation );
+    boost::shared_ptr<render::mesh::AbstractMesh>  gpu_mesh;
+    update( project, gpu_mesh );
 }
 
 void
 GridStats::update(boost::shared_ptr<dataset::AbstractDataSource> project,
-                   boost::shared_ptr<render::GridTess> tessellation )
+                   boost::shared_ptr<render::mesh::AbstractMesh> gpu_mesh )
 {
     int na = 0;
     int nn = 0;
@@ -108,33 +110,45 @@ GridStats::update(boost::shared_ptr<dataset::AbstractDataSource> project,
     o << (nn);
     m_model->updateElement( grid_total_cells_key, o.str() );
     
+    boost::shared_ptr<render::mesh::CellSetInterface> cell_set = 
+            boost::dynamic_pointer_cast<render::mesh::CellSetInterface>( gpu_mesh );
     
-    if( tessellation.get() != NULL ) {
-        na = tessellation->cellCount();
-        pc = tessellation->polygonCount();
-        tc = tessellation->polygonTriangulatedCount();
-        mv = tessellation->polygonMaxPolygonSize();
+    if( cell_set ) {
+        na = cell_set->cellCount();
+        o.str("");
+        o << na;
+        if( nn != 0 ) {
+            o << " (" << ((100*na)/nn ) << " %)";
+        }
+        m_model->updateElement( grid_active_cells_key, o.str() );
     }
-
-
-    o.str("");
-    o << na;
-    if( nn != 0 ) {
-        o << " (" << ((100*na)/nn ) << " %)";
+    else {
+        m_model->updateElement( grid_active_cells_key, "n/a" );
     }
-    m_model->updateElement( grid_active_cells_key, o.str() );
-
-    o.str("");
-    o << pc << " polygons";
-    m_model->updateElement( grid_faces_key, o.str() );
-
-    o.str("");
-    o << tc << " triangles";
-    m_model->updateElement( grid_triangles_key, o.str() );
-
-    o.str("");
-    o << mv  << " corners";
-    m_model->updateElement( grid_max_poly_key, o.str() );
+    
+    boost::shared_ptr<render::mesh::PolyhedralRepresentation> polyhedral_mesh = 
+            boost::dynamic_pointer_cast<render::mesh::PolyhedralRepresentation>( gpu_mesh );
+    if( polyhedral_mesh ) {
+        pc = polyhedral_mesh->polygonCount();
+        tc = polyhedral_mesh->polygonTriangulatedCount();
+        mv = polyhedral_mesh->polygonMaxPolygonSize();
+        o.str("");
+        o << pc << " polygons";
+        m_model->updateElement( grid_faces_key, o.str() );
+    
+        o.str("");
+        o << tc << " triangles";
+        m_model->updateElement( grid_triangles_key, o.str() );
+    
+        o.str("");
+        o << mv  << " corners";
+        m_model->updateElement( grid_max_poly_key, o.str() );
+    }
+    else {
+        m_model->updateElement( grid_faces_key, "n/a" );
+        m_model->updateElement( grid_triangles_key, "n/a" );
+        m_model->updateElement( grid_max_poly_key, "n/a" );
+    }
 }
 
 void

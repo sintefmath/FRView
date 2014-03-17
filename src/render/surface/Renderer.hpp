@@ -24,7 +24,9 @@
 #include "render/ManagedGL.hpp"
 
 namespace render {
-    class GridTess;
+    namespace mesh {
+        class AbstractMesh;
+    }
     class GridField;
     namespace surface {
 
@@ -39,7 +41,7 @@ public:
           const GLfloat*                            projection,
           const GLsizei                             width,
           const GLsizei                             height,
-          const boost::shared_ptr<const GridTess>   tess,
+          const boost::shared_ptr<const mesh::AbstractMesh>   mesh,
           const boost::shared_ptr<const GridField>  field,
           GLTexture&                                color_map,
           const std::vector<RenderItem>&            render_items );

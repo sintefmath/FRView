@@ -15,7 +15,7 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "render/GridTess.hpp"
+#include "render/mesh/CellSetInterface.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/subset/BuilderSelectByIndex.hpp"
 
@@ -37,8 +37,8 @@ BuilderSelectByIndex::BuilderSelectByIndex()
 }
 
 void
-BuilderSelectByIndex::apply( boost::shared_ptr<Representation> tess_subset,
-                      boost::shared_ptr<const GridTess> tess,
+BuilderSelectByIndex::apply( boost::shared_ptr<Representation> cell_subset,
+                             boost::shared_ptr<const mesh::CellSetInterface> cell_set,
                       unsigned int n_i,
                       unsigned int n_j,
                       unsigned int n_k,
@@ -51,11 +51,11 @@ BuilderSelectByIndex::apply( boost::shared_ptr<Representation> tess_subset,
 {
     glUseProgram( m_program );
     glActiveTexture( GL_TEXTURE0 );
-    glBindTexture( GL_TEXTURE_BUFFER, tess->cellGlobalIndexTexture() );
+    glBindTexture( GL_TEXTURE_BUFFER, cell_set->cellGlobalIndexTexture() );
     glUniform3ui( m_loc_grid_dim, n_i, n_j, n_k );
     glUniform3ui( m_loc_index_min, min_i, min_j, min_k );
     glUniform3ui( m_loc_index_max, max_i, max_j, max_k );
-    tess_subset->populateBuffer( tess );
+    cell_subset->populateBuffer( cell_set );
     glBindTexture( GL_TEXTURE_BUFFER, 0 );
     glUseProgram( 0 );
 }

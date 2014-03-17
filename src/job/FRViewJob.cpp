@@ -31,7 +31,8 @@
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "utils/PerfTimer.hpp"
-#include "render/GridTess.hpp"
+#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/BoundingBoxInterface.hpp"
 #include "render/GridField.hpp"
 #include "render/ClipPlane.hpp"
 #include "render/GridCubeRenderer.hpp"
@@ -818,22 +819,26 @@ FRViewJob::updateModelMatrices()
     if( m_has_pipeline ) {
         if( currentSourceItemValid() ) {
             SourceItem& source_item = currentSourceItem();
-            bbmin = glm::vec3( source_item.m_grid_tess->minBBox()[0],
-                               source_item.m_grid_tess->minBBox()[1],
-                               source_item.m_grid_tess->minBBox()[2] );
-            bbmax = glm::vec3( source_item.m_grid_tess->maxBBox()[0],
-                               source_item.m_grid_tess->maxBBox()[1],
-                               source_item.m_grid_tess->maxBBox()[2] );
-            shift = -0.5f*( bbmin + bbmax );
-            scale_xy = std::max( (bbmax.x-bbmin.x),
-                                 (bbmax.y-bbmin.y) );
-            
-            scale_z = m_grid_stats.zScale();
-            
-            boost::shared_ptr<dataset::ZScaleInterface> zscale_src =
-                    boost::dynamic_pointer_cast<dataset::ZScaleInterface>( currentSourceItem().m_source );
-            if( zscale_src ) {
-                scale_z = scale_z*(zscale_src->cornerPointZScale()/zscale_src->cornerPointXYScale());
+            boost::shared_ptr<const render::mesh::BoundingBoxInterface> bbox =
+                    boost::dynamic_pointer_cast<const render::mesh::BoundingBoxInterface>( source_item.m_grid_tess );
+            if( bbox ) {
+                bbmin = glm::vec3( bbox->minBBox()[0],
+                                   bbox->minBBox()[1],
+                                   bbox->minBBox()[2] );
+                bbmax = glm::vec3( bbox->maxBBox()[0],
+                                   bbox->maxBBox()[1],
+                                   bbox->maxBBox()[2] );
+                shift = -0.5f*( bbmin + bbmax );
+                scale_xy = std::max( (bbmax.x-bbmin.x),
+                                     (bbmax.y-bbmin.y) );
+                
+                scale_z = m_grid_stats.zScale();
+                
+                boost::shared_ptr<dataset::ZScaleInterface> zscale_src =
+                        boost::dynamic_pointer_cast<dataset::ZScaleInterface>( currentSourceItem().m_source );
+                if( zscale_src ) {
+                    scale_z = scale_z*(zscale_src->cornerPointZScale()/zscale_src->cornerPointXYScale());
+                }
             }
         }
         m_local_to_world = glm::mat4();

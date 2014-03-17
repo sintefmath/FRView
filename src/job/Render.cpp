@@ -20,7 +20,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "dataset/CornerpointGrid.hpp"
 #include "job/FRViewJob.hpp"
-#include "render/GridTess.hpp"
 #include "utils/Logger.hpp"
 #include "render/GridCubeRenderer.hpp"
 #include "render/ClipPlane.hpp"

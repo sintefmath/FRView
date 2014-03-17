@@ -29,8 +29,8 @@ public:
 
     /** Populates a \ref GridTessSubset by selecting all cells in a \ref GridTess. */
     void
-    apply( boost::shared_ptr<Representation> tess_subset,
-           boost::shared_ptr<GridTess const> tess );
+    apply( boost::shared_ptr<Representation> cell_subset,
+           boost::shared_ptr<mesh::CellSetInterface const> cell_set );
 
 protected:
 };

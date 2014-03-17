@@ -40,11 +40,11 @@ public:
      * \param maxval       Maximum value for the range (inclusive).
      */
     void
-    apply( boost::shared_ptr<Representation>  tess_subset,
-           boost::shared_ptr<const GridTess>  tess,
-           boost::shared_ptr<const GridField> field,
-           const float      minval,
-           const float      maxval );
+    apply( boost::shared_ptr<Representation>                cell_subset,
+           boost::shared_ptr<const mesh::CellSetInterface>  cell_set,
+           boost::shared_ptr<const GridField>               field,
+           const float                                      minval,
+           const float                                      maxval );
 
 protected:
     GLint   m_loc_min_max;      ///< Uniform location of min and max value (vec2).

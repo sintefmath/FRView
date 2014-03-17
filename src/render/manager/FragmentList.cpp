@@ -80,7 +80,7 @@ FragmentList::render( GLuint                              fbo,
                           const GLfloat*                      local_to_world,
                           const GLfloat*                      modelview,
                           const GLfloat*                      projection,
-                          boost::shared_ptr<const GridTess>   tess,
+                          boost::shared_ptr<const mesh::AbstractMesh>  gpu_mesh,
                           boost::shared_ptr<const GridField>  field,
                           const std::vector<RenderItem>&      items )
 {
@@ -100,7 +100,7 @@ FragmentList::render( GLuint                              fbo,
     glDepthFunc( GL_LESS );
     m_surface_renderer_solid.draw( glm::value_ptr( M ), projection,
                                    m_width, m_height,
-                                   tess, field, m_color_map, items );
+                                   gpu_mesh, field, m_color_map, items );
     renderMiscellaneous( width, height,
                          local_to_world, modelview, projection,
                          items );
@@ -144,7 +144,7 @@ FragmentList::render( GLuint                              fbo,
         
         m_surface_renderer_transparent.draw( glm::value_ptr( M ), projection,
                                              m_width, m_height,
-                                             tess, field, m_color_map, items );
+                                             gpu_mesh, field, m_color_map, items );
         
         glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
         glDepthMask( GL_TRUE );

@@ -18,14 +18,14 @@
 #include <GL/glew.h>
 #include <iostream>
 #include "utils/Logger.hpp"
-#include "render/GridTess.hpp"
+#include "render/mesh/PolyhedralRepresentation.hpp"
 #include "render/GridField.hpp"
 #include "bridge/PolyhedralMeshBridge.hpp"
 
 namespace render {
 
-GridField::GridField(boost::shared_ptr<GridTess> grid )
-    : m_grid( grid ),
+GridField::GridField( boost::shared_ptr<mesh::CellSetInterface> cell_set )
+    : m_cell_set( cell_set ),
       m_has_data( false ),
       m_buffer( "GridField.m_buffer" ),
       m_texture( "GridField.m_texture" )
@@ -39,9 +39,9 @@ GridField::import( bridge::FieldBridge& bridge )
 {
     Logger log = getLogger( "GridField.import" );
 
-    LOGGER_DEBUG( log, "bridge.count=" << bridge.count() << ", cellCount=" << m_grid->cellCount() );
+    LOGGER_DEBUG( log, "bridge.count=" << bridge.count() << ", cellCount=" << m_cell_set->cellCount() );
 
-    if( true || bridge.count() == m_grid->cellCount() ) {
+    if( true || bridge.count() == m_cell_set->cellCount() ) {
         // compacted data
         glBindBuffer( GL_TEXTURE_BUFFER, m_buffer.get() );
         glBufferData( GL_TEXTURE_BUFFER,
@@ -57,8 +57,8 @@ GridField::import( bridge::FieldBridge& bridge )
         // assume that we are dealing with a uncompacted field
         LOGGER_DEBUG( log, "Encountered uncompacted data" );
 
-        std::vector<GLfloat> values( m_grid->cellCount() );
-        const std::vector<GLuint>& indices = m_grid->cellGlobalIndicesInHostMemory();
+        std::vector<GLfloat> values( m_cell_set->cellCount() );
+        const std::vector<GLuint>& indices = m_cell_set->cellGlobalIndicesInHostMemory();
 
         float* data = bridge.values();
 

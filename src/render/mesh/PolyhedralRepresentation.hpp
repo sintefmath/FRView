@@ -19,8 +19,12 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <vector>
-#include <boost/utility.hpp>
-#include "ManagedGL.hpp"
+#include "render/ManagedGL.hpp"
+#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/CellSetInterface.hpp"
+#include "render/mesh/VertexPositionInterface.hpp"
+#include "render/mesh/NormalVectorInterface.hpp"
+#include "render/mesh/BoundingBoxInterface.hpp"
 
 namespace bridge {
     class PolyhedralMeshBridge;
@@ -32,6 +36,7 @@ namespace render {
     namespace subset {
         class Representation;
     }
+    namespace mesh {
 
 /** GPU representation of a polyhedral mesh.
  *
@@ -68,12 +73,18 @@ namespace render {
  *   - Four cell indices.
  *
  */
-class GridTess : public boost::noncopyable
+class PolyhedralRepresentation
+        : virtual public AbstractMesh,
+          virtual public CellSetInterface,
+          virtual public VertexPositionInterface,
+          virtual public NormalVectorInterface,
+          virtual public BoundingBoxInterface
 {
 public:
-    GridTess();
+    PolyhedralRepresentation();
 
-    ~GridTess();
+    ~PolyhedralRepresentation();
+    
 
     /** Check the topology (Euler number and friends) for each cell individually.
      *
@@ -82,73 +93,76 @@ public:
     void
     checkTopology() const;
 
+
     // -------------------------------------------------------------------------
+    /** \name Implementation of VertexPositionInterface. */
     /** @{ */
-    /** Get the number of vertices in the grid. */
+
     GLsizei
     vertexCount() const { return m_vertices_num; }
 
-    /** Get 4-component vertex positions through a vertex array object with positions at index 0. */
     GLuint
     vertexPositonsAsVertexArrayObject() const { return m_vertex_positions_vao.get();  }
 
-    /** Get 4-component vertex positions through a GL_RGBA32F buffer texture. */
     GLuint
     vertexPositionsAsBufferTexture() const { return m_vertex_positions_tex.get(); }
 
-    /** Get 4-component vertex positions stored in host memory. */
     const std::vector<float>&
     vertexPositionsInHostMemory() const { return m_vertex_positions_host; }
-
+    
     /** @} */
     // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    /** \name Implementation of NormalVectorInterface. */
     /** @{ */
-    /** Get 4-component normal vectors through a GL_RGBA32F buffer texture. */
+
     GLuint
     normalVectorsAsBufferTexture() const { return m_normal_vectors_tex.get(); }
 
-    /** Get 4-component normal vectors stored in host memory. */
     const std::vector<float>&
     normalVectorsInHostMemory() const { return m_normal_vectors_host; }
+
     /** @} */
     // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    /** \name Implementation of CellSetInterface */
     /** @{ */
 
-    /** Get the number of cells in the grid. */
     GLsizei
     cellCount() const { return m_cell_global_index_host.size(); }
 
-    /** Get global cell index through GL_R32UI buffer texture. */
     GLuint
     cellGlobalIndexTexture() const { return m_cell_global_index_tex.get(); }
 
-    /** Get the vertex indices spanning a cell through a GL_RGBA32UI buffer texture, two uvec4 per cell. */
     GLuint
     cellCornerTexture() const { return m_cell_vertex_indices_tex.get(); }
 
-    /** Get global cell index stored in host memory. */
     const std::vector<GLuint>&
     cellGlobalIndicesInHostMemory() const { return m_cell_global_index_host; }
 
     /** @} */
     // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    /** \name Implementation of BoundingBoxInterface. */
     /** @{ */
-    /** Get the minimum corner of the axis-aligned bounding box of corner-points. */
+
     const float*
     minBBox() const { return m_bb_min; }
 
-    /** Get the maximum corner of the axis-aligned bounding box of corner-points. */
     const float*
     maxBBox() const { return m_bb_max; }
 
-    /** Get the scale of the XY-aspect-ratio preserving transform from actual positions to the unit cube. */
     const float*
     scale() const { return m_scale; }
 
-    /** Get the shift of the XY-aspect-ratio preserving transform from actual positions to the unit cube. */
     const float*
     shift() const { return m_shift; }
     /** @} */
+    // -------------------------------------------------------------------------
+
     // -------------------------------------------------------------------------
     /** @{ */
 
@@ -251,4 +265,5 @@ protected:
 
 };
 
+    } // of namespace mesh
 } // of namespace render

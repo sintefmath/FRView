@@ -33,8 +33,9 @@
 #include <tinia/renderlist/SetRasterState.hpp>
 
 #include "job/FRViewJob.hpp"
-#include "render/GridTess.hpp"
 #include "render/ClipPlane.hpp"
+#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/CellSetInterface.hpp"
 #include "render/rlgen/GridVoxelization.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
 
@@ -70,13 +71,18 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
                 SourceItem& source_item = m_source_items[i];
                 
                 // FIXME: Needs to add support for multi-object
-                m_grid_voxelizer->build( source_item.m_grid_tess,
-                                         source_item.m_grid_tess_subset,
-                                         glm::value_ptr( m_local_to_world ) );
                 
-                // FIXME: coloring should be part of splatting and surface
-                // extraction should be moved outside of loop (independent on
-                // geometries).
+                boost::shared_ptr<const render::mesh::CellSetInterface> cell_set =
+                        boost::dynamic_pointer_cast<const render::mesh::CellSetInterface>( source_item.m_grid_tess );
+                if( cell_set && source_item.m_grid_tess_subset ) {
+                    m_grid_voxelizer->build( cell_set,
+                                             source_item.m_grid_tess_subset,
+                                             glm::value_ptr( m_local_to_world ) );
+                
+                    // FIXME: coloring should be part of splatting and surface
+                    // extraction should be moved outside of loop (independent on
+                    // geometries).
+                }
                 m_voxel_surface->build( m_grid_voxelizer, source_item.m_grid_field );
             }
             if( m_under_the_hood.profilingEnabled() ) {

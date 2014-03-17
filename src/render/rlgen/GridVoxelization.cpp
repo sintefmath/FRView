@@ -21,13 +21,14 @@
 
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
-#include "render/GridTess.hpp"
+#include "render/mesh/CellSetInterface.hpp"
+#include "render/mesh/VertexPositionInterface.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/rlgen/GridVoxelization.hpp"
 
-static const std::string package = "render.GridVoxelization";
-
-
+namespace {
+    const std::string package = "render.GridVoxelization";
+}
 
 namespace render {
     namespace rlgen {
@@ -140,15 +141,23 @@ GridVoxelization::dimension( GLsizei* dim ) const
 }
 
 void
-GridVoxelization::build( boost::shared_ptr<const GridTess> tess,
-                         boost::shared_ptr<const subset::Representation> subset,
-                         const GLfloat* world_from_local )
+GridVoxelization::build( boost::shared_ptr<const mesh::CellSetInterface> cell_set,
+                         boost::shared_ptr<const subset::Representation> cell_subset,
+                         const GLfloat*                                  world_from_local )
 {
+    boost::shared_ptr<const mesh::VertexPositionInterface> vertices =
+            boost::dynamic_pointer_cast<const mesh::VertexPositionInterface>( cell_set );
+    if( !vertices ) {
+        Logger log = getLogger( package + ".apply" );
+        LOGGER_ERROR( log, "cell set does not implement VertexPositionInterface." );
+        return;
+    }
+
     Logger log = getLogger( package + ".build" );
 
     // transform to unit cube and discard unselected cells
-    if( m_compacted_alloc < tess->cellCount() ) {
-        m_compacted_alloc = 1.01*tess->cellCount();
+    if( m_compacted_alloc < cell_set->cellCount() ) {
+        m_compacted_alloc = 1.01*cell_set->cellCount();
         glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_compacted_buf );
         glBufferData( GL_TRANSFORM_FEEDBACK_BUFFER,
                       (sizeof(GLfloat)*6+sizeof(GLuint))*m_compacted_alloc,
@@ -158,11 +167,11 @@ GridVoxelization::build( boost::shared_ptr<const GridTess> tess,
     }
 
     glActiveTexture( GL_TEXTURE0 );
-    glBindTexture( GL_TEXTURE_BUFFER, subset->subsetAsTexture() );
+    glBindTexture( GL_TEXTURE_BUFFER, cell_subset->subsetAsTexture() );
     glActiveTexture( GL_TEXTURE1 );
-    glBindTexture( GL_TEXTURE_BUFFER, tess->vertexPositionsAsBufferTexture() );
+    glBindTexture( GL_TEXTURE_BUFFER, vertices->vertexPositionsAsBufferTexture() );
     glActiveTexture( GL_TEXTURE2 );
-    glBindTexture( GL_TEXTURE_BUFFER, tess->cellCornerTexture() );
+    glBindTexture( GL_TEXTURE_BUFFER, cell_set->cellCornerTexture() );
 
     glUseProgram( m_compact_program );
     glUniformMatrix4fv( m_compact_local_to_world_loc, 1, GL_FALSE, world_from_local );
@@ -171,7 +180,7 @@ GridVoxelization::build( boost::shared_ptr<const GridTess> tess,
     glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, m_compacted_buf );
     glBeginQuery( GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, m_compacted_count_query );
     glBeginTransformFeedback( GL_POINTS );
-    glDrawArrays( GL_POINTS, 0, tess->cellCount() );
+    glDrawArrays( GL_POINTS, 0, cell_set->cellCount() );
     glEndTransformFeedback();
     glEndQuery( GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN );
     glDisable( GL_RASTERIZER_DISCARD );

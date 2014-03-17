@@ -38,9 +38,9 @@ public:
      * \param equation     The plane equation to use (4 components).
      */
     void
-    apply( boost::shared_ptr<Representation>  tess_subset,
-           boost::shared_ptr<const GridTess>  tess,
-           const float*     equation );
+    apply(  boost::shared_ptr<Representation>                cell_subset,
+            boost::shared_ptr<const mesh::CellSetInterface>  cell_set,
+            const float*                                     equation  );
 
 protected:
     GLint   m_loc_plane_eq;     ///< Uniform location of plane equation (vec4).
