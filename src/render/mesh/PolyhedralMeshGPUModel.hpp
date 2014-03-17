@@ -20,7 +20,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include "render/ManagedGL.hpp"
-#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/AbstractMeshGPUModel.hpp"
 #include "render/mesh/CellSetInterface.hpp"
 #include "render/mesh/VertexPositionInterface.hpp"
 #include "render/mesh/NormalVectorInterface.hpp"
@@ -73,17 +73,17 @@ namespace render {
  *   - Four cell indices.
  *
  */
-class PolyhedralRepresentation
-        : virtual public AbstractMesh,
+class PolyhedralMeshGPUModel
+        : virtual public AbstractMeshGPUModel,
           virtual public CellSetInterface,
           virtual public VertexPositionInterface,
           virtual public NormalVectorInterface,
           virtual public BoundingBoxInterface
 {
 public:
-    PolyhedralRepresentation();
+    PolyhedralMeshGPUModel();
 
-    ~PolyhedralRepresentation();
+    ~PolyhedralMeshGPUModel();
     
 
     /** Check the topology (Euler number and friends) for each cell individually.

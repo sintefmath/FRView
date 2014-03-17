@@ -24,7 +24,7 @@
 namespace render {
     class PolyhedralRepresentation;
     namespace mesh {
-        class PolyhedralRepresentation;
+        class PolyhedralMeshGPUModel;
     }
     namespace subset {
         class Representation;
@@ -44,7 +44,7 @@ public:
                    boost::shared_ptr<GridTessSurf>            surf_subset_boundary,
                    boost::shared_ptr<GridTessSurf>            surf_faults,
                    boost::shared_ptr<const subset::Representation>    subset,
-                   boost::shared_ptr<const mesh::PolyhedralRepresentation>  mesh,
+                   boost::shared_ptr<const mesh::PolyhedralMeshGPUModel>  mesh,
                    bool                     flip_faces );
 
 protected:

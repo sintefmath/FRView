@@ -18,7 +18,7 @@
 #include <GL/glew.h>
 #include <iostream>
 #include "utils/Logger.hpp"
-#include "render/mesh/PolyhedralRepresentation.hpp"
+#include "render/mesh/PolyhedralMeshGPUModel.hpp"
 #include "render/GridField.hpp"
 #include "bridge/PolyhedralMeshBridge.hpp"
 

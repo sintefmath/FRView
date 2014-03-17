@@ -31,7 +31,7 @@
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "utils/PerfTimer.hpp"
-#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/AbstractMeshGPUModel.hpp"
 #include "render/mesh/BoundingBoxInterface.hpp"
 #include "render/GridField.hpp"
 #include "render/ClipPlane.hpp"

@@ -17,7 +17,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/AbstractMeshGPUModel.hpp"
 #include "render/mesh/VertexPositionInterface.hpp"
 #include "render/mesh/NormalVectorInterface.hpp"
 #include "render/GridField.hpp"
@@ -76,7 +76,7 @@ Renderer::draw(const GLfloat*                            modelview,
                 const GLfloat*                            projection,
                 const GLsizei                             width,
                 const GLsizei                             height,
-                const boost::shared_ptr<const mesh::AbstractMesh> mesh,
+                const boost::shared_ptr<const mesh::AbstractMeshGPUModel> mesh,
                 const boost::shared_ptr<const GridField>  field,
                 GLTexture&                                color_map,
                 const std::vector<RenderItem>&            render_items )

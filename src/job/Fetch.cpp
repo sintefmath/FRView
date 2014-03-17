@@ -25,8 +25,10 @@
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "eclipse/EclipseReader.hpp"
-#include "render/mesh/PolyhedralRepresentation.hpp"
+#include "render/mesh/PolygonMeshGPUModel.hpp"
+#include "render/mesh/PolyhedralMeshGPUModel.hpp"
 #include "render/GridField.hpp"
+#include "bridge/PolygonMeshBridge.hpp"
 #include "bridge/PolyhedralMeshBridge.hpp"
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
@@ -42,6 +44,16 @@
 #include "render/surface/GridTessSurfBuilder.hpp"
 #include "render/subset/Representation.hpp"
 
+using boost::shared_ptr;
+using boost::dynamic_pointer_cast;
+
+using dataset::AbstractDataSource;
+using bridge::AbstractMeshBridge;
+using bridge::PolygonMeshBridge;
+using bridge::PolyhedralMeshBridge;
+using render::mesh::PolygonMeshGPUModel;
+using render::mesh::PolyhedralMeshGPUModel;
+
 namespace {
 const std::string package = "FRViewJob";
 }
@@ -51,8 +63,8 @@ FRViewJob::handleFetchSource()
 {
     Logger log = getLogger( package + ".handleFetchSource" );
     // Try to get source
-    boost::shared_ptr< dataset::AbstractDataSource > source;
-    boost::shared_ptr< bridge::AbstractMeshBridge > mesh_bridge;
+    shared_ptr< AbstractDataSource > source;
+    shared_ptr< AbstractMeshBridge > mesh_bridge;
     if( !m_async_reader->getSource( source, mesh_bridge ) ) {
         return; // Nothing.
     }
@@ -60,22 +72,27 @@ FRViewJob::handleFetchSource()
     SourceItem source_item;
     source_item.m_source = source;
 
-    boost::shared_ptr<bridge::PolyhedralMeshBridge> polyhedral_bridge =
-            boost::dynamic_pointer_cast<bridge::PolyhedralMeshBridge>( mesh_bridge );
+    shared_ptr<PolyhedralMeshBridge> polyhedral_bridge =
+            dynamic_pointer_cast<PolyhedralMeshBridge>( mesh_bridge );
+
+    shared_ptr<PolygonMeshBridge> polygon_bridge =
+            dynamic_pointer_cast<PolygonMeshBridge>( mesh_bridge );
+
+    
     if( polyhedral_bridge ) {
-        boost::shared_ptr<render::mesh::PolyhedralRepresentation> gpu_mesh( new render::mesh::PolyhedralRepresentation );
+        shared_ptr<PolyhedralMeshGPUModel> gpu_polyhedronmesh( new PolyhedralMeshGPUModel );
         
         
         source_item.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
-        source_item.m_grid_tess = gpu_mesh;
+        source_item.m_grid_tess = gpu_polyhedronmesh;
         source_item.m_faults_surface.reset( new render::surface::GridTessSurf );
         source_item.m_subset_surface.reset( new render::surface::GridTessSurf );
         source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
         source_item.m_grid_tess_subset.reset( new render::subset::Representation );
         source_item.m_wells.reset( new render::wells::Representation );
-        source_item.m_grid_field.reset(  new render::GridField( gpu_mesh ) );
+        source_item.m_grid_field.reset(  new render::GridField( gpu_polyhedronmesh ) );
         
-        gpu_mesh->update( *polyhedral_bridge );
+        gpu_polyhedronmesh->update( *polyhedral_bridge );
         LOGGER_DEBUG( log, "Updated grid tess" );
 
         addSourceItem( source_item );
@@ -84,6 +101,19 @@ FRViewJob::handleFetchSource()
                 return;
             }
         }
+    }
+    else if( polygon_bridge ) {
+        shared_ptr<PolygonMeshGPUModel> gpu_polygonmesh( new PolygonMeshGPUModel );
+        
+        source_item.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
+        source_item.m_grid_tess = gpu_polygonmesh;
+        source_item.m_subset_surface.reset( new render::surface::GridTessSurf );
+        source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
+        source_item.m_grid_tess_subset.reset( new render::subset::Representation );
+        source_item.m_wells.reset( new render::wells::Representation );
+//        source_item.m_grid_field.reset(  new render::GridField( gpu_polygonmesh ) );
+        
+        gpu_polygonmesh->update( polygon_bridge );
     }
     
     

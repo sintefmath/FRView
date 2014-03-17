@@ -27,7 +27,7 @@ namespace dataset {
 }
 namespace render {
     namespace mesh {
-        class AbstractMesh;
+        class AbstractMeshGPUModel;
     }
 } // of namespace render
 
@@ -55,7 +55,7 @@ public:
 
     void
     update( boost::shared_ptr<dataset::AbstractDataSource > project,
-            boost::shared_ptr<render::mesh::AbstractMesh> tessellation );
+            boost::shared_ptr<render::mesh::AbstractMeshGPUModel> tessellation );
 
 protected:
     boost::shared_ptr<tinia::model::ExposedModel> m_model;

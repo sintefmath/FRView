@@ -39,7 +39,7 @@ namespace dataset {
 class ASyncReader;
 namespace render {
     namespace mesh {
-        class AbstractMesh;
+        class AbstractMeshGPUModel;
     }
     namespace subset {
         class Representation;
@@ -76,7 +76,7 @@ struct SourceItem {
     
     boost::shared_ptr<dataset::AbstractDataSource>  m_source;
     boost::shared_ptr<render::ClipPlane>                            m_clip_plane;
-    boost::shared_ptr<render::mesh::AbstractMesh>          m_grid_tess;
+    boost::shared_ptr<render::mesh::AbstractMeshGPUModel>          m_grid_tess;
     boost::shared_ptr<render::subset::Representation>               m_grid_tess_subset;
     boost::shared_ptr<render::surface::GridTessSurf>                m_faults_surface;
     boost::shared_ptr<render::surface::GridTessSurf>                m_subset_surface;

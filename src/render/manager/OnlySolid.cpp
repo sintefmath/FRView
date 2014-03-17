@@ -46,7 +46,7 @@ TransparencyNone::render( GLuint                              fbo,
                           const GLfloat*                      local_to_world,
                           const GLfloat*                      modelview,
                           const GLfloat*                      projection,
-                          boost::shared_ptr<const mesh::AbstractMesh>  gpu_mesh,
+                          boost::shared_ptr<const mesh::AbstractMeshGPUModel>  gpu_mesh,
                           boost::shared_ptr<const GridField>  field,
                           const std::vector<RenderItem>&      items )
 {

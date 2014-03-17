@@ -15,12 +15,12 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/AbstractMeshGPUModel.hpp"
 
 namespace render {
 namespace mesh {
 
-AbstractMesh::~AbstractMesh()
+AbstractMeshGPUModel::~AbstractMeshGPUModel()
 {
 }
 

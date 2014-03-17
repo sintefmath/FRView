@@ -20,11 +20,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "dataset/CornerpointGrid.hpp"
 #include "job/FRViewJob.hpp"
-#include "render/mesh/AbstractMesh.hpp"
 #include "utils/Logger.hpp"
-#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/AbstractMeshGPUModel.hpp"
 #include "render/mesh/CellSetInterface.hpp"
-#include "render/mesh/PolyhedralRepresentation.hpp"
+#include "render/mesh/PolyhedralMeshGPUModel.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/GridField.hpp"
 #include "render/subset/BuilderSelectAll.hpp"
@@ -128,8 +127,8 @@ FRViewJob::doCompute()
             // -----------------------------------------------------------------
                 
             // --- Extract surface ---------------------------------------------
-            boost::shared_ptr<const render::mesh::PolyhedralRepresentation> polyhedral_mesh =
-                    boost::dynamic_pointer_cast<const render::mesh::PolyhedralRepresentation>( source_item.m_grid_tess );
+            boost::shared_ptr<const render::mesh::PolyhedralMeshGPUModel> polyhedral_mesh =
+                    boost::dynamic_pointer_cast<const render::mesh::PolyhedralMeshGPUModel>( source_item.m_grid_tess );
             if( polyhedral_mesh ) {
                 if( m_under_the_hood.profilingEnabled() ) {
                     m_under_the_hood.surfaceGenerateTimer().beginQuery();

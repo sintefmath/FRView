@@ -17,7 +17,7 @@
 
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
-#include "render/mesh/PolyhedralRepresentation.hpp"
+#include "render/mesh/PolyhedralMeshGPUModel.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
@@ -146,7 +146,7 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
                                     boost::shared_ptr<GridTessSurf> surf_subset_boundary,
                                     boost::shared_ptr<GridTessSurf> surf_faults,
                                     boost::shared_ptr<const subset::Representation> subset,
-                                    boost::shared_ptr<const mesh::PolyhedralRepresentation> mesh,
+                                    boost::shared_ptr<const mesh::PolyhedralMeshGPUModel> mesh,
                                     bool                     flip_faces )
 {
     Logger log = getLogger( "GridTessSurfBuilder.buildSurfaces" );

@@ -23,7 +23,7 @@
 
 namespace render {
     namespace mesh {
-        class PolyhedralRepresentation;
+        class PolyhedralMeshGPUModel;
     }
 }
 
@@ -32,7 +32,7 @@ namespace bridge {
 class PolyhedralMeshBridge
         : public AbstractMeshBridge
 {
-    friend class render::mesh::PolyhedralRepresentation;
+    friend class render::mesh::PolyhedralMeshGPUModel;
 public:
     /** Explicit edge.
      *

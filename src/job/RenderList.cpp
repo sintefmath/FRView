@@ -34,7 +34,7 @@
 
 #include "job/FRViewJob.hpp"
 #include "render/ClipPlane.hpp"
-#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/AbstractMeshGPUModel.hpp"
 #include "render/mesh/CellSetInterface.hpp"
 #include "render/rlgen/GridVoxelization.hpp"
 #include "render/rlgen/VoxelSurface.hpp"

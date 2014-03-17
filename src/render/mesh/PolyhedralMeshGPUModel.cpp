@@ -21,43 +21,42 @@
 #include <algorithm>
 #include <tuple>
 #include "bridge/PolyhedralMeshBridge.hpp"
-#include "render/mesh/PolyhedralRepresentation.hpp"
+#include "render/mesh/PolyhedralMeshGPUModel.hpp"
 #include "render/GridField.hpp"
 #include "render/subset/Builder.hpp"
 #include "render/subset/Representation.hpp"
 #include "utils/Logger.hpp"
 
 namespace {
-const std::string package = "render.mesh.PolyhedralRepresentation";
+const std::string package = "render.mesh.PolyhedralMeshGPUModel";
 }
 
 namespace render {
 namespace mesh {
 
-PolyhedralRepresentation::PolyhedralRepresentation()
+PolyhedralMeshGPUModel::PolyhedralMeshGPUModel()
     : m_vertices_num( 0 ),
-      m_vertex_positions_buf( "GridTess.m_vertex_positions_buf" ),
-      m_vertex_positions_tex( "GridTess.m_vertex_positions_tex" ),
-      m_vertex_positions_vao( "GridTess.m_vertex_positions_vao" ),
+      m_vertex_positions_buf( package + ".m_vertex_positions_buf" ),
+      m_vertex_positions_tex( package + ".m_vertex_positions_tex" ),
+      m_vertex_positions_vao( package + ".m_vertex_positions_vao" ),
       m_normals_num( 0 ),
-      m_normal_vectors_buf( "GridTess.m_normal_vectors_buf" ),
-      m_normal_vectors_tex( "GridTess.m_normal_vectors_tex" ),
+      m_normal_vectors_buf( package + ".m_normal_vectors_buf" ),
+      m_normal_vectors_tex( package + ".m_normal_vectors_tex" ),
       m_cells_num(0),
-      m_cell_global_index_buf( "GridTess.m_cell_global_index_buf" ),
-      m_cell_global_index_tex( "GridTess.m_cell_global_index_tex" ),
-      m_cell_vertex_indices_buf( "GridTess.m_cell_vertex_indices_buf" ),
-      m_cell_vertex_indices_tex( "GridTess.m_cell_vertex_indices_tex" ),
+      m_cell_global_index_buf( package + ".m_cell_global_index_buf" ),
+      m_cell_global_index_tex( package + ".m_cell_global_index_tex" ),
+      m_cell_vertex_indices_buf( package + ".m_cell_vertex_indices_buf" ),
+      m_cell_vertex_indices_tex( package + ".m_cell_vertex_indices_tex" ),
       m_triangles_N(0),
       m_polygons_N( 0 ),
-      m_polygon_vao( "GridTess.m_polygon_vao" ),
-      m_polygon_info_buf( "GridTess.m_polygon_info_buf" ),
-      m_polygon_offset_buf( "GridTess.m_polygon_offset_buf" ),
-      m_polygon_vtx_buf( "GridTess.m_polygon_vtx_buf" ),
-      m_polygon_vtx_tex( "GridTess.m_polygon_vtx_tex" ),
-      m_polygon_nrm_buf( "GridTess.m_polygon_nrm_buf" ),
-      m_polygon_nrm_tex( "GridTess.m_polygon_nrm_tex" )
+      m_polygon_vao( package + ".m_polygon_vao" ),
+      m_polygon_info_buf( package + ".m_polygon_info_buf" ),
+      m_polygon_offset_buf( package + ".m_polygon_offset_buf" ),
+      m_polygon_vtx_buf( package + ".m_polygon_vtx_buf" ),
+      m_polygon_vtx_tex( package + ".m_polygon_vtx_tex" ),
+      m_polygon_nrm_buf( package + ".m_polygon_nrm_buf" ),
+      m_polygon_nrm_tex( package + ".m_polygon_nrm_tex" )
 {
-    Logger log = getLogger( "GridTess.constructor" );
     m_bb_min[0] = 0.f;
     m_bb_min[1] = 0.f;
     m_bb_min[2] = 0.f;
@@ -70,15 +69,14 @@ PolyhedralRepresentation::PolyhedralRepresentation()
     m_shift[0] = 0.f;
     m_shift[1] = 0.f;
     m_shift[2] = 0.f;
-
 }
 
-PolyhedralRepresentation::~PolyhedralRepresentation()
+PolyhedralMeshGPUModel::~PolyhedralMeshGPUModel()
 {
 }
 
 void
-PolyhedralRepresentation::update( bridge::PolyhedralMeshBridge& bridge )
+PolyhedralMeshGPUModel::update( bridge::PolyhedralMeshBridge& bridge )
 {
     Logger log = getLogger( package + ".import" );
 
@@ -93,7 +91,7 @@ PolyhedralRepresentation::update( bridge::PolyhedralMeshBridge& bridge )
 }
 
 void
-PolyhedralRepresentation::updatePolygons( bridge::PolyhedralMeshBridge& bridge )
+PolyhedralMeshGPUModel::updatePolygons( bridge::PolyhedralMeshBridge& bridge )
 {
     Logger log = getLogger( "GridTess.updatePolygons" );
     m_polygons_N = bridge.m_polygon_info.size()/2;
@@ -162,7 +160,7 @@ PolyhedralRepresentation::updatePolygons( bridge::PolyhedralMeshBridge& bridge )
 
 
 void
-PolyhedralRepresentation::checkTopology() const
+PolyhedralMeshGPUModel::checkTopology() const
 {
 #if 0
     Logger log = getLogger( "GridTess.checkTopolgy" );
@@ -238,7 +236,7 @@ PolyhedralRepresentation::checkTopology() const
 }
 
 void
-PolyhedralRepresentation::updateBoundingBox( bridge::PolyhedralMeshBridge& bridge )
+PolyhedralMeshGPUModel::updateBoundingBox( bridge::PolyhedralMeshBridge& bridge )
 {
     Logger log = getLogger( "GridTess.setCornerPointBoundingBox" );
 
@@ -270,7 +268,7 @@ PolyhedralRepresentation::updateBoundingBox( bridge::PolyhedralMeshBridge& bridg
 }
 
 void
-PolyhedralRepresentation::updateVertices( bridge::PolyhedralMeshBridge& bridge )
+PolyhedralMeshGPUModel::updateVertices( bridge::PolyhedralMeshBridge& bridge )
 {
     m_vertices_num = bridge.m_vertices.size();
     if( m_vertices_num > 0 ) {
@@ -304,7 +302,7 @@ PolyhedralRepresentation::updateVertices( bridge::PolyhedralMeshBridge& bridge )
 }
 
 void
-PolyhedralRepresentation::updateNormals( bridge::PolyhedralMeshBridge& bridge )
+PolyhedralMeshGPUModel::updateNormals( bridge::PolyhedralMeshBridge& bridge )
 {
     // Normal vectors
     m_normals_num = bridge.m_normals.size();
@@ -333,7 +331,7 @@ PolyhedralRepresentation::updateNormals( bridge::PolyhedralMeshBridge& bridge )
 }
 
 void
-PolyhedralRepresentation::updateCells( bridge::PolyhedralMeshBridge& bridge )
+PolyhedralMeshGPUModel::updateCells( bridge::PolyhedralMeshBridge& bridge )
 {
     m_cells_num = bridge.m_cell_index.size();
 

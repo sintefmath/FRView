@@ -17,9 +17,9 @@
 
 #include "dataset/CornerpointGrid.hpp"
 #include "models/GridStats.hpp"
-#include "render/mesh/AbstractMesh.hpp"
+#include "render/mesh/AbstractMeshGPUModel.hpp"
 #include "render/mesh/CellSetInterface.hpp"
-#include "render/mesh/PolyhedralRepresentation.hpp"
+#include "render/mesh/PolyhedralMeshGPUModel.hpp"
 
 namespace models {
     using std::string;
@@ -64,13 +64,13 @@ void
 GridStats::update( )
 {
     boost::shared_ptr<dataset::CornerpointGrid > project;
-    boost::shared_ptr<render::mesh::AbstractMesh>  gpu_mesh;
+    boost::shared_ptr<render::mesh::AbstractMeshGPUModel>  gpu_mesh;
     update( project, gpu_mesh );
 }
 
 void
 GridStats::update(boost::shared_ptr<dataset::AbstractDataSource> project,
-                   boost::shared_ptr<render::mesh::AbstractMesh> gpu_mesh )
+                   boost::shared_ptr<render::mesh::AbstractMeshGPUModel> gpu_mesh )
 {
     int na = 0;
     int nn = 0;
@@ -126,8 +126,8 @@ GridStats::update(boost::shared_ptr<dataset::AbstractDataSource> project,
         m_model->updateElement( grid_active_cells_key, "n/a" );
     }
     
-    boost::shared_ptr<render::mesh::PolyhedralRepresentation> polyhedral_mesh = 
-            boost::dynamic_pointer_cast<render::mesh::PolyhedralRepresentation>( gpu_mesh );
+    boost::shared_ptr<render::mesh::PolyhedralMeshGPUModel> polyhedral_mesh = 
+            boost::dynamic_pointer_cast<render::mesh::PolyhedralMeshGPUModel>( gpu_mesh );
     if( polyhedral_mesh ) {
         pc = polyhedral_mesh->polygonCount();
         tc = polyhedral_mesh->polygonTriangulatedCount();

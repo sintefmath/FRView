@@ -24,7 +24,7 @@
 namespace render {
     class GridField;
     namespace mesh {
-        class AbstractMesh;
+        class AbstractMeshGPUModel;
         class CellSetInterface;
     }
     namespace subset {

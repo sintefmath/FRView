@@ -21,11 +21,11 @@
 namespace render {
 namespace mesh {
 
-class AbstractMesh : public boost::noncopyable
+class AbstractMeshGPUModel : public boost::noncopyable
 {
 public:
     virtual
-    ~AbstractMesh();
+    ~AbstractMeshGPUModel();
     
 protected:
     
