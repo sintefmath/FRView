@@ -19,11 +19,19 @@
 #include <vector>
 #include "bridge/AbstractMeshBridge.hpp"
 
+namespace render {
+    namespace mesh {
+        class PolygonMeshGPUModel;
+    }
+}
+
 namespace bridge {
+
 
 class PolygonMeshBridge
         : public AbstractMeshBridge
 {
+    friend class render::mesh::PolygonMeshGPUModel;
 public:
     PolygonMeshBridge( bool triangulate );
 

@@ -233,7 +233,7 @@ protected:
     GLsizei                 m_triangles_N;
     GLsizei                 m_polygons_N;
     GLVertexArrayObject     m_polygon_vao;
-    GLsizei                 m_polygon_max_n;
+    GLsizei                 m_polygon_max_n;                ///< Maximum number of corners of a polygon in the set.
     GLBuffer                m_polygon_info_buf;
     GLBuffer                m_polygon_offset_buf;
     GLBuffer                m_polygon_vtx_buf;

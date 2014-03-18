@@ -34,10 +34,10 @@ namespace render {
 
 class PolygonMeshGPUModel
         : virtual public AbstractMeshGPUModel,
-          virtual public BoundingBoxInterface
-          // virtual public CellSetInterface
-          // virtual public VertexPositionInterface
-          // virtual public NormalVectorInterface
+          virtual public BoundingBoxInterface,
+          virtual public CellSetInterface,
+          virtual public VertexPositionInterface,
+          virtual public NormalVectorInterface
 {
 public:
     PolygonMeshGPUModel();
@@ -119,6 +119,7 @@ public:
     
 protected:
     /** @{ */
+    bool                    m_bb_valid;                     ///< True if BBox is a valid bounding box.
     float                   m_bb_min[3];                    ///< AABB min corner.
     float                   m_bb_max[3];                    ///< AABB max corner.
     float                   m_scale[3];                     ///< Scale part of XY-aspect-preserving map to unit cube.
@@ -154,7 +155,7 @@ protected:
     updateVertices( boost::shared_ptr<const bridge::PolygonMeshBridge> mesh_bridge );
 
     bool
-    updateBoundingBox( boost::shared_ptr<const bridge::PolygonMeshBridge> mesh_bridge );
+    updateBoundingBox( );
 
     bool
     updateNormals( boost::shared_ptr<const bridge::PolygonMeshBridge> mesh_bridge );

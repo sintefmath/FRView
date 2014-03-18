@@ -290,8 +290,10 @@ PolyhedralMeshGPUModel::updateVertices( bridge::PolyhedralMeshBridge& bridge )
         // vertex array object
         glBindVertexArray( m_vertex_positions_vao.get() );
         glBindBuffer( GL_ARRAY_BUFFER, m_vertex_positions_buf.get() );
-        glVertexPointer( 4, GL_FLOAT, 0, NULL );
-        glEnableClientState( GL_VERTEX_ARRAY );
+        glVertexAttribPointer( 0, 4, GL_FLOAT, GL_FALSE, 0, NULL );
+        glEnableVertexAttribArray( 0 );
+        //glVertexPointer( 4, GL_FLOAT, 0, NULL );
+        //glEnableClientState( GL_VERTEX_ARRAY );
         glBindVertexArray( 0 );
         // texture
         glBindTexture( GL_TEXTURE_BUFFER, m_vertex_positions_tex.get() );
