@@ -124,7 +124,9 @@ FRViewJob::render( const float*  projection,
                 items.back().m_well = source_item.m_wells;
             }
             
-            if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS )  {
+            if( source_item.m_faults_surface
+                    && (m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS ) )
+            {
                 const glm::vec4& fc = m_appearance.faultsFillColor();
                 const glm::vec4& oc = m_appearance.faultsOutlineColor();
                 items.resize( items.size() + 1 );
@@ -141,7 +143,9 @@ FRViewJob::render( const float*  projection,
                 items.back().m_face_color[2] = fc.b;
                 items.back().m_face_color[3] = fc.a;
             }
-            if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_SUBSET ) {
+            if( source_item.m_subset_surface
+                    && (m_visibility_mask & models::Appearance::VISIBILITY_MASK_SUBSET ) )
+            {
                 const glm::vec4& fc = m_appearance.subsetFillColor();
                 const glm::vec4& oc = m_appearance.subsetOutlineColor();
                 items.resize( items.size() + 1 );
@@ -161,7 +165,9 @@ FRViewJob::render( const float*  projection,
                 items.back().m_face_color[2] = fc.b;
                 items.back().m_face_color[3] = fc.a;
             }
-            if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_BOUNDARY ) {
+            if( source_item.m_boundary_surface
+                    && (m_visibility_mask & models::Appearance::VISIBILITY_MASK_BOUNDARY ) )
+            {
                 const glm::vec4& fc = m_appearance.boundaryFillColor();
                 const glm::vec4& oc = m_appearance.boundaryOutlineColor();
                 items.resize( items.size() + 1 );

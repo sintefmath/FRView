@@ -20,6 +20,7 @@
 #include "render/mesh/AbstractMeshGPUModel.hpp"
 #include "render/mesh/VertexPositionInterface.hpp"
 #include "render/mesh/NormalVectorInterface.hpp"
+#include "render/mesh/PolygonSetInterface.hpp"
 #include "render/GridField.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/Renderer.hpp"
@@ -89,6 +90,7 @@ Renderer::draw(const GLfloat*                            modelview,
     boost::shared_ptr<const mesh::NormalVectorInterface> normals = 
             boost::dynamic_pointer_cast<const mesh::NormalVectorInterface>( mesh );
     
+    
     if( !vertices || !normals ) {
         LOGGER_ERROR( log, "Abstract mesh descendent without assummed interfaces." );
         return;
@@ -141,6 +143,9 @@ Renderer::draw(const GLfloat*                            modelview,
         if( item.m_renderer != RenderItem::RENDERER_SURFACE ) {
             continue;
         }
+        if( item.m_surf->triangleCount() < 1 ) {
+            continue;
+        }
 
         if( item.m_edge_color[3] > 0.f ) {
             glDisable( GL_POLYGON_OFFSET_FILL );
@@ -175,6 +180,22 @@ Renderer::draw(const GLfloat*                            modelview,
         glBindTexture( GL_TEXTURE_BUFFER, item.m_surf->triangleCellTexture() );
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, item.m_surf->triangleCornerpointIndexBuffer() );
         glDrawElements( GL_TRIANGLES, 3*item.m_surf->triangleCount(), GL_UNSIGNED_INT, NULL );
+        
+#if 0
+        boost::shared_ptr<const mesh::PolygonSetInterface> polygon_set = 
+                boost::dynamic_pointer_cast<const mesh::PolygonSetInterface>( mesh );
+        glUseProgram( 0 );
+        glMatrixMode( GL_PROJECTION );
+        glLoadMatrixf( glm::value_ptr( P ) );
+        glMatrixMode( GL_MODELVIEW );
+        glLoadMatrixf( glm::value_ptr( M ) );
+
+        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, polygon_set->polygonVertexIndexBuffer() );
+//        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, item.m_surf->triangleCornerpointIndexBuffer() );
+
+        glDrawElements( GL_TRIANGLES, 1024, GL_UNSIGNED_INT, NULL );
+        glUseProgram( m_main.get() );
+#endif
     }
     glDisable( GL_POLYGON_OFFSET_FILL );
 

@@ -44,7 +44,7 @@ public:
                    boost::shared_ptr<GridTessSurf>            surf_subset_boundary,
                    boost::shared_ptr<GridTessSurf>            surf_faults,
                    boost::shared_ptr<const subset::Representation>    subset,
-                   boost::shared_ptr<const mesh::PolyhedralMeshGPUModel>  mesh,
+                   boost::shared_ptr<const mesh::AbstractMeshGPUModel>  mesh,
                    bool                     flip_faces );
 
 protected:

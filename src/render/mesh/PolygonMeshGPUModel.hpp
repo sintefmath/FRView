@@ -23,6 +23,7 @@
 #include "render/mesh/CellSetInterface.hpp"
 #include "render/mesh/BoundingBoxInterface.hpp"
 #include "render/mesh/VertexPositionInterface.hpp"
+#include "render/mesh/PolygonSetInterface.hpp"
 #include "render/mesh/NormalVectorInterface.hpp"
 
 namespace bridge {
@@ -37,6 +38,7 @@ class PolygonMeshGPUModel
           virtual public BoundingBoxInterface,
           virtual public CellSetInterface,
           virtual public VertexPositionInterface,
+          virtual public PolygonSetInterface,
           virtual public NormalVectorInterface
 {
 public:
@@ -116,6 +118,44 @@ public:
     shift() const { return m_shift; }
     /** @} */
     // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    /** \name Implementation of PolygonSetInterface. */
+    /** @{ */
+
+    GLuint
+    polygonCellCount() const
+    { return 1; }
+    
+    GLuint
+    polygonVertexArray() const
+    { return m_polygon_vao.get(); }
+
+    GLuint
+    polygonVertexIndexTexture() const
+    { return m_polygon_vtx_tex.get(); }
+
+    GLuint
+    polygonVertexIndexBuffer() const
+    { return m_polygon_vtx_buf.get(); }
+    
+    GLuint
+    polygonNormalIndexTexture() const
+    { return m_polygon_nrm_tex.get(); }
+
+    GLsizei
+    polygonCount() const
+    { return m_polygons_N; }
+
+    GLsizei
+    polygonMaxPolygonSize() const
+    { return m_polygon_max_n; }
+
+    GLsizei
+    polygonTriangulatedCount() const
+    { return m_triangles_N; }
+    /** @} */
+    // -------------------------------------------------------------------------
     
 protected:
     /** @{ */
@@ -148,6 +188,55 @@ protected:
     GLTexture               m_cell_vertex_indices_tex;      ///< Texture sampling \ref m_cell_vertex_indices_buf.
     /** @} */
 
+    /** \name Per polygon info. */
+    /** @{ */
+    
+    /** Number of triangles if all polygons were triangulated.
+     *
+     * I.e., each polygon contributes with N-2 triangles, where N is the number
+     * of corners in that polygon. */
+    GLsizei                 m_triangles_N;
+
+    /** Number of polygons in set. */
+    GLsizei                 m_polygons_N;
+
+    /** Vertex array object with per polygon info.
+     *
+     * - Binding 0: \ref m_polygon_info_buf
+     * - Binding 1: \ref m_polygon_offset_buf
+     * - Binding 2: \ref m_polygon_offset_buf+1
+     */
+    GLVertexArrayObject     m_polygon_vao;
+
+    /** Maximum number of corners in a polygon in the set. */
+    GLsizei                 m_polygon_max_n;
+    
+    /** Per polygon info about adjacent cells and flags (2 uint's).
+     *
+     * Bits 0..29 inclusive encode cell, 0x3fffffffu means no cell. Bit 31 tags
+     * polygon as part of a fault, and bit 30 is currently unused. Flags present
+     * in both uints. */
+    GLBuffer                m_polygon_cell_buf;
+    
+    /** Per polygon offsets into \ref m_polygon_vtx_buf and \ref m_polygon_nrm_buf. */
+    GLBuffer                m_polygon_offset_buf;
+
+    /** Polygon vertex index. */
+    GLBuffer                m_polygon_vtx_buf;
+    
+    /** Buffer texture accessing \ref m_polygon_vtx_buf. */
+    GLTexture               m_polygon_vtx_tex;
+    
+    /** Polygon normal index with flags (1 uint).
+     *
+     * Bits 0..29 inclusive encode the normal index, bit 30 encode whether there
+     * should be rendered an edge on side 1, and bit 31 encodes whether there
+     * should be rendered an edge on side 0. */
+    GLBuffer                m_polygon_nrm_buf;
+    
+    /** Buffer texture accessing \ref m_polygon_nrm_buf. */
+    GLTexture               m_polygon_nrm_tex;
+    /** @} */
     void
     reset();
     
@@ -159,6 +248,9 @@ protected:
 
     bool
     updateNormals( boost::shared_ptr<const bridge::PolygonMeshBridge> mesh_bridge );
+
+    bool
+    updatePolygons( boost::shared_ptr<const bridge::PolygonMeshBridge> mesh_bridge );
 
     bool
     updateCells( boost::shared_ptr<const bridge::PolygonMeshBridge> mesh_bridge );

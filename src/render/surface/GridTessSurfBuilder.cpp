@@ -18,6 +18,7 @@
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
 #include "render/mesh/PolyhedralMeshGPUModel.hpp"
+#include "render/mesh/PolygonMeshGPUModel.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
@@ -34,6 +35,13 @@ namespace render {
             extern const std::string GridTessSurfBuilder_extract_vs;
             extern const std::string GridTessSurfBuilder_extract_gs;
         }
+        using boost::shared_ptr;
+        using boost::dynamic_pointer_cast;
+        using render::mesh::AbstractMeshGPUModel;
+        using render::mesh::PolyhedralMeshGPUModel;
+        using render::mesh::PolygonMeshGPUModel;
+        using render::mesh::VertexPositionInterface;
+        using render::mesh::PolygonSetInterface;
 
 GridTessSurfBuilder::GridTessSurfBuilder()
     : m_meta_prog( "GridTessSurfBuilder.m_meta_prog"),
@@ -146,16 +154,30 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
                                     boost::shared_ptr<GridTessSurf> surf_subset_boundary,
                                     boost::shared_ptr<GridTessSurf> surf_faults,
                                     boost::shared_ptr<const subset::Representation> subset,
-                                    boost::shared_ptr<const mesh::PolyhedralMeshGPUModel> mesh,
+                                    boost::shared_ptr<const mesh::AbstractMeshGPUModel> mesh,
                                     bool                     flip_faces )
 {
     Logger log = getLogger( "GridTessSurfBuilder.buildSurfaces" );
+
+    shared_ptr<const PolygonSetInterface> polygon_set
+            = dynamic_pointer_cast<const PolygonSetInterface>( mesh );
+    if( !polygon_set ) {
+        LOGGER_ERROR( log, "mesh does not implement the polygon set interface." );
+        return;
+    }
+    shared_ptr<const VertexPositionInterface> vertex_positions
+            = dynamic_pointer_cast<const VertexPositionInterface>( mesh );
+    if( !vertex_positions ) {
+        LOGGER_ERROR( log, "mesh does not implement the vertex positions interface." );
+        return;
+    }
+    
     GridTessSurf* surfaces[ SURFACE_N ];
     surfaces[ SURFACE_SUBSET          ] = surf_subset.get();
     surfaces[ SURFACE_SUBSET_BOUNDARY ] = surf_subset_boundary.get();
     surfaces[ SURFACE_FAULT ]           = surf_faults.get();
 
-    if( mesh->polygonCount() == 0 ) {
+    if( polygon_set->polygonCount() == 0 ) {
         for( int i=0; i< SURFACE_N; i++ ) {
             if( surfaces[i] != NULL ) {
                 surfaces[i]->setTriangleCount( 0 );
@@ -166,12 +188,10 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
 
     // Late shader builing; we don't know the max output until the tessellation
     // has been built.
-    if( m_triangulate_count != mesh->polygonMaxPolygonSize() ) {
-        rebuildTriangulationProgram( mesh->polygonMaxPolygonSize() );
+    if( m_triangulate_count != polygon_set->polygonMaxPolygonSize() ) {
+        rebuildTriangulationProgram( polygon_set->polygonMaxPolygonSize() );
     }
-
-
-
+    
     // Find all polygons that we want to render
 
     glActiveTexture( GL_TEXTURE0 );
@@ -181,9 +201,9 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
     else {
         glBindTexture( GL_TEXTURE_BUFFER, 0 );
     }
-    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, mesh->polygonNormalIndexTexture() );
-    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, mesh->polygonVertexIndexTexture() );
-    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, mesh->vertexPositionsAsBufferTexture() );
+    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonNormalIndexTexture() );
+    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonVertexIndexTexture() );
+    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, vertex_positions->vertexPositionsAsBufferTexture() );
 
     glEnable( GL_RASTERIZER_DISCARD );
 
@@ -194,20 +214,22 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
 
         // --- try to extract all triangles that should be part of the surfaces
         if( redo_meta ) {
-            glBindVertexArray( mesh->polygonVertexArray() );
+            
+            glBindVertexArray( polygon_set->polygonVertexArray() );
             glUseProgram( m_meta_prog.get() );
             glUniform1i( m_meta_loc_flip, flip_faces ? GL_TRUE : GL_FALSE );
-
+            
             glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, m_meta_xfb.get() );
             glBeginTransformFeedback( GL_POINTS );
             for( uint i=0; i<SURFACE_N; i++ ) {
+                
                 // We use GL_PRIMITIVES_GENERATED and not
                 // GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN since we are
                 // interested in the full count since we want to detect buffer
                 // overflows.
                 glBeginQueryIndexed( GL_PRIMITIVES_GENERATED, i, m_meta_query[i].get() );
             }
-            glDrawArrays( GL_POINTS, 0, mesh->polygonCount() );
+            glDrawArrays( GL_POINTS, 0, polygon_set->polygonCount() );
             for( uint i=0; i<SURFACE_N; i++ ) {
                 glEndQueryIndexed( GL_PRIMITIVES_GENERATED, i );
             }

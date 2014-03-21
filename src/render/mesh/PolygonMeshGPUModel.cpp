@@ -80,6 +80,7 @@ PolygonMeshGPUModel::update( shared_ptr<const PolygonMeshBridge> mesh_bridge )
     if( !updateVertices(mesh_bridge)
             || !updateBoundingBox()
             || !updateNormals(mesh_bridge)
+            || !updatePolygons(mesh_bridge)
             || !updateCells(mesh_bridge) )
     {
         Logger log = getLogger( package + ".update" );
@@ -207,6 +208,109 @@ PolygonMeshGPUModel::updateNormals( shared_ptr<const PolygonMeshBridge> mesh_bri
     
     return true;
 }
+
+bool
+PolygonMeshGPUModel::updatePolygons( boost::shared_ptr<const bridge::PolygonMeshBridge> mesh_bridge )
+{
+    typedef bridge::PolygonMeshBridge::Index Index;
+    
+    Logger log = getLogger( package + ".updatePolygons" );
+    if( mesh_bridge->m_polygon_cell.empty() ) {
+        m_polygons_N = 0;
+        LOGGER_DEBUG( log, "No polygons." );
+        return false;
+    }
+
+    // --- update meta data ----------------------------------------------------
+    m_polygons_N = mesh_bridge->m_polygon_cell.size();
+    m_triangles_N = 0;
+    m_polygon_max_n = 0;
+    for( size_t i=0; (i+1)<mesh_bridge->m_polygon_offset.size(); i++ ) {
+        GLsizei N = mesh_bridge->m_polygon_offset[i+1] - mesh_bridge->m_polygon_offset[i];
+        m_triangles_N += N-2;
+        m_polygon_max_n = std::max( m_polygon_max_n, N );
+        if( N < 3 ) {
+            LOGGER_ERROR( log, "Encountered polygon with less than three corners." );
+            m_polygons_N = 0;
+            return false;
+        }
+    }
+    LOGGER_DEBUG( log, "Processing " << m_polygons_N << " polygons ("
+                  << m_triangles_N << " triangles), polygon_max=" << m_polygon_max_n );
+    
+    // --- sanity checks -------------------------------------------------------
+    if( (GLsizei)(mesh_bridge->m_polygon_offset.size()) != m_polygons_N+1 ) {
+        LOGGER_ERROR( log, "Expected " << (m_polygons_N+1)
+                      << " offsets, got " << mesh_bridge->m_polygon_offset.size() );
+    }
+    if( (GLsizei)(mesh_bridge->m_polygon_vtx_ix.size()) != 3*m_triangles_N ) {
+        LOGGER_ERROR( log, "Expected " << (3*m_triangles_N)
+                      << " vertex indices, got " << mesh_bridge->m_polygon_vtx_ix.size() );
+        m_polygons_N = 0;
+        return false;
+    }
+    if( (GLsizei)(mesh_bridge->m_polygon_nrm_ix.size()) != 3*m_triangles_N ) {
+        LOGGER_ERROR( log, "Expected " << (3*m_triangles_N)
+                      << " normal indices, got " << mesh_bridge->m_polygon_nrm_ix.size() );
+        m_polygons_N = 0;
+        return false;
+    }
+
+    // --- per polygon data ----------------------------------------------------
+    glBindVertexArray( m_polygon_vao.get() );
+    
+    // polygon cell index data
+    glBindBuffer( GL_ARRAY_BUFFER, m_polygon_cell_buf.get() );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(GLuint)*m_polygons_N,
+                  mesh_bridge->m_polygon_cell.data(), GL_STATIC_DRAW );
+
+    // enable fetch from VAO binding point 0
+    glVertexAttribIPointer( 0, 1, GL_UNSIGNED_INT, 0, NULL );
+    glEnableVertexAttribArray( 0 );
+    
+    // polygon offset data
+    glBindBuffer( GL_ARRAY_BUFFER, m_polygon_offset_buf.get() );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(GLuint)*(m_polygons_N+1),
+                  mesh_bridge->m_polygon_offset.data(), GL_STATIC_DRAW );
+    
+    // enable fetch of offset from VAO binding point 1
+    glVertexAttribIPointer( 1, 1, GL_UNSIGNED_INT, sizeof(GLuint), NULL );
+    glEnableVertexAttribArray( 1 );
+    
+    // enable fetch of next offset (so we can deduce number of corners) at VAO
+    // binding point 2
+    glVertexAttribIPointer( 2, 1, GL_UNSIGNED_INT, sizeof(GLuint), (const GLvoid*)(sizeof(GLuint)) );
+    glEnableVertexAttribArray( 2 );
+    
+    glBindVertexArray( 0 );
+    
+    // --- per polygon corner data ---------------------------------------------
+
+    // vertex indices data
+    glBindBuffer( GL_TEXTURE_BUFFER, m_polygon_vtx_buf.get() );
+    glBufferData( GL_TEXTURE_BUFFER, sizeof(GLuint)*3*m_triangles_N,
+                  mesh_bridge->m_polygon_vtx_ix.data(), GL_STATIC_DRAW );
+    glBindBuffer( GL_TEXTURE_BUFFER, 0 );
+
+    // set up texture fetching vertex indices
+    glBindTexture( GL_TEXTURE_BUFFER, m_polygon_vtx_tex.get() );
+    glTexBuffer( GL_TEXTURE_BUFFER, GL_R32UI, m_polygon_vtx_buf.get() );
+    glBindTexture( GL_TEXTURE_BUFFER, 0 );
+
+    // normal indices data
+    glBindBuffer( GL_TEXTURE_BUFFER, m_polygon_nrm_buf.get() );
+    glBufferData( GL_TEXTURE_BUFFER, sizeof(GLuint)*3*m_triangles_N,
+                  mesh_bridge->m_polygon_nrm_ix.data(), GL_STATIC_DRAW );
+    glBindBuffer( GL_TEXTURE_BUFFER, 0 );
+
+    // set up texture fetching normal indices
+    glBindTexture( GL_TEXTURE_BUFFER, m_polygon_nrm_tex.get() );
+    glTexBuffer( GL_TEXTURE_BUFFER, GL_R32UI, m_polygon_nrm_buf.get() );
+    glBindTexture( GL_TEXTURE_BUFFER, 0 );
+
+    return true;    
+}
+
 
 bool
 PolygonMeshGPUModel::updateCells( shared_ptr<const PolygonMeshBridge> mesh_bridge  )

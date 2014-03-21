@@ -62,10 +62,18 @@ protected:
     std::vector<Real4>  m_vertices;         ///< Vertex positions.
     std::vector<Real4>  m_normals;          ///< Normal directions.
 
-    std::vector<Index>  m_polygon_vtx_ix;   ///< Polygon corner index into m_vertices.
-    std::vector<Index>  m_polygon_nrm_ix;   ///< Polygon corner index into m_normals;
-    std::vector<Index>  m_polygon_offset;   ///< polygons_N+1 offsets into m_polygon_vtx_ix and m_polygon_nrm_ix.
+
+    /** Polygon cell index. */
     std::vector<Index>  m_polygon_cell;     ///< polygons_N cell indices.
+    
+    /** Polygon offsets into \ref m_polygon_vtx_ix and \ref m_polygon_nrm_ix, N+1 elements. */
+    std::vector<Index>  m_polygon_offset;
+
+    /** Polygon corner index into \ref m_vertices. */
+    std::vector<Index>  m_polygon_vtx_ix;
+
+    /** Polygon corner index into \ref m_normals. */
+    std::vector<Index>  m_polygon_nrm_ix;
 
     std::vector<Index>  m_cell_corners;     ///< Unique corners for a given cell.
     std::vector<Index>  m_cell_offset;      ///< cell_N+1 indices into m_cell_corners.

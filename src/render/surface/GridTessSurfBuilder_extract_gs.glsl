@@ -108,6 +108,9 @@ main()
     bool flip, in_subset, on_boundary, on_fault;
     check( cell, flip, in_subset, on_boundary, on_fault, cell_a, cell_b );
 
+    //cell = cell_a;
+    //in_subset = cell != 0x3fffffffu;
+    
     if( in_subset ) {
         //uint offset = atomicCounterIncrement( counter[0] );
 
