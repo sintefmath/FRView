@@ -107,7 +107,8 @@ main()
     uint cell;
     bool flip, in_subset, on_boundary, on_fault;
     check( cell, flip, in_subset, on_boundary, on_fault, cell_a, cell_b );
-    
+
+   
     if( in_subset ) {
         //uint offset = atomicCounterIncrement( counter[0] );
 
@@ -121,7 +122,7 @@ main()
     }
     if( on_fault ) {
         //uint offset = atomicCounterIncrement( counter[2] );
-        meta_fault = uvec4( ~0u, 0, o, N );
+        meta_fault = uvec4( 0x20000000u, 0, o, N );
         EmitStreamVertex( 2 );
     }
 }

@@ -60,43 +60,47 @@ main()
     vec3 n1 = normalize( NM*texelFetch( normals, int(indices.z & 0x0fffffffu) ).rgb );
     vec3 n2 = normalize( NM*texelFetch( normals, int(indices.w & 0x0fffffffu) ).rgb );
 
-    vec3 color;
-    if( cell == ~0u ) {
-        // fault surface
-        color.rgb = surface_color.rgb;
-        vec3 tn = cross( in_g[1].obj_pos - in_g[0].obj_pos,
-                         in_g[2].obj_pos - in_g[0].obj_pos);
-        n0 = faceforward( n0, tn, vec3(0.f, 0.f, 1.f ) );
-        n1 = faceforward( n1, tn, vec3(0.f, 0.f, 1.f ) );
-        n2 = faceforward( n2, tn, vec3(0.f, 0.f, 1.f ) );
-    }
-    else {
-        if( (cell & 0x80000000u) == 0u ) {
-            n0 = -n0;
-            n1 = -n1;
-            n2 = -n2;
-        }
 
-        if( use_field ) {
-            // colorize using a field
-            uint cid = cell & 0x0fffffffu;
-            float value = texelFetch( field, int(cid) ).r;
-            if( log_map ) {
-                // field_remap.x = 1.0/min_value
-                // field_remap.y = 1.0/log(max_value/min_value)
-                value = log( value*field_remap.x )*field_remap.y;
-            }
-            else {
-                // field_remap.x = min_value
-                // field_remap.y = 1.0/(max_value-min_value)
-                value = field_remap.y*( value - field_remap.x);
-            }
-            color = texture( color_map, value ).rgb;
+    bool flip = false;
+    if( (cell & 0x20000000u) != 0u ) {
+        // surface, check orientation of triangle
+        vec2 a = in_g[1].scr_pos - in_g[0].scr_pos;
+        vec2 b = in_g[2].scr_pos - in_g[0].scr_pos;
+        float z = a.x*b.y - b.x*a.y;
+        if( z < 0.f ) {
+            flip = true;
+        }
+    }
+    
+    if( (cell & 0x80000000u) == 0u ) {
+        flip = !flip;
+    }
+
+    if( flip ) {
+        n0 = -n0;
+        n1 = -n1;
+        n2 = -n2;
+    }
+    
+    vec3 color;
+    if( use_field ) {
+        // colorize using a field
+        uint cid = cell & 0x0fffffffu;
+        float value = texelFetch( field, int(cid) ).r;
+        if( log_map ) {
+            // field_remap.x = 1.0/min_value
+            // field_remap.y = 1.0/log(max_value/min_value)
+            value = log( value*field_remap.x )*field_remap.y;
         }
         else {
-            // undef -> gray
-            color.rgb = vec3( 0.5, 0.5, 0.55 );
+            // field_remap.x = min_value
+            // field_remap.y = 1.0/(max_value-min_value)
+            value = field_remap.y*( value - field_remap.x);
         }
+        color = texture( color_map, value ).rgb;
+    }
+    else {
+        color = surface_color.rgb;
     }
 
     out_g.color = surface_color.w*vec4( color, 1.0 );

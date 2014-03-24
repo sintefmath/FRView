@@ -34,7 +34,8 @@ layout(binding=0)   uniform usamplerBuffer  cell_subset;
 bool
 selected( uint cell )
 {
-    if( cell == 0x3fffffffu ) {
+    cell = cell & 0x1fffffffu;
+    if( cell == 0x1fffffffu ) {
         return false;
     }
     uint s = ((texelFetch( cell_subset, int(cell/32u) ).r)>>(cell%32u))&0x1u;
@@ -48,7 +49,9 @@ main()
     uint o    = in_gs[0].offset_a;
     uint N    = in_gs[0].offset_b - o;
 
-    bool flip = false;
+    cell = cell | 0x20000000u;
+    
+    bool flip = true;
     if( /*flip ^^*/ flip_faces ) {
 //        bitfieldInsert( cell, 1, 31, 1 );
         cell = cell | 0x80000000u;
