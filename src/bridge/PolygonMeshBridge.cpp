@@ -77,7 +77,9 @@ PolygonMeshBridge::addPolygon( const Index cell,
     m_max_corners = std::max( m_max_corners, N );
     for(Index i=0; i<N; i++ ) {
         m_polygon_vtx_ix.push_back( segments[i].vertex() );
-        m_polygon_nrm_ix.push_back( segments[i].normal() );
+        m_polygon_nrm_ix.push_back( segments[i].normal()
+                                    | (segments[i].edgeA() ? 0x80000000 : 0u)
+                                    | (segments[i].edgeB() ? 0x40000000 : 0u) );
     }
     m_polygon_cell.push_back( cell );
     m_polygon_offset.push_back( m_polygon_vtx_ix.size() );
