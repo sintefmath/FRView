@@ -16,6 +16,7 @@
  */
 
 #pragma once
+#include <limits>
 #include <GL/glew.h>
 #include "utils/Logger.hpp"
 
@@ -41,6 +42,30 @@ public:
     GLuint
     get() const { return m_gl_name; }
 
+
+    /** Dump contents of GPU-side buffer into a CPU-side buffer.
+     *
+     * \param dst     CPU-side buffer into where to store the data.
+     * \param count   Maximum number of elements to copy.
+     * \param target  OpenGL buffer target to use.
+     * \return        Number of elements copied.
+     */
+    template<typename T>
+    size_t
+    contents( std::vector<T>& dst,
+              size_t count = std::numeric_limits<size_t>::max(),
+              GLenum target = GL_PIXEL_PACK_BUFFER )
+    {
+        glBindBuffer( target, m_gl_name );
+        GLint64 bytes;        
+        glGetBufferParameteri64v( target, GL_BUFFER_SIZE, &bytes );
+        size_t N = std::min( count, static_cast<size_t>(bytes/sizeof(T)) );
+        dst.resize( N );
+        glGetBufferSubData(	target, 0, sizeof(T)*N, dst.data() );
+        return N;
+    }
+    
+    
 protected:
     GLuint  m_gl_name;
 };
