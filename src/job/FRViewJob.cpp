@@ -809,47 +809,60 @@ FRViewJob::triggerRedraw( const string& viewer_key )
 void
 FRViewJob::updateModelMatrices()
 {
+    using boost::shared_ptr;
+    using boost::dynamic_pointer_cast;
+    using render::mesh::BoundingBoxInterface;
+    using dataset::ZScaleInterface;
+    
+    
     glm::vec3 bbmin( 0.f );
     glm::vec3 bbmax( 1.f );
-    glm::vec3 shift;
-    float scale_xy = 1.f;
-    float scale_z  = 1.f;
+    float scale_z  = 0.f;
 
-    if( m_has_pipeline ) {
-        if( currentSourceItemValid() ) {
-            SourceItem& source_item = currentSourceItem();
-            boost::shared_ptr<const render::mesh::BoundingBoxInterface> bbox =
-                    boost::dynamic_pointer_cast<const render::mesh::BoundingBoxInterface>( source_item.m_grid_tess );
-            if( bbox ) {
-                bbmin = glm::vec3( bbox->minBBox()[0],
-                                   bbox->minBBox()[1],
-                                   bbox->minBBox()[2] );
-                bbmax = glm::vec3( bbox->maxBBox()[0],
-                                   bbox->maxBBox()[1],
-                                   bbox->maxBBox()[2] );
-                shift = -0.5f*( bbmin + bbmax );
-                scale_xy = std::max( (bbmax.x-bbmin.x),
-                                     (bbmax.y-bbmin.y) );
-                
-                scale_z = m_grid_stats.zScale();
-                
-                boost::shared_ptr<dataset::ZScaleInterface> zscale_src =
-                        boost::dynamic_pointer_cast<dataset::ZScaleInterface>( currentSourceItem().m_source );
-                if( zscale_src ) {
-                    scale_z = scale_z*(zscale_src->cornerPointZScale()/zscale_src->cornerPointXYScale());
-                }
+    bool first = true;
+    for(size_t i=0; i<m_source_items.size(); i++ ) {
+        SourceItem& source_item = currentSourceItem();
+        shared_ptr<const BoundingBoxInterface> bbox = dynamic_pointer_cast<const BoundingBoxInterface>( source_item.m_grid_tess );
+        if( bbox ) {
+            glm::vec3 bbmin_( bbox->minBBox()[0], bbox->minBBox()[1], bbox->minBBox()[2] );
+            glm::vec3 bbmax_( bbox->maxBBox()[0], bbox->maxBBox()[1], bbox->maxBBox()[2] );
+            if( first ) {
+                bbmin = bbmin_;
+                bbmax = bbmax_;
+                first = false;
+            }
+            else {
+                bbmin = glm::min( bbmin, bbmin_ );
+                bbmax = glm::max( bbmax, bbmax_ );
             }
         }
+        
+        shared_ptr<ZScaleInterface> zscale_src = dynamic_pointer_cast<ZScaleInterface>( source_item.m_source );
+        if( zscale_src ) {
+            scale_z = glm::max( scale_z, zscale_src->cornerPointZScale()/zscale_src->cornerPointXYScale() );
+        }
+    }
+    if( !first ) {
+        
+        glm::vec3 shift = -0.5f*( bbmin + bbmax );
+        float scale_xy = std::max( (bbmax.x-bbmin.x),
+                                   (bbmax.y-bbmin.y) );
+        
+        if( scale_z < std::numeric_limits<float>::epsilon() ) {
+            scale_z = 1.f;
+        }
+        scale_z = m_grid_stats.zScale()*scale_z;
+        
         m_local_to_world = glm::mat4();
         m_local_to_world = glm::translate( m_local_to_world, glm::vec3(0.5f ) );
         m_local_to_world = glm::scale( m_local_to_world, glm::vec3( 1.f/scale_xy, 1.f/scale_xy, scale_z/scale_xy) );
         m_local_to_world = glm::translate( m_local_to_world, shift );
-
+        
         m_local_from_world = glm::mat4();
         m_local_from_world = glm::translate( m_local_from_world, -shift );
         m_local_from_world = glm::scale( m_local_from_world, glm::vec3( scale_xy, scale_xy, scale_xy/scale_z ) );
         m_local_from_world = glm::translate( m_local_from_world, -glm::vec3(0.5f ) );
-
+        
         m_bbox_to_world = glm::translate( glm::mat4(), glm::vec3( -0.1f ) );
         m_bbox_to_world = glm::scale( m_bbox_to_world, glm::vec3( 1.2f ) );
         m_bbox_from_world = glm::inverse( m_bbox_to_world );

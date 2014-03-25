@@ -75,7 +75,7 @@ CornerpointGrid::CornerpointGrid(const std::string filename,
       *it = toupper( *it );
     }
 
-    if( suffix == "VTU" ) {
+    if( suffix == ".VTU" ) {
         File file;
         file.m_filetype = VTK_XML_VTU_FILE;
         file.m_timestep = -1;
@@ -83,7 +83,7 @@ CornerpointGrid::CornerpointGrid(const std::string filename,
         m_unprocessed_files.push_front( file );
         LOGGER_DEBUG( log, "Found VTU file" );
     }
-    else if( suffix == "GTXT" ) {
+    else if( suffix == ".GTXT" ) {
         File file;
         file.m_filetype = FOOBAR_TXT_GRID_FILE;
         file.m_timestep = -1;
@@ -91,7 +91,7 @@ CornerpointGrid::CornerpointGrid(const std::string filename,
         m_unprocessed_files.push_front( file );
         LOGGER_DEBUG( log, "Found GTXT file" );
     }
-    else if( suffix == "GEOMETRY" ) {
+    else if( suffix == ".GEOMETRY" ) {
         File file;
         file.m_filetype = FOOBAR_GRID_FILE;
         file.m_timestep = -1;
@@ -99,7 +99,7 @@ CornerpointGrid::CornerpointGrid(const std::string filename,
         m_unprocessed_files.push_front( file );
         LOGGER_DEBUG( log, "Found GEOMETRY file" );
     }
-    else if( suffix == "EGRID" ) {
+    else if( suffix == ".EGRID" ) {
         File file;
         file.m_filetype = ECLIPSE_EGRID_FILE;
         file.m_timestep = -1;
