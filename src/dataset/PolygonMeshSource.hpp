@@ -39,12 +39,16 @@ public:
      * Note that this constructor will take ownership of the contents of the
      * arguments (through vector.swap).
      */
-    PolygonMeshSource( std::vector<float>&                 vertices,
+    PolygonMeshSource( const std::string&                  name,
+                       std::vector<float>&                 vertices,
                        std::vector<int>&                   indices,
                        std::vector<int>&                   polygons,
                        std::vector<int>&                   cells,
                        std::vector<std::string>&           cell_field_name,
                        std::vector< std::vector<float> >&  cell_field_data );
+
+    const std::string&
+    name() const { return m_name; }
     
     // -------------------------------------------------------------------------
     /** \name Implementation of PolygonDataInterface */
@@ -96,6 +100,7 @@ public:
 
     
 protected:
+    std::string                         m_name;
     std::vector<float>                  m_vertices; ///< in R^3.
     std::vector<int>                    m_indices;  ///< Offsets into m_vertices.
     std::vector<int>                    m_polygons; ///< Offsets into m_indices.

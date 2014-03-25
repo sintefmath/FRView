@@ -41,6 +41,9 @@ public:
     tinia::model::gui::Element*
     guiFactory() const;
     
+    void
+    updateSources( std::vector<std::string>& sources );
+    
 protected:
     boost::shared_ptr<tinia::model::ExposedModel>   m_model;
     Revision                                        m_revision;

@@ -39,6 +39,24 @@ SourceSelector::SourceSelector( boost::shared_ptr<tinia::model::ExposedModel>& m
 }
 
 void
+SourceSelector::updateSources( std::vector<std::string>& sources )
+{
+    if( sources.empty() ) {
+        m_model->updateRestrictions<std::string>( source_selector_key,
+                                     source_selector_none[ 0 ],
+                                    &source_selector_none[0],
+                                    &source_selector_none[1] );
+    }
+    else {
+        m_model->updateRestrictions( source_selector_key,
+                                     sources[0],
+                                     sources.begin(),
+                                     sources.end() );
+    }
+}
+
+
+void
 SourceSelector::bumpRevision()
 {
 }

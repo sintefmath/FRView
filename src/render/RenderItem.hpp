@@ -19,6 +19,11 @@
 #include <boost/shared_ptr.hpp>
 
 namespace render {
+    namespace mesh {
+        class AbstractMeshGPUModel;
+    }
+    class GridField;
+
     namespace wells {
         class Representation;
     }
@@ -31,10 +36,12 @@ struct RenderItem {
     enum {
         RENDERER_SURFACE,
         RENDERER_WELL
-    }                                       m_renderer;
-    boost::shared_ptr<const surface::GridTessSurf>  m_surf;
-    boost::shared_ptr<wells::Representation>        m_well;
-    bool                                    m_field;
+    }                                                    m_renderer;
+    boost::shared_ptr<const mesh::AbstractMeshGPUModel>  m_mesh;
+    boost::shared_ptr<const GridField>                   m_field;
+    boost::shared_ptr<const surface::GridTessSurf>       m_surf;
+    boost::shared_ptr<wells::Representation>             m_well;
+    //bool                                    m_field;
     bool                                    m_field_log_map;
     float                                   m_field_min;
     float                                   m_field_max;

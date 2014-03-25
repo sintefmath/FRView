@@ -34,12 +34,14 @@ const std::string package = "datasource.PolygonMeshSource";
 
 namespace dataset {
 
-PolygonMeshSource::PolygonMeshSource( std::vector<float>&                 vertices,
+PolygonMeshSource::PolygonMeshSource( const std::string &name,
+                                      std::vector<float>&                 vertices,
                                       std::vector<int>&                   indices,
                                       std::vector<int>&                   polygons,
                                       std::vector<int>&                   cells,
                                       std::vector<std::string>&           cell_field_name,
                                       std::vector< std::vector<float> >&  cell_field_data )
+    : m_name( name )
 {
     m_vertices.swap( vertices );
     m_indices.swap( indices );

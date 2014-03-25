@@ -54,6 +54,8 @@ public:
     virtual
     ~CornerpointGrid();
 
+    const std::string&
+    name() const { return m_name; }
 
     GeometryType
     geometryType() const
@@ -185,6 +187,7 @@ public:
 
 
 private:
+    std::string                                     m_name;
     enum SolutionReader {
         READER_NONE,
         READER_UNFORMATTED_ECLIPSE,

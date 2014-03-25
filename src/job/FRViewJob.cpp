@@ -67,7 +67,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_file( m_model, *this ),
       m_source_selector( m_model ),
       m_under_the_hood( m_model, *this ),
-      m_appearance( m_model, m_load_color_field ),
+      m_appearance( m_model ),
       m_visibility_mask( models::Appearance::VISIBILITY_MASK_NONE ),
       m_theme( 0 ),
       m_grid_stats( m_model, *this ),
@@ -82,8 +82,6 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_model->addElement<int>( current_source_item_key, m_current_item );
     m_model->addStateListener( current_source_item_key, this);
     
-    m_load_color_field = false;
-    m_has_color_field = false;
     m_render_clip_plane = false;
     m_care_about_updates = true;
     m_report_step_index = 0;
@@ -388,7 +386,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
         
         if( (*it).find('.') != std::string::npos ) {
             loadFile( *it, 1, 1, 1, false );
-            break;
+            //break;
         }
     }
 }
@@ -506,7 +504,8 @@ FRViewJob::updateCurrentFieldData()
             m_model->updateElement<double>( "field_range_min", source_item.m_grid_field->minValue() );
             m_model->updateElement<double>( "field_range_max", source_item.m_grid_field->maxValue() );
         }
-        if( m_has_color_field  ) {
+        
+        if( source_item.m_grid_tess_subset ) {
             boost::shared_ptr<dataset::PolyhedralDataInterface> poly_data =
                     boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item.m_source );
             if( poly_data ) {
@@ -541,7 +540,7 @@ FRViewJob::loadFile( const std::string& filename,
 {
     m_file.setFileName( filename );
 
-    m_load_color_field = false;
+    //m_load_color_field = false;
     releaseSourceItems();
     updateCurrentMeshData();
     updateCurrentFieldData();
@@ -612,7 +611,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     else if( key == "plane_select_PX" && handleButtonClick(stateElement) ) {
         if( currentSourceItemValid() ) {
             currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, -0.1*M_PI_4 ) ) );
-            m_do_update_subset = true;
+            currentSourceItem().m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
             }
@@ -621,7 +620,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     else if( key == "plane_select_NX"  && handleButtonClick(stateElement) ) {
         if(  currentSourceItemValid() ) {
             currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, 0.1*M_PI_4 ) ) );
-            m_do_update_subset = true;
+            currentSourceItem().m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
             }
@@ -630,7 +629,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     else if( key == "plane_select_PY"  && handleButtonClick(stateElement) ) {
         if(  currentSourceItemValid() ) {
             currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( 0.1*M_PI_4, 0.f, 0.f ) ) );
-            m_do_update_subset = true;
+            currentSourceItem().m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
             }
@@ -639,7 +638,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     else if( key == "plane_select_NY"  && handleButtonClick(stateElement) ) {
         if(  currentSourceItemValid() ) {
             currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( -0.1*M_PI_4, 0.f, 0.f ) ) );
-            m_do_update_subset = true;
+            currentSourceItem().m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
             }
@@ -650,7 +649,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         stateElement->getValue<int>( value );
         if(  currentSourceItemValid() ) {
             currentSourceItem().m_clip_plane->setOffset( (1.7f/1000.f)*(value) );
-            m_do_update_subset = true;
+            currentSourceItem().m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
             }
@@ -664,7 +663,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_max_i", min );
         }
-        m_do_update_subset = true;
+        currentSourceItem().m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -677,7 +676,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_min_i", max );
         }
-        m_do_update_subset = true;
+        currentSourceItem().m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -690,7 +689,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_max_j", min );
         }
-        m_do_update_subset = true;
+        currentSourceItem().m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -703,7 +702,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_min_j", max );
         }
-        m_do_update_subset = true;
+        currentSourceItem().m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -716,7 +715,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_max_k", min );
         }
-        m_do_update_subset = true;
+        currentSourceItem().m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -729,19 +728,19 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_min_k", max );
         }
-        m_do_update_subset = true;
+        currentSourceItem().m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
     }
     else if( key == "field_select_min" ) {
-        m_do_update_subset = true;
+        currentSourceItem().m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
     }
     else if( key == "field_select_max" ) {
-        m_do_update_subset = true;
+        currentSourceItem().m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -775,7 +774,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "surface_subset_index_range", false );
             m_model->updateElement( "surface_subset_plane", true );
         }
-        m_do_update_subset = true;
+        currentSourceItem().m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -790,7 +789,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         }
     }
     else if( key == "tess_flip_orientation" ) {
-        m_do_update_subset = true;
+        currentSourceItem().m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -1016,14 +1015,14 @@ FRViewJob::doLogic()
             // trigger render list update
 //        }
 
-        if( m_render_clip_plane ) {
-            m_do_update_subset = true;
+        if( m_render_clip_plane && currentSourceItemValid() ) {
+            currentSourceItem().m_do_update_subset = true;
         }
     }
 
     models::Appearance::VisibilityMask new_mask = m_appearance.visibilityMask();
-    if( (m_visibility_mask != new_mask) || m_under_the_hood.profilingEnabled() ) {
-        m_do_update_subset = true;
+    if( currentSourceItemValid() && ( (m_visibility_mask != new_mask) || m_under_the_hood.profilingEnabled() ) ) {
+        currentSourceItem().m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }

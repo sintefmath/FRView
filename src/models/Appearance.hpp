@@ -48,8 +48,7 @@ public:
         DiffuseSpecular = 2
     } ShadingModel;
     
-    Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model,
-                bool& reload );
+    Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model );
 
     ~Appearance();
 
@@ -127,7 +126,7 @@ public:
 protected:
     boost::shared_ptr<tinia::model::ExposedModel>   m_model;
     Revision                                        m_revision;
-    bool&                                       m_reload;
+    bool                                        m_reload;
     int                                         m_render_quality;
     ShadingModel                                m_shading_model;
     Theme                                       m_theme;

@@ -15,26 +15,20 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include <string>
-#include <boost/utility.hpp>
 
-namespace dataset {
+namespace utils {
+namespace Path {
 
-class AbstractDataSource : public boost::noncopyable
-{
-public:
-    virtual
-    ~AbstractDataSource();
-
-    virtual
-    const std::string&
-    name() const = 0;
-    
-protected:
-    
-    
-};
+void
+split( std::string& path,
+       std::string& stem,
+       std::string& suffix,
+       const std::string& file );
 
 
 
-} // of namespace dataset
+
+} // of namespace Path
+} // of namespace utils

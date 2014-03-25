@@ -185,14 +185,12 @@ TransparencyWeightedAverage::resize( const GLsizei width, const GLsizei height )
 
 
 void
-TransparencyWeightedAverage::render( GLuint                              fbo,
+TransparencyWeightedAverage::render(GLuint                              fbo,
                                      const GLsizei                       width,
                                      const GLsizei                       height,
                                      const GLfloat*                      local_to_world,
                                      const GLfloat*                      modelview,
                                      const GLfloat*                      projection,
-                                     boost::shared_ptr<const mesh::AbstractMeshGPUModel>  gpu_mesh,
-                                     boost::shared_ptr<const GridField>  field,
                                      const std::vector<RenderItem>&      items )
 {
     if( (m_width != width) || (m_height != height) ) {
@@ -223,7 +221,7 @@ TransparencyWeightedAverage::render( GLuint                              fbo,
                              projection,
                              m_width,
                              m_height,
-                             gpu_mesh, field, m_color_map, items );
+                             m_color_map, items );
     renderMiscellaneous( width, height,
                          local_to_world, modelview, projection,
                          items );
@@ -242,7 +240,7 @@ TransparencyWeightedAverage::render( GLuint                              fbo,
                              projection,
                              m_width,
                              m_height,
-                             gpu_mesh, field, m_color_map, items );
+                             m_color_map, items );
 
     glDepthMask( GL_TRUE );
     glDisable( GL_BLEND );

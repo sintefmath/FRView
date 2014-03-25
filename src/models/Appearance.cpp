@@ -55,11 +55,10 @@ static const std::string faults_opacity_outline_key     = "faults_outline_opacit
 
 
 
-Appearance::Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model,
-                        bool& reload )
+Appearance::Appearance(boost::shared_ptr<tinia::model::ExposedModel>& model)
     : m_model( model ),
       m_revision( 1 ),
-      m_reload( reload ),
+      //m_reload( reload ),
       m_render_quality( 3 ),
       m_shading_model( Diffuse ),
       m_render_grid( false ),

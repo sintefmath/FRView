@@ -84,6 +84,9 @@ struct SourceItem {
     boost::shared_ptr<render::GridField>                            m_grid_field;
     boost::shared_ptr<render::wells::Representation>                m_wells;
 
+    bool                                            m_load_color_field;
+    bool                                            m_do_update_subset;
+    
 };
 
 
@@ -203,9 +206,6 @@ private:
     /** @} */
 
 
-    bool                                            m_load_color_field;
-    bool                                            m_has_color_field;
-    bool                                            m_do_update_subset;
     bool                                            m_care_about_updates;
     bool                                            m_render_clip_plane;
     unsigned int                                    m_solution_index;

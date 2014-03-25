@@ -73,30 +73,21 @@ Renderer::Renderer( const std::string& defines, const std::string& fragment_sour
 
     
 void
-Renderer::draw(const GLfloat*                            modelview,
+Renderer::draw( const GLfloat*                            modelview,
                 const GLfloat*                            projection,
                 const GLsizei                             width,
                 const GLsizei                             height,
-                const boost::shared_ptr<const mesh::AbstractMeshGPUModel> mesh,
-                const boost::shared_ptr<const GridField>  field,
                 GLTexture&                                color_map,
                 const std::vector<RenderItem>&            render_items )
 {
+    using boost::shared_ptr;
+    using boost::dynamic_pointer_cast;
+    using mesh::VertexPositionInterface;
+    using mesh::NormalVectorInterface;
+
     Logger log = getLogger( package + ".draw" );
     
-    boost::shared_ptr<const mesh::VertexPositionInterface> vertices = 
-            boost::dynamic_pointer_cast<const mesh::VertexPositionInterface>( mesh );
-    
-    boost::shared_ptr<const mesh::NormalVectorInterface> normals = 
-            boost::dynamic_pointer_cast<const mesh::NormalVectorInterface>( mesh );
-    
-    
-    if( !vertices || !normals ) {
-        LOGGER_ERROR( log, "Abstract mesh descendent without assummed interfaces." );
-        return;
-    }
-    
-    
+     
     glm::mat4 M(modelview[0], modelview[1], modelview[ 2], modelview[3],
                 modelview[4], modelview[5], modelview[ 6], modelview[7],
                 modelview[8], modelview[9], modelview[10], modelview[11],
@@ -121,22 +112,11 @@ Renderer::draw(const GLfloat*                            modelview,
     glUniform2f( m_loc_screen_size, width, height );
 
     // bind normal vector texture
-    glActiveTexture( GL_TEXTURE1 );
-    glBindTexture( GL_TEXTURE_BUFFER, normals->normalVectorsAsBufferTexture() );
 
-    // bind field values, if available
-    glActiveTexture( GL_TEXTURE2 );
-    if( field.get() != NULL ) {
-        glBindTexture( GL_TEXTURE_BUFFER, field->texture() );
-    }
-    else {
-        glBindTexture( GL_TEXTURE_BUFFER, 0 );
-    }
     glActiveTexture( GL_TEXTURE3 );
     glBindTexture( GL_TEXTURE_1D, color_map.get() );
 
     // Bind vertex position VAO
-    glBindVertexArray( vertices->vertexPositonsAsVertexArrayObject() );
    
     for( size_t i = 0; i<render_items.size(); i++) {
         const RenderItem& item = render_items[i];
@@ -146,18 +126,41 @@ Renderer::draw(const GLfloat*                            modelview,
         if( item.m_surf->triangleCount() < 1 ) {
             continue;
         }
+        shared_ptr<const VertexPositionInterface> vertices = dynamic_pointer_cast<const VertexPositionInterface>( item.m_mesh );
+        if( !vertices ) {
+            continue;
+        }
+        shared_ptr<const NormalVectorInterface>   normals  = dynamic_pointer_cast<const NormalVectorInterface>(item.m_mesh );
+        if( !normals ) {
+            continue;
+        }        
 
-        if( item.m_edge_color[3] > 0.f ) {
-            glDisable( GL_POLYGON_OFFSET_FILL );
+        glActiveTexture( GL_TEXTURE1 );
+        glBindTexture( GL_TEXTURE_BUFFER, normals->normalVectorsAsBufferTexture() );
+
+        glBindVertexArray( vertices->vertexPositonsAsVertexArrayObject() );
+        
+        // set up field if enabled
+        glActiveTexture( GL_TEXTURE2 );
+        if( item.m_field ) {
+            glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), 1 );
+            glBindTexture( GL_TEXTURE_BUFFER, item.m_field->texture() );
         }
         else {
-            glPolygonOffset( 1.f, 1.f );
-            glEnable( GL_POLYGON_OFFSET_FILL );
+            glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), 0 );
+            glBindTexture( GL_TEXTURE_BUFFER, 0 );
         }
+        
+        //if( item.m_edge_color[3] > 0.f ) {
+        //    glDisable( GL_POLYGON_OFFSET_FILL );
+        //}
+        //else {
+        //    glPolygonOffset( 1.f, 1.f );
+        //    glEnable( GL_POLYGON_OFFSET_FILL );
+        //
         glActiveTexture( GL_TEXTURE0 );
 
         glUniform1i( glGetUniformLocation( m_main.get(), "flat_normals"), GL_FALSE );
-        glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), item.m_field );
         glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), item.m_field_log_map );
 //        glUniform1i( glGetUniformLocation( m_main.get(), "solid_pass"), solid_pass ? GL_TRUE : GL_FALSE );
         glUniform1f( glGetUniformLocation( m_main.get(), "line_width"), 0.5f*item.m_line_thickness );

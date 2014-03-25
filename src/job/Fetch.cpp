@@ -90,7 +90,8 @@ FRViewJob::handleFetchSource()
         source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
         source_item.m_grid_tess_subset.reset( new render::subset::Representation );
         source_item.m_wells.reset( new render::wells::Representation );
-        source_item.m_grid_field.reset(  new render::GridField( gpu_polyhedronmesh ) );
+        source_item.m_do_update_subset = true;
+        source_item.m_load_color_field = true;
         
         gpu_polyhedronmesh->update( *polyhedral_bridge );
         LOGGER_DEBUG( log, "Updated polyhedral mesh" );
@@ -112,7 +113,8 @@ FRViewJob::handleFetchSource()
         source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
         source_item.m_grid_tess_subset.reset( new render::subset::Representation );
         source_item.m_wells.reset( new render::wells::Representation );
-        source_item.m_grid_field.reset(  new render::GridField( gpu_polygonmesh ) );
+        source_item.m_do_update_subset = true;
+        source_item.m_load_color_field = true;
         
         gpu_polygonmesh->update( polygon_bridge );
         LOGGER_DEBUG( log, "Updated polygon mesh" );
@@ -125,12 +127,21 @@ FRViewJob::handleFetchSource()
         }
     }
     
+    std::vector<std::string> sources;
+    for( size_t i=0; i<m_source_items.size(); i++ ) {
+        sources.push_back( m_source_items[i].m_source->name() );
+    }
+    m_source_selector.updateSources( sources );
+    
+    
+    
     
     LOGGER_DEBUG( log, "currentSourceItemValid()=" << currentSourceItemValid() );
     
+    
+    
+    
     // update state variables
-    m_do_update_subset = true;
-    m_load_color_field = true;
     m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
     
     // --- update model variables --------------------------------------
@@ -188,7 +199,6 @@ FRViewJob::handleFetchSource()
     
     m_grid_stats.update( source_item.m_source, source_item.m_grid_tess );
     
-    m_do_update_subset = true;
     
     if( m_renderlist_state == RENDERLIST_SENT ) {
         m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
@@ -201,7 +211,11 @@ FRViewJob::handleFetchSource()
 void
 FRViewJob::handleFetchField()
 {
-    m_has_color_field = false;
+    using boost::shared_ptr;
+    using boost::dynamic_pointer_cast;
+    using render::GridField;
+    using render::mesh::CellSetInterface;
+    
 
     boost::shared_ptr<dataset::AbstractDataSource> source;
     boost::shared_ptr<bridge::FieldBridge> bridge;
@@ -215,14 +229,11 @@ FRViewJob::handleFetchField()
         if( m_source_items[i].m_source == source ) {
             SourceItem& source_item = m_source_items[i];
             
+            source_item.m_grid_field.reset();
             if( bridge ) {
+                source_item.m_grid_field.reset(  new render::GridField( boost::dynamic_pointer_cast<render::mesh::CellSetInterface>( source_item.m_grid_tess ) ) );
                 source_item.m_grid_field->import( *bridge );
-                m_has_color_field = true;
             }
-            else {
-                m_has_color_field = false;
-            }
-            m_load_color_field = false;
             
             //m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
             

@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <cstring>
 #include "utils/Logger.hpp"
+#include "utils/Path.hpp"
 #include "dataset/CornerpointGrid.hpp"
 #include "eclipse/EclipseParser.hpp"
 #include "cornerpoint/Tessellator.hpp"
@@ -62,11 +63,14 @@ CornerpointGrid::CornerpointGrid(const std::string filename,
     close( fd );
 
     // Extract suffix
-    size_t dot = filename.find_last_of( '.' );
-    if( dot == std::string::npos ) {
-        throw std::runtime_error( "Filename has no suffix" );
-    }
-    string suffix = filename.substr( dot + 1u );
+    std::string path;
+    std::string stem;
+    std::string suffix;
+    utils::Path::split( path, stem, suffix, filename );
+    
+    m_name = stem;
+    
+    // suffix to uppercase
     for( auto it=suffix.begin(); it!=suffix.end(); ++it ) {
       *it = toupper( *it );
     }
@@ -103,8 +107,7 @@ CornerpointGrid::CornerpointGrid(const std::string filename,
         m_unprocessed_files.push_front( file );
         LOGGER_DEBUG( log, "Found EGRID file" );
 
-        string stem = filename.substr( 0, dot );
-        string unrst = stem + ".UNRST";
+        string unrst = path + stem + ".UNRST";
         int fd = open( unrst.c_str(), O_RDONLY );
         if( fd >= 0 ) {
             close( fd );
@@ -119,7 +122,7 @@ CornerpointGrid::CornerpointGrid(const std::string filename,
             // Search for restart steps in separate files
             for(int step=0; true; step++) {
                 std::stringstream o;
-                o << stem << ".X";
+                o << path << stem << ".X";
                 o.width( 4 );
                 o.fill( '0' );
                 o << step;

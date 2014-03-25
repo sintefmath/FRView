@@ -23,6 +23,7 @@
 #include <cerrno>
 #include <libxml/parser.h>
 #include "utils/Logger.hpp"
+#include "utils/Path.hpp"
 #include "dataset/VTKXMLSourceFactory.hpp"
 #include "dataset/PolyhedralMeshSource.hpp"
 #include "dataset/PolygonMeshSource.hpp"
@@ -584,6 +585,9 @@ VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
     cells.push_back( polygons.size() );
     polygons.push_back( indices.size() );
 
+    std::string path, stem, suffix;
+    utils::Path::split( path, stem, suffix, filename );
+    
     boost::shared_ptr<dataset::AbstractDataSource> retval;
     if( volume_data && surface_data ) {
         LOGGER_ERROR( log, "Both surface and volumetric data in " << filename );
@@ -594,7 +598,8 @@ VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
                       << indices.size() << " indices, "
                       << (polygons.size()-1) << " polygons, and "
                       << (cells.size()-1) << " cells." );
-        retval.reset( new PolyhedralMeshSource( cd.m_piece_points,
+        retval.reset( new PolyhedralMeshSource( stem,
+                                                cd.m_piece_points,
                                                 indices,
                                                 polygons,
                                                 cells,
@@ -607,12 +612,13 @@ VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
                       << indices.size() << " indices, "
                       << (polygons.size()-1) << " polygons, and "
                       << (cells.size()-1) << " cells." );
-        retval.reset( new PolygonMeshSource( cd.m_piece_points,
-                                                indices,
-                                                polygons,
-                                                cells,
-                                                cd.m_piece_cell_data_name,
-                                                cd.m_piece_cell_data_vals ) );
+        retval.reset( new PolygonMeshSource( stem,
+                                             cd.m_piece_points,
+                                             indices,
+                                             polygons,
+                                             cells,
+                                             cd.m_piece_cell_data_name,
+                                             cd.m_piece_cell_data_vals ) );
         
     }
     else {

@@ -41,8 +41,8 @@ public:
           const GLfloat*                            projection,
           const GLsizei                             width,
           const GLsizei                             height,
-          const boost::shared_ptr<const mesh::AbstractMeshGPUModel>   mesh,
-          const boost::shared_ptr<const GridField>  field,
+          //const boost::shared_ptr<const mesh::AbstractMeshGPUModel>   mesh,
+          //const boost::shared_ptr<const GridField>  field,
           GLTexture&                                color_map,
           const std::vector<RenderItem>&            render_items );
 

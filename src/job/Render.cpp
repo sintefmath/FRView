@@ -118,6 +118,7 @@ FRViewJob::render( const float*  projection,
         for(size_t i=0; i<m_source_items.size(); i++ ) {
             SourceItem& source_item = m_source_items[i];
         
+            
             if( m_appearance.renderWells() ) {
                 items.resize( items.size() + 1 );
                 items.back().m_renderer = render::RenderItem::RENDERER_WELL;
@@ -130,9 +131,9 @@ FRViewJob::render( const float*  projection,
                 const glm::vec4& fc = m_appearance.faultsFillColor();
                 const glm::vec4& oc = m_appearance.faultsOutlineColor();
                 items.resize( items.size() + 1 );
+                items.back().m_mesh = source_item.m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
                 items.back().m_surf = source_item.m_faults_surface;
-                items.back().m_field = false;
                 items.back().m_line_thickness = m_appearance.lineThickness();
                 items.back().m_edge_color[0] = oc.r;
                 items.back().m_edge_color[1] = oc.g;
@@ -149,9 +150,10 @@ FRViewJob::render( const float*  projection,
                 const glm::vec4& fc = m_appearance.subsetFillColor();
                 const glm::vec4& oc = m_appearance.subsetOutlineColor();
                 items.resize( items.size() + 1 );
+                items.back().m_mesh = source_item.m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
                 items.back().m_surf = source_item.m_subset_surface;
-                items.back().m_field = m_has_color_field;
+                items.back().m_field = source_item.m_grid_field;
                 items.back().m_field_log_map = log_map;
                 items.back().m_field_min = min;
                 items.back().m_field_max = max;
@@ -171,9 +173,10 @@ FRViewJob::render( const float*  projection,
                 const glm::vec4& fc = m_appearance.boundaryFillColor();
                 const glm::vec4& oc = m_appearance.boundaryOutlineColor();
                 items.resize( items.size() + 1 );
+                items.back().m_mesh = source_item.m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
                 items.back().m_surf = source_item.m_boundary_surface;
-                items.back().m_field = m_has_color_field;
+                items.back().m_field = source_item.m_grid_field;
                 items.back().m_field_log_map = log_map;
                 items.back().m_field_min = min;
                 items.back().m_field_max = max;
@@ -187,9 +190,8 @@ FRViewJob::render( const float*  projection,
                 items.back().m_face_color[2] = fc.b;
                 items.back().m_face_color[3] = fc.a;
             }
-            
         }
-
+        
         switch ( m_appearance.renderQuality() ) {
         case 0:
             if( (!m_screen_manager)
@@ -233,21 +235,18 @@ FRViewJob::render( const float*  projection,
             }
             break;
         }
-        if( currentSourceItemValid() ) {
-            m_screen_manager->render( fbo,
-                                      width,
-                                      height,
-                                      glm::value_ptr( m_local_to_world ),
-                                      glm::value_ptr( mv ),
-                                      projection,
-                                      currentSourceItem().m_grid_tess,  // move into render item
-                                      currentSourceItem().m_grid_field, // move into render item
-                                      items);
-        }
 
+        
+        m_screen_manager->render( fbo,
+                                  width,
+                                  height,
+                                  glm::value_ptr( m_local_to_world ),
+                                  glm::value_ptr( mv ),
+                                  projection,
+                                  items);
+        
         glViewport( 0, 0, 0.1*width, 0.1*height );
         m_coordsys_renderer->render( glm::value_ptr( mv ), 0.1*width, 0.1*height);
-
     }
     catch( std::runtime_error& e ) {
         LOGGER_ERROR( log, "While rendering: " << e.what() );
