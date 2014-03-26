@@ -111,29 +111,29 @@ FRViewJob::render( const float*  projection,
                 glBindFramebuffer( GL_FRAMEBUFFER, fbo );
                 glUseProgram( 0 );
                 glColor4fv( glm::value_ptr( m_appearance.clipPlaneColor() ) );
-                currentSourceItem().m_clip_plane->render( projection, modelview );
+                currentSourceItem()->m_clip_plane->render( projection, modelview );
             }
         }
         
         for(size_t i=0; i<m_source_items.size(); i++ ) {
-            SourceItem& source_item = m_source_items[i];
+            boost::shared_ptr<SourceItem> source_item = m_source_items[i];
         
             
             if( m_appearance.renderWells() ) {
                 items.resize( items.size() + 1 );
                 items.back().m_renderer = render::RenderItem::RENDERER_WELL;
-                items.back().m_well = source_item.m_wells;
+                items.back().m_well = source_item->m_wells;
             }
             
-            if( source_item.m_faults_surface
+            if( source_item->m_faults_surface
                     && (m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS ) )
             {
                 const glm::vec4& fc = m_appearance.faultsFillColor();
                 const glm::vec4& oc = m_appearance.faultsOutlineColor();
                 items.resize( items.size() + 1 );
-                items.back().m_mesh = source_item.m_grid_tess;
+                items.back().m_mesh = source_item->m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
-                items.back().m_surf = source_item.m_faults_surface;
+                items.back().m_surf = source_item->m_faults_surface;
                 items.back().m_line_thickness = m_appearance.lineThickness();
                 items.back().m_edge_color[0] = oc.r;
                 items.back().m_edge_color[1] = oc.g;
@@ -144,16 +144,16 @@ FRViewJob::render( const float*  projection,
                 items.back().m_face_color[2] = fc.b;
                 items.back().m_face_color[3] = fc.a;
             }
-            if( source_item.m_subset_surface
+            if( source_item->m_subset_surface
                     && (m_visibility_mask & models::Appearance::VISIBILITY_MASK_SUBSET ) )
             {
                 const glm::vec4& fc = m_appearance.subsetFillColor();
                 const glm::vec4& oc = m_appearance.subsetOutlineColor();
                 items.resize( items.size() + 1 );
-                items.back().m_mesh = source_item.m_grid_tess;
+                items.back().m_mesh = source_item->m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
-                items.back().m_surf = source_item.m_subset_surface;
-                items.back().m_field = source_item.m_grid_field;
+                items.back().m_surf = source_item->m_subset_surface;
+                items.back().m_field = source_item->m_grid_field;
                 items.back().m_field_log_map = log_map;
                 items.back().m_field_min = min;
                 items.back().m_field_max = max;
@@ -167,16 +167,16 @@ FRViewJob::render( const float*  projection,
                 items.back().m_face_color[2] = fc.b;
                 items.back().m_face_color[3] = fc.a;
             }
-            if( source_item.m_boundary_surface
+            if( source_item->m_boundary_surface
                     && (m_visibility_mask & models::Appearance::VISIBILITY_MASK_BOUNDARY ) )
             {
                 const glm::vec4& fc = m_appearance.boundaryFillColor();
                 const glm::vec4& oc = m_appearance.boundaryOutlineColor();
                 items.resize( items.size() + 1 );
-                items.back().m_mesh = source_item.m_grid_tess;
+                items.back().m_mesh = source_item->m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
-                items.back().m_surf = source_item.m_boundary_surface;
-                items.back().m_field = source_item.m_grid_field;
+                items.back().m_surf = source_item->m_boundary_surface;
+                items.back().m_field = source_item->m_grid_field;
                 items.back().m_field_log_map = log_map;
                 items.back().m_field_min = min;
                 items.back().m_field_max = max;

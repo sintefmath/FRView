@@ -65,7 +65,8 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     : tinia::jobcontroller::OpenGLJob(),
       m_current_item( ~0 ),
       m_file( m_model, *this ),
-      m_source_selector( m_model ),
+      m_source_selector( m_model, *this ),
+      m_subset_selector( m_model, *this ),
       m_under_the_hood( m_model, *this ),
       m_appearance( m_model ),
       m_visibility_mask( models::Appearance::VISIBILITY_MASK_NONE ),
@@ -108,12 +109,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
    const char* colormap_types[] = { "Linear", "Logarithmic" };
 
-    const char* subsets[] = { "all",
-                              "subset_field",
-                              "subset_index",
-                              "subset_plane",
-                              "subset_halfplane" };
-
+    
 
 
     const double dmax = std::numeric_limits<double>::max();
@@ -206,50 +202,24 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_model->addConstrainedElement<double>( "field_range_min", 0.0, -dmax, dmax, "Min" );
     m_model->addConstrainedElement<double>( "field_range_max", 0.0, -dmax, dmax, "Max" );
     m_model->addElement<bool>("grid_subset", true, "Subset" );
-    m_model->addElementWithRestriction<string>( "surface_subset",
-                                                    subsets[0],
-                                                    &subsets[0],
-                                                    &subsets[5] );
 
     m_model->addElement<bool>( "surface_subset_field_range", false );
     m_model->addElement<bool>( "surface_subset_index_range", false );
     m_model->addElement<bool>( "surface_subset_plane", false );
     m_model->addElement<bool>( "tessellation_label", true, "Tessellation" );
     m_model->addElement<bool>( "tess_flip_orientation", false, "Flip orientation" );
-    m_model->addElement<bool>( "plane_select_PY", false, "PY" );
-    m_model->addElement<bool>( "plane_select_NY", false, "NY" );
-    m_model->addElement<bool>( "plane_select_PX", false, "PX" );
-    m_model->addElement<bool>( "plane_select_NX", false, "NX" );
-    m_model->addConstrainedElement( "plane_select_shift", 0, -500, 500, "Shift" );
-    m_model->addConstrainedElement<int>( "index_range_select_min_i", 0, 0, 0, "I" );
-    m_model->addConstrainedElement<int>( "index_range_select_max_i", 0, 0, 0, "I" );
-    m_model->addConstrainedElement<int>( "index_range_select_min_j", 0, 0, 0, "J" );
-    m_model->addConstrainedElement<int>( "index_range_select_max_j", 0, 0, 0, "J" );
-    m_model->addConstrainedElement<int>( "index_range_select_min_k", 0, 0, 0, "k" );
-    m_model->addConstrainedElement<int>( "index_range_select_max_k", 0, 0, 0, "K" );
-    m_model->addConstrainedElement<double>( "field_select_min", 0.0, -dmax, dmax, "Min" );
-    m_model->addConstrainedElement<double>( "field_select_max", 0.0, -dmax, dmax, "Max" );
     m_model->addElement<bool>( "field_select_report_step_override", false, "Specific report step" );
     m_model->addConstrainedElement<int>( "field_select_report_step", 0, 0, 0, "Field select report step" );
-    m_model->addElement<bool>( "field_select_solution_override", false );
-    m_model->addElementWithRestriction<string>( "field_select_solution",
-                                                solutions.front(),
-                                                solutions.begin(),
-                                                solutions.end() );
     m_model->addAnnotation( "field_select_solution_override", "Specific solution");
     m_model->addElement<bool>( "field_range_label", true, "Range" );
     m_model->addElement<bool>( "color_label", true, "Color" );
     m_model->addElement<bool>( "details_label", true, "Details" );
 
+    m_model->addElement<string>( "source_tab", "Source", "Source" );
 
     m_model->addStateListener( "asyncreader_ticket", this);
     m_model->addStateListener( "field_solution", this);
     m_model->addStateListener( "field_report_step", this);
-    m_model->addStateListener( "plane_select_PX", this);
-    m_model->addStateListener( "plane_select_NX", this);
-    m_model->addStateListener( "plane_select_PY", this);
-    m_model->addStateListener( "plane_select_NY", this);
-    m_model->addStateListener( "plane_select_shift", this);
     m_model->addStateListener( "index_range_select_min_i", this);
     m_model->addStateListener( "index_range_select_max_i", this);
     m_model->addStateListener( "index_range_select_min_j", this);
@@ -263,9 +233,12 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_model->addStateListener( "tess_flip_orientation", this);
 
     // --- info
-    right_column->addChild( m_grid_stats.guiFactory() );
-
-
+    tinia::model::gui::TabLayout* tabs = new tinia::model::gui::TabLayout;
+    right_column->addChild( tabs );
+    
+    tinia::model::gui::Tab* source_tab = new tinia::model::gui::Tab( "source_tab", true );
+    tinia::model::gui::VerticalLayout* source_tab_layout = new tinia::model::gui::VerticalLayout; 
+    
     tinia::model::gui::ElementGroup* field_details_group = new tinia::model::gui::ElementGroup( "field_info_enable", true );
     tinia::model::gui::Grid* field_details_grid = new tinia::model::gui::Grid( 4, 4 );
     field_details_grid->setChild( 0, 1, new tinia::model::gui::HorizontalSpace );
@@ -279,67 +252,22 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     field_details_grid->setChild( 3, 0, new tinia::model::gui::Label( "field_info_range" ) );
     field_details_grid->setChild( 3, 2, (new tinia::model::gui::Label( "field_info_range", true ))->setEnabledKey( "has_field" ) );
     field_details_group->setChild( field_details_grid );
-    right_column->addChild( field_details_group );
 
+    source_tab_layout->addChild( m_grid_stats.guiFactory() );
+    source_tab_layout->addChild( field_details_group );
+    source_tab->setChild( source_tab_layout );
+    tabs->addChild( source_tab );
 
+    tinia::model::gui::Tab* subset_tab = new tinia::model::gui::Tab( "subset_label", true );
+    tinia::model::gui::VerticalLayout* subset_tab_layout = new tinia::model::gui::VerticalLayout;
+    
+    subset_tab_layout->addChild( m_subset_selector.guiFactory() );
+    subset_tab_layout->addChild( new tinia::model::gui::VerticalExpandingSpace );
+    subset_tab->setChild( subset_tab_layout );
+    tabs->addChild( subset_tab );
+
+    
     // -- surface
-
-    // subset field range
-    Grid* subset_field_minmax_layout = new Grid( 3, 2 );
-    subset_field_minmax_layout->setChild( 0, 0, new Label("field_select_min") );
-    subset_field_minmax_layout->setChild( 0, 1, new DoubleSpinBox("field_select_min") );
-    subset_field_minmax_layout->setChild( 1, 0, new Label("field_select_max") );
-    subset_field_minmax_layout->setChild( 1, 1, new DoubleSpinBox("field_select_max") );
-    subset_field_minmax_layout->setChild( 2, 1, new HorizontalExpandingSpace );
-    VerticalLayout* subset_field_layout = new VerticalLayout;
-    subset_field_layout->addChild( subset_field_minmax_layout );
-    subset_field_layout->addChild( new CheckBox( "field_select_solution_override" ) );
-    subset_field_layout->addChild( (new ComboBox( "field_select_solution" ))
-                                   ->setVisibilityKey( "field_select_solution_override" ) );
-    subset_field_layout->addChild( new CheckBox( "field_select_report_step_override" ) );
-    subset_field_layout->addChild( (new HorizontalSlider( "field_select_report_step" ))
-                                   ->setVisibilityKey("field_select_report_step_override") );
-    subset_field_layout->addChild( new VerticalExpandingSpace );
-    PopupButton* subset_field_popup = new PopupButton( "details_label", false );
-    subset_field_popup->setChild( subset_field_layout );
-    subset_field_popup->setVisibilityKey( "surface_subset_field_range" );
-
-    // subset index
-    Grid* subset_index_grid = new Grid( 4, 4 );
-    subset_index_grid->setChild( 0, 3, new HorizontalExpandingSpace );
-    subset_index_grid->setChild( 0, 0, new Label("index_range_select_min_i"));
-    subset_index_grid->setChild( 0, 1, new SpinBox("index_range_select_min_i"));
-    subset_index_grid->setChild( 0, 2, new SpinBox("index_range_select_max_i"));
-    subset_index_grid->setChild( 1, 0, new Label("index_range_select_min_j"));
-    subset_index_grid->setChild( 1, 1, new SpinBox("index_range_select_min_j"));
-    subset_index_grid->setChild( 1, 2, new SpinBox("index_range_select_max_j"));
-    subset_index_grid->setChild( 2, 0, new Label("index_range_select_min_k"));
-    subset_index_grid->setChild( 2, 1, new SpinBox("index_range_select_min_k"));
-    subset_index_grid->setChild( 2, 2, new SpinBox("index_range_select_max_k"));
-    PopupButton* subset_index_popup = new PopupButton( "details_label", false );
-    subset_index_popup->setChild( subset_index_grid );
-    subset_index_popup->setVisibilityKey( "surface_subset_index_range" );
-
-    // --- subset plane ---
-    Grid* geo_subset_plane_rot_grid = new Grid( 3, 3 );
-    geo_subset_plane_rot_grid->setChild( 1, 0, new Button( "plane_select_NX" ) );
-    geo_subset_plane_rot_grid->setChild( 1, 2, new Button( "plane_select_PX" ) );
-    geo_subset_plane_rot_grid->setChild( 0, 1, new Button( "plane_select_PY" ) );
-    geo_subset_plane_rot_grid->setChild( 2, 1, new Button( "plane_select_NY" ) );
-    VerticalLayout* subset_plane_layout = new VerticalLayout;
-    subset_plane_layout->addChild( geo_subset_plane_rot_grid );
-    subset_plane_layout->addChild( new HorizontalSlider( "plane_select_shift" ) );
-    PopupButton* subset_plane_popup = new PopupButton( "details_label", false );
-    subset_plane_popup->setChild( subset_plane_layout );
-    subset_plane_popup->setVisibilityKey( "surface_subset_plane" );
-
-
-    HorizontalLayout* subsets_layout = new HorizontalLayout;
-    subsets_layout->addChild( new tinia::model::gui::ComboBox( "surface_subset" ) );
-    subsets_layout->addChild( subset_field_popup );
-    subsets_layout->addChild( subset_index_popup );
-    subsets_layout->addChild( subset_plane_popup );
-
 
     Grid* colormap_range_grid = new Grid( 2, 3 );
     colormap_range_grid->setVisibilityKey( "field_range_enable" );
@@ -361,8 +289,6 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     Grid* surf_details_grid = new Grid( 4, 4 );
     surf_details_grid->setChild( 0, 1, new HorizontalSpace );
     surf_details_grid->setChild( 0, 3, new HorizontalExpandingSpace );
-    surf_details_grid->setChild( 0, 0, new Label( "subset_label" ) );
-    surf_details_grid->setChild( 0, 2, subsets_layout );
     surf_details_grid->setChild( 1, 0, new Label( "tessellation_label" ) );
     surf_details_grid->setChild( 1, 2, new CheckBox( "tess_flip_orientation" ) );
     surf_details_grid->setChild( 2, 0, new Label( "colormap_label" ) );
@@ -406,7 +332,7 @@ FRViewJob::currentSourceItemValid() const
 }
 
 
-SourceItem&
+boost::shared_ptr<SourceItem>
 FRViewJob::currentSourceItem()
 {
     if( !currentSourceItemValid() ) {
@@ -415,7 +341,7 @@ FRViewJob::currentSourceItem()
     return m_source_items[ m_current_item ];
 }
 
-const SourceItem&
+const boost::shared_ptr<SourceItem>
 FRViewJob::currentSourceItem() const
 {
     if( !currentSourceItemValid() ) {
@@ -429,18 +355,6 @@ FRViewJob::releaseSourceItems()
 {
     m_source_items.clear();
     m_model->updateElement<int>( current_source_item_key, ~0);
-}
-
-void
-FRViewJob::addSourceItem( SourceItem& item )
-{
-    Logger log = getLogger( package + ".addSourceItem" );
-    
-    m_source_items.push_back( item );
-    if(!currentSourceItemValid()) {
-        m_model->updateElement<int>( current_source_item_key, 0);
-    }
-    LOGGER_DEBUG( log, "m_source_items.size()=" << m_source_items.size() );
 }
 
 
@@ -467,62 +381,44 @@ FRViewJob::handleButtonClick( tinia::model::StateElement *stateElement )
     return false;
 }
 
-void
-FRViewJob::updateCurrentMeshData()
-{
-    if( currentSourceItemValid() ) {
-        
-    }
-    else {
-        std::list<std::string> solutions = {"none"};
-        m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
-        m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
-        m_model->updateConstraints<int>("field_report_step", 0, 0, 0 );
-        m_model->updateConstraints<int>( "field_select_report_step", 0, 0, 0 );
-        m_model->updateConstraints<int>( "index_range_select_min_i", 0, 0, 0 );
-        m_model->updateConstraints<int>( "index_range_select_max_i", 0, 0, 0 );
-        m_model->updateConstraints<int>( "index_range_select_min_j", 0, 0, 0 );
-        m_model->updateConstraints<int>( "index_range_select_max_j", 0, 0, 0 );
-        m_model->updateConstraints<int>( "index_range_select_min_k", 0, 0, 0 );
-        m_model->updateConstraints<int>( "index_range_select_max_k", 0, 0, 0 );
-        m_grid_stats.update();
-    }
-}
 
 void
 FRViewJob::updateCurrentFieldData()
 {
     bool has_field = false;
+    if( m_current_item < m_source_items.size() ) {
+        boost::shared_ptr<SourceItem> source_item = m_source_items[ m_current_item ];
+        
+        if( source_item->m_grid_field ) {
+            has_field = true;
 
-    if( currentSourceItemValid() ) {
-        SourceItem& source_item = currentSourceItem();
-        
-        // -- update policy elements
-        bool fix;
-        m_model->getElementValue( "field_range_enable", fix );
-        if( !fix ) {
-            m_model->updateElement<double>( "field_range_min", source_item.m_grid_field->minValue() );
-            m_model->updateElement<double>( "field_range_max", source_item.m_grid_field->maxValue() );
-        }
-        
-        if( source_item.m_grid_tess_subset ) {
-            boost::shared_ptr<dataset::PolyhedralDataInterface> poly_data =
-                    boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item.m_source );
-            if( poly_data ) {
-                has_field = true;
-                std::stringstream o;
-                o << "[ " << source_item.m_grid_field->minValue()
-                  << ", " << source_item.m_grid_field->maxValue() << " ]";
-                m_model->updateElement( "field_info_range", o.str() );
-                o.str("");
-                o << "[not implemented]";
-                m_model->updateElement( "field_info_calendar", poly_data->timestepDescription( m_report_step_index ) );
+            bool fix;
+            m_model->getElementValue( "field_range_enable", fix );
+            if( !fix ) {
+                m_model->updateElement<double>( "field_range_min", source_item->m_grid_field->minValue() );
+                m_model->updateElement<double>( "field_range_max", source_item->m_grid_field->maxValue() );
+            }
+            
+            if( source_item->m_grid_tess_subset ) {
+                boost::shared_ptr<dataset::PolyhedralDataInterface> poly_data =
+                        boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item->m_source );
+                if( poly_data ) {
+                    has_field = true;
+                    std::stringstream o;
+                    o << "[ " << source_item->m_grid_field->minValue()
+                      << ", " << source_item->m_grid_field->maxValue() << " ]";
+                    m_model->updateElement( "field_info_range", o.str() );
+                    o.str("");
+                    o << "[not implemented]";
+                    m_model->updateElement( "field_info_calendar", poly_data->timestepDescription( m_report_step_index ) );
+                }
             }
         }
     }
     else {
         
     }
+    return;
     if( !has_field ) {
         m_model->updateElement( "field_info_range", "[not available]" );
         m_model->updateElement( "field_info_calendar", "[not available]" );
@@ -540,12 +436,11 @@ FRViewJob::loadFile( const std::string& filename,
 {
     m_file.setFileName( filename );
 
-    //m_load_color_field = false;
     releaseSourceItems();
-    updateCurrentMeshData();
-    updateCurrentFieldData();
+    setSource( 0 );
 
     releasePipeline();
+    
     m_async_reader->issueOpenSource( filename,
                                       refine_i,
                                       refine_j,
@@ -576,9 +471,9 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         m_check_async_reader = true;
     }
     else if( currentSourceItemValid() && (key == "field_solution") ) {
-        SourceItem& source_item = currentSourceItem();
+        boost::shared_ptr<SourceItem> source_item = currentSourceItem();
         boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
-                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item.m_source );
+                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item->m_source );
         if( poly_source ) {
             string value;
             stateElement->getValue<string>( value );
@@ -589,29 +484,29 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
                 }
             }
             if( poly_source->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
-                if( m_async_reader->issueFetchField( source_item.m_source, m_solution_index, m_report_step_index ) ) {
+                if( m_async_reader->issueFetchField( source_item->m_source, m_solution_index, m_report_step_index ) ) {
                 }
             }
         }
     }
     else if( currentSourceItemValid() && (key == "field_report_step") ) {
-        SourceItem& source_item = currentSourceItem();
+        boost::shared_ptr<SourceItem> source_item = currentSourceItem();
         boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
-                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item.m_source );
+                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item->m_source );
         if( poly_source ) {
             int value;
             stateElement->getValue<int>( value );
             m_report_step_index = value;
             if( poly_source->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
-                if( m_async_reader->issueFetchField(source_item.m_source, m_solution_index, m_report_step_index ) ) {
+                if( m_async_reader->issueFetchField(source_item->m_source, m_solution_index, m_report_step_index ) ) {
                 }
             }
         }
     }
     else if( key == "plane_select_PX" && handleButtonClick(stateElement) ) {
         if( currentSourceItemValid() ) {
-            currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, -0.1*M_PI_4 ) ) );
-            currentSourceItem().m_do_update_subset = true;
+            currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, -0.1*M_PI_4 ) ) );
+            currentSourceItem()->m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
             }
@@ -619,8 +514,8 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     }
     else if( key == "plane_select_NX"  && handleButtonClick(stateElement) ) {
         if(  currentSourceItemValid() ) {
-            currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, 0.1*M_PI_4 ) ) );
-            currentSourceItem().m_do_update_subset = true;
+            currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, 0.1*M_PI_4 ) ) );
+            currentSourceItem()->m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
             }
@@ -628,8 +523,8 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     }
     else if( key == "plane_select_PY"  && handleButtonClick(stateElement) ) {
         if(  currentSourceItemValid() ) {
-            currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( 0.1*M_PI_4, 0.f, 0.f ) ) );
-            currentSourceItem().m_do_update_subset = true;
+            currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( 0.1*M_PI_4, 0.f, 0.f ) ) );
+            currentSourceItem()->m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
             }
@@ -637,8 +532,8 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     }
     else if( key == "plane_select_NY"  && handleButtonClick(stateElement) ) {
         if(  currentSourceItemValid() ) {
-            currentSourceItem().m_clip_plane->rotate( glm::quat( glm::vec3( -0.1*M_PI_4, 0.f, 0.f ) ) );
-            currentSourceItem().m_do_update_subset = true;
+            currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( -0.1*M_PI_4, 0.f, 0.f ) ) );
+            currentSourceItem()->m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
             }
@@ -648,8 +543,8 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         int value;
         stateElement->getValue<int>( value );
         if(  currentSourceItemValid() ) {
-            currentSourceItem().m_clip_plane->setOffset( (1.7f/1000.f)*(value) );
-            currentSourceItem().m_do_update_subset = true;
+            currentSourceItem()->m_clip_plane->setOffset( (1.7f/1000.f)*(value) );
+            currentSourceItem()->m_do_update_subset = true;
             if( m_renderlist_state == RENDERLIST_SENT ) {
                 m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
             }
@@ -663,7 +558,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_max_i", min );
         }
-        currentSourceItem().m_do_update_subset = true;
+        currentSourceItem()->m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -676,7 +571,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_min_i", max );
         }
-        currentSourceItem().m_do_update_subset = true;
+        currentSourceItem()->m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -689,7 +584,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_max_j", min );
         }
-        currentSourceItem().m_do_update_subset = true;
+        currentSourceItem()->m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -702,7 +597,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_min_j", max );
         }
-        currentSourceItem().m_do_update_subset = true;
+        currentSourceItem()->m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -715,7 +610,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_max_k", min );
         }
-        currentSourceItem().m_do_update_subset = true;
+        currentSourceItem()->m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -728,19 +623,19 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( max < min ) {
             m_model->updateElement( "index_range_select_min_k", max );
         }
-        currentSourceItem().m_do_update_subset = true;
+        currentSourceItem()->m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
     }
     else if( key == "field_select_min" ) {
-        currentSourceItem().m_do_update_subset = true;
+        currentSourceItem()->m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
     }
     else if( key == "field_select_max" ) {
-        currentSourceItem().m_do_update_subset = true;
+        currentSourceItem()->m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -774,7 +669,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "surface_subset_index_range", false );
             m_model->updateElement( "surface_subset_plane", true );
         }
-        currentSourceItem().m_do_update_subset = true;
+        currentSourceItem()->m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -783,13 +678,13 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         
         bool value;
         stateElement->getValue( value );
-        if( !value && currentSourceItem().m_grid_field ) {
-            m_model->updateElement<double>( "field_range_min", currentSourceItem().m_grid_field->minValue() );
-            m_model->updateElement<double>( "field_range_max", currentSourceItem().m_grid_field->maxValue() );
+        if( !value && currentSourceItem()->m_grid_field ) {
+            m_model->updateElement<double>( "field_range_min", currentSourceItem()->m_grid_field->minValue() );
+            m_model->updateElement<double>( "field_range_max", currentSourceItem()->m_grid_field->maxValue() );
         }
     }
     else if( key == "tess_flip_orientation" ) {
-        currentSourceItem().m_do_update_subset = true;
+        currentSourceItem()->m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
@@ -821,8 +716,8 @@ FRViewJob::updateModelMatrices()
 
     bool first = true;
     for(size_t i=0; i<m_source_items.size(); i++ ) {
-        SourceItem& source_item = currentSourceItem();
-        shared_ptr<const BoundingBoxInterface> bbox = dynamic_pointer_cast<const BoundingBoxInterface>( source_item.m_grid_tess );
+        boost::shared_ptr<SourceItem> source_item = currentSourceItem();
+        shared_ptr<const BoundingBoxInterface> bbox = dynamic_pointer_cast<const BoundingBoxInterface>( source_item->m_grid_tess );
         if( bbox ) {
             glm::vec3 bbmin_( bbox->minBBox()[0], bbox->minBBox()[1], bbox->minBBox()[2] );
             glm::vec3 bbmax_( bbox->maxBBox()[0], bbox->maxBBox()[1], bbox->maxBBox()[2] );
@@ -837,7 +732,7 @@ FRViewJob::updateModelMatrices()
             }
         }
         
-        shared_ptr<ZScaleInterface> zscale_src = dynamic_pointer_cast<ZScaleInterface>( source_item.m_source );
+        shared_ptr<ZScaleInterface> zscale_src = dynamic_pointer_cast<ZScaleInterface>( source_item->m_source );
         if( zscale_src ) {
             scale_z = glm::max( scale_z, zscale_src->cornerPointZScale()/zscale_src->cornerPointXYScale() );
         }
@@ -1016,6 +911,55 @@ bool FRViewJob::setupPipeline()
 }
 
 void
+FRViewJob::setSource( size_t index )
+{
+    Logger log = getLogger( package + ".selected" );
+
+    boost::shared_ptr<SourceItem> source_item;
+    if( index < m_source_items.size() ) {
+        m_current_item = index;
+        source_item = m_source_items[index];
+
+        // --- update model variables --------------------------------------
+        m_model->updateElement<bool>("has_project", true );
+        
+        boost::shared_ptr< dataset::PolyhedralDataInterface > polydata =
+                boost::dynamic_pointer_cast< dataset::PolyhedralDataInterface >( source_item->m_source );
+        
+        std::list<std::string> solutions;
+        int timestep_max = 0;
+        if( polydata ) {
+            for(unsigned int i=0; i<polydata->fields(); i++ ) {
+                solutions.push_back( polydata->fieldName(i) );
+            }
+            timestep_max = std::max( (int)1, (int)polydata->timesteps() )-1;
+        }
+        
+        if( solutions.empty() ) {
+            solutions.push_back( "[none]" );
+        }
+        m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
+        m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
+        m_model->updateConstraints<int>("field_report_step", 0,0,  timestep_max );
+        m_model->updateConstraints<int>( "field_select_report_step", 0, 0, timestep_max );
+        
+        
+        m_grid_stats.update( source_item->m_source, source_item->m_grid_tess );
+     
+        
+    }
+    else {
+        std::list<std::string> solutions = {"none"};
+        m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
+        
+        m_grid_stats.update();
+    }
+    m_subset_selector.update( source_item );
+    updateCurrentFieldData();
+}
+
+
+void
 FRViewJob::doLogic()
 {
     if( m_zscale != m_grid_stats.zScale() ) {
@@ -1029,13 +973,13 @@ FRViewJob::doLogic()
 //        }
 
         if( m_render_clip_plane && currentSourceItemValid() ) {
-            currentSourceItem().m_do_update_subset = true;
+            currentSourceItem()->m_do_update_subset = true;
         }
     }
 
     models::Appearance::VisibilityMask new_mask = m_appearance.visibilityMask();
     if( currentSourceItemValid() && ( (m_visibility_mask != new_mask) || m_under_the_hood.profilingEnabled() ) ) {
-        currentSourceItem().m_do_update_subset = true;
+        currentSourceItem()->m_do_update_subset = true;
         if( m_renderlist_state == RENDERLIST_SENT ) {
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }

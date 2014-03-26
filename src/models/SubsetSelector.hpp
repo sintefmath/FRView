@@ -1,5 +1,5 @@
 #pragma once
-/* Copyright STIFTELSEN SINTEF 2013
+/* Copyright STIFTELSEN SINTEF 2014
  * 
  * This file is part of FRView.
  * FRView is free software: you can redistribute it and/or modify
@@ -16,22 +16,33 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <memory>
-#include <glm/glm.hpp>
 #include <tinia/model/GUILayout.hpp>
 #include <tinia/model/StateListener.hpp>
 #include <tinia/model/ExposedModel.hpp>
+#include "job/SourceItem.hpp"
 #include "models/Logic.hpp"
+
+
 
 namespace models {
 
-class SourceSelector
+class SubsetSelectorData
+{
+public:    
+    SubsetSelectorData();
+
+protected:
+    
+};
+
+class SubsetSelector
         : public tinia::model::StateListener
 {
 public:
     typedef int Revision;
+    
 
-    SourceSelector( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic  );
+    SubsetSelector( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic  );
     
     Revision
     revision() const { return m_revision; }
@@ -41,19 +52,19 @@ public:
 
     tinia::model::gui::Element*
     guiFactory() const;
-    
+
     void
-    updateSources( std::vector<std::string>& sources );
-    
+    update( boost::shared_ptr<SourceItem> source_item );
+
 protected:
     boost::shared_ptr<tinia::model::ExposedModel>   m_model;
     Logic&                                          m_logic;
-    std::vector<std::string>                        m_sources;
+    boost::shared_ptr<SourceItem>                   m_source_item;
     Revision                                        m_revision;
 
     void
-    bumpRevision();
+    bumpRevision(); 
 };
 
+
 } // of namespace models
-    

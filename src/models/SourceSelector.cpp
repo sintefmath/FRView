@@ -28,30 +28,51 @@ const char* source_selector_none[1] = { "None" };
 
 namespace models {
 
-SourceSelector::SourceSelector( boost::shared_ptr<tinia::model::ExposedModel>& model )
+SourceSelector::SourceSelector(boost::shared_ptr<tinia::model::ExposedModel>& model , Logic &logic)
     : m_model( model ),
+      m_logic( logic ),
       m_revision( 1 )
 {
     m_model->addElementWithRestriction<std::string>( source_selector_key,
                                                      source_selector_none[ 0 ],
                                                     &source_selector_none[0],
                                                     &source_selector_none[1] );
+    m_model->addStateListener( source_selector_key, this );
 }
 
 void
 SourceSelector::updateSources( std::vector<std::string>& sources )
 {
-    if( sources.empty() ) {
+    m_sources = sources;
+    if( m_sources.empty() ) {
+        // --- No sources ------------------------------------------------------
         m_model->updateRestrictions<std::string>( source_selector_key,
                                      source_selector_none[ 0 ],
                                     &source_selector_none[0],
                                     &source_selector_none[1] );
     }
     else {
+        // --- One or more sources, get current selection ----------------------
+        std::string current;
+        m_model->getElementValue( source_selector_key, current );
+        
+        for( size_t i=0; i<m_sources.size(); i++ ) {
+            // --- found current selection, adjust index -----------------------
+            if( m_sources[i] == current ) {
+                m_model->updateRestrictions( source_selector_key,
+                                             m_sources[i],
+                                             m_sources.begin(),
+                                             m_sources.end() );
+                m_logic.setSource( i );
+                return;
+            }
+        }
+        // --- current selection not in new list, use first element ------------
         m_model->updateRestrictions( source_selector_key,
-                                     sources[0],
-                                     sources.begin(),
-                                     sources.end() );
+                                     m_sources[0],
+                                     m_sources.begin(),
+                                     m_sources.end() );
+        m_logic.setSource( 0 );
     }
 }
 
@@ -64,7 +85,17 @@ SourceSelector::bumpRevision()
 void
 SourceSelector::stateElementModified( tinia::model::StateElement * stateElement )
 {
-    
+    if( stateElement->getKey() == source_selector_key ) {
+        std::string value;
+        stateElement->getValue( value );
+        
+        for(size_t i=0; i<m_sources.size(); i++ ) {
+            if( m_sources[i] == value ) {
+                m_logic.setSource( i );
+                return;
+            }
+        }
+    }
 }
 
 tinia::model::gui::Element*

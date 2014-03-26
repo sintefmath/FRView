@@ -43,6 +43,7 @@
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
 #include "render/subset/Representation.hpp"
+#include "models/SubsetSelector.hpp"
 
 using boost::shared_ptr;
 using boost::dynamic_pointer_cast;
@@ -80,6 +81,7 @@ FRViewJob::handleFetchSource()
 
     
     if( polyhedral_bridge ) {
+        
         shared_ptr<PolyhedralMeshGPUModel> gpu_polyhedronmesh( new PolyhedralMeshGPUModel );
         
         
@@ -92,11 +94,15 @@ FRViewJob::handleFetchSource()
         source_item.m_wells.reset( new render::wells::Representation );
         source_item.m_do_update_subset = true;
         source_item.m_load_color_field = true;
+        source_item.m_subset_selector_data.reset( new models::SubsetSelectorData );
         
         gpu_polyhedronmesh->update( *polyhedral_bridge );
         LOGGER_DEBUG( log, "Updated polyhedral mesh" );
 
-        addSourceItem( source_item );
+        size_t index = m_source_items.size();
+        m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( source_item ) ) );
+        setSource( index );
+
         if( !m_has_pipeline ) {
             if(!setupPipeline()) {
                 return;
@@ -115,11 +121,17 @@ FRViewJob::handleFetchSource()
         source_item.m_wells.reset( new render::wells::Representation );
         source_item.m_do_update_subset = true;
         source_item.m_load_color_field = true;
+        source_item.m_subset_selector_data.reset( new models::SubsetSelectorData );
+
+
         
         gpu_polygonmesh->update( polygon_bridge );
         LOGGER_DEBUG( log, "Updated polygon mesh" );
 
-        addSourceItem( source_item );
+        size_t index = m_source_items.size();
+        m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( source_item ) ) );
+        setSource( index );
+
         if( !m_has_pipeline ) {
             if(!setupPipeline()) {
                 return;
@@ -129,7 +141,7 @@ FRViewJob::handleFetchSource()
     
     std::vector<std::string> sources;
     for( size_t i=0; i<m_source_items.size(); i++ ) {
-        sources.push_back( m_source_items[i].m_source->name() );
+        sources.push_back( m_source_items[i]->m_source->name() );
     }
     m_source_selector.updateSources( sources );
     
@@ -144,61 +156,7 @@ FRViewJob::handleFetchSource()
     // update state variables
     m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
     
-    // --- update model variables --------------------------------------
-    m_model->updateElement<bool>("has_project", true );
-    
-    boost::shared_ptr< dataset::PolyhedralDataInterface > polydata =
-            boost::dynamic_pointer_cast< dataset::PolyhedralDataInterface >( source_item.m_source );
-    
-    std::list<std::string> solutions;
-    int timestep_max = 0;
-    if( polydata ) {
-        for(unsigned int i=0; i<polydata->fields(); i++ ) {
-            solutions.push_back( polydata->fieldName(i) );
-        }
-        timestep_max = std::max( (int)1, (int)polydata->timesteps() )-1;
-    }
-    
-    if( solutions.empty() ) {
-        solutions.push_back( "[none]" );
-    }
-    m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
-    m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
-    m_model->updateConstraints<int>("field_report_step", 0,0,  timestep_max );
-    m_model->updateConstraints<int>( "field_select_report_step", 0, 0, timestep_max );
-    
-    int nx_min = 0;
-    int nx_max = 0;
-    int ny_min = 0;
-    int ny_max = 0;
-    int nz_min = 0;
-    int nz_max = 0;
-    boost::shared_ptr< dataset::CellLayoutInterface > cell_layout =
-            boost::dynamic_pointer_cast< dataset::CellLayoutInterface >( source_item.m_source );
-    if( cell_layout ) {
-        int dim = cell_layout->indexDim();
-        if( dim > 0 ) {
-            nx_min = cell_layout->minIndex(0);
-            nx_max = std::max( 1, cell_layout->maxIndex(0) ) - 1u;
-            if( dim > 1 ) {
-                ny_min = cell_layout->minIndex(1);
-                ny_max = std::max( 1, cell_layout->maxIndex(1) ) - 1u;
-                if( dim > 2 ) {
-                    nz_min = cell_layout->minIndex(2);
-                    nz_max = std::max( 1, cell_layout->maxIndex(2) ) - 1u;
-                }
-            }
-        }
-    }
-    m_model->updateConstraints<int>( "index_range_select_min_i", nx_min, nx_min, nx_max );
-    m_model->updateConstraints<int>( "index_range_select_max_i", nx_max, nx_min, nx_max );
-    m_model->updateConstraints<int>( "index_range_select_min_j", ny_min, ny_min, ny_max );
-    m_model->updateConstraints<int>( "index_range_select_max_j", ny_max, ny_min, ny_max );
-    m_model->updateConstraints<int>( "index_range_select_min_k", nz_min, nz_min, nz_max );
-    m_model->updateConstraints<int>( "index_range_select_max_k", nz_max, nz_min, nz_max );
-    
-    m_grid_stats.update( source_item.m_source, source_item.m_grid_tess );
-    
+        
     
     if( m_renderlist_state == RENDERLIST_SENT ) {
         m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
@@ -226,21 +184,21 @@ FRViewJob::handleFetchField()
     for( size_t i=0; i<m_source_items.size(); i++ ) {
         
         // find the corresponding source and update
-        if( m_source_items[i].m_source == source ) {
-            SourceItem& source_item = m_source_items[i];
+        if( m_source_items[i]->m_source == source ) {
+            boost::shared_ptr<SourceItem> source_item = m_source_items[i];
             
-            source_item.m_grid_field.reset();
+            source_item->m_grid_field.reset();
             if( bridge ) {
-                source_item.m_grid_field.reset(  new render::GridField( boost::dynamic_pointer_cast<render::mesh::CellSetInterface>( source_item.m_grid_tess ) ) );
-                source_item.m_grid_field->import( *bridge );
+                source_item->m_grid_field.reset(  new render::GridField( boost::dynamic_pointer_cast<render::mesh::CellSetInterface>( source_item->m_grid_tess ) ) );
+                source_item->m_grid_field->import( *bridge );
             }
             
             //m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
             
-            source_item.m_wells->clear();
+            source_item->m_wells->clear();
             if( m_appearance.renderWells() ) {
                 boost::shared_ptr< dataset::WellDataInterace > well_source =
-                        boost::dynamic_pointer_cast< dataset::WellDataInterace >( source_item.m_source );
+                        boost::dynamic_pointer_cast< dataset::WellDataInterace >( source_item->m_source );
                 if( well_source ) {
                     std::vector<float> colors;
                     std::vector<float> positions;
@@ -248,8 +206,8 @@ FRViewJob::handleFetchField()
                         if( !well_source->wellDefined( m_report_step_index, w ) ) {
                             continue;
                         }
-                        source_item.m_wells->addWellHead( well_source->wellName(w),
-                                              well_source->wellHeadPosition( m_report_step_index, w ) );
+                        source_item->m_wells->addWellHead( well_source->wellName(w),
+                                                           well_source->wellHeadPosition( m_report_step_index, w ) );
                         
                         positions.clear();
                         colors.clear();
@@ -267,7 +225,7 @@ FRViewJob::handleFetchField()
                                 colors.push_back( ((i & 0x2) == 0) ? 1.f : 0.5f );
                                 colors.push_back( ((i & 0x4) == 0) ? 1.f : 0.5f );
                             }
-                            source_item.m_wells->addSegments( positions, colors );
+                            source_item->m_wells->addSegments( positions, colors );
                         }
                     }
                 }

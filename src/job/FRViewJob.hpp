@@ -1,3 +1,4 @@
+#pragma once
 /* Copyright STIFTELSEN SINTEF 2013
  * 
  * This file is part of FRView.
@@ -15,7 +16,6 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
 #include <memory>
 #include <list>
 #include <glm/glm.hpp>
@@ -30,19 +30,14 @@
 #include "models/File.hpp"
 #include "models/UnderTheHood.hpp"
 #include "models/SourceSelector.hpp"
+#include "models/SubsetSelector.hpp"
 #include "render/TimerQuery.hpp"
+#include "job/SourceItem.hpp"
 
-namespace dataset {
-    class AbstractDataSource;
-} // of namespace dataset
 
 class ASyncReader;
 namespace render {
-    namespace mesh {
-        class AbstractMeshGPUModel;
-    }
     namespace subset {
-        class Representation;
         class BuilderSelectAll;
         class BuilderSelectByFieldValue;
         class BuilderSelectByIndex;
@@ -50,17 +45,13 @@ namespace render {
         class BuilderSelectInsideHalfplane;
     }
 
-    class ClipPlane;
-    class GridField;
     class GridCubeRenderer;
     class TextRenderer;
     class CoordSysRenderer;
     namespace wells {
-        class Representation;
         class WellRenderer;
     }
     namespace surface {
-        class GridTessSurf;
         class GridTessSurfBuilder;
     }
     namespace rlgen {
@@ -72,22 +63,6 @@ namespace render {
     }
 } // of namespace render
 
-struct SourceItem {
-    
-    boost::shared_ptr<dataset::AbstractDataSource>  m_source;
-    boost::shared_ptr<render::ClipPlane>                            m_clip_plane;
-    boost::shared_ptr<render::mesh::AbstractMeshGPUModel>          m_grid_tess;
-    boost::shared_ptr<render::subset::Representation>               m_grid_tess_subset;
-    boost::shared_ptr<render::surface::GridTessSurf>                m_faults_surface;
-    boost::shared_ptr<render::surface::GridTessSurf>                m_subset_surface;
-    boost::shared_ptr<render::surface::GridTessSurf>                m_boundary_surface;
-    boost::shared_ptr<render::GridField>                            m_grid_field;
-    boost::shared_ptr<render::wells::Representation>                m_wells;
-
-    bool                                            m_load_color_field;
-    bool                                            m_do_update_subset;
-    
-};
 
 
 class FRViewJob
@@ -126,6 +101,9 @@ public:
     doLogic();
 
     void
+    setSource( size_t index );
+    
+    void
     loadFile( const std::string& filename,
               int refine_i,
               int refine_j,
@@ -141,20 +119,21 @@ public:
     currentSourceItemValid() const;
     
     // might throw runtime_error if no item
-    SourceItem&
+    boost::shared_ptr<SourceItem>
     currentSourceItem();
 
     // might throw runtime_error if no item
-    const SourceItem&
+    const boost::shared_ptr<SourceItem>
     currentSourceItem() const;
     
 private:
-    std::vector<SourceItem>                         m_source_items;
+    std::vector<boost::shared_ptr<SourceItem> >     m_source_items;
     size_t                                          m_current_item;
 
 
     models::File                                    m_file;
     models::SourceSelector                          m_source_selector;
+    models::SubsetSelector                          m_subset_selector;
     models::UnderTheHood                            m_under_the_hood;
     models::Appearance                              m_appearance;
     models::Appearance::VisibilityMask              m_visibility_mask;
@@ -222,12 +201,6 @@ private:
 
     void
     releaseSourceItems();
-    
-    void
-    addSourceItem( SourceItem& item );
-
-    void
-    updateCurrentMeshData();
     
     void
     updateCurrentFieldData();

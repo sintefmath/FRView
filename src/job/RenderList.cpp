@@ -68,22 +68,22 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
             }
 
             for( size_t i=0; i<m_source_items.size(); i++ ) {
-                SourceItem& source_item = m_source_items[i];
+                boost::shared_ptr<SourceItem> source_item = m_source_items[i];
                 
                 // FIXME: Needs to add support for multi-object
                 
                 boost::shared_ptr<const render::mesh::CellSetInterface> cell_set =
-                        boost::dynamic_pointer_cast<const render::mesh::CellSetInterface>( source_item.m_grid_tess );
-                if( cell_set && source_item.m_grid_tess_subset ) {
+                        boost::dynamic_pointer_cast<const render::mesh::CellSetInterface>( source_item->m_grid_tess );
+                if( cell_set && source_item->m_grid_tess_subset ) {
                     m_grid_voxelizer->build( cell_set,
-                                             source_item.m_grid_tess_subset,
+                                             source_item->m_grid_tess_subset,
                                              glm::value_ptr( m_local_to_world ) );
                 
                     // FIXME: coloring should be part of splatting and surface
                     // extraction should be moved outside of loop (independent on
                     // geometries).
                 }
-                m_voxel_surface->build( m_grid_voxelizer, source_item.m_grid_field );
+                m_voxel_surface->build( m_grid_voxelizer, source_item->m_grid_field );
             }
             if( m_under_the_hood.profilingEnabled() ) {
                 m_under_the_hood.proxyGenerateTimer().endQuery();
@@ -211,11 +211,11 @@ FRViewJob::updateRenderList( )
             ->drawOrderAdd( "wire_cube_draw" );
 
     if( m_render_clip_plane && currentSourceItemValid() ) {
-        SourceItem& source_item = currentSourceItem();
+        boost::shared_ptr<SourceItem> source_item = currentSourceItem();
         
         // vertex positions of line loop
         std::vector<float> vertices;
-        source_item.m_clip_plane->getLineLoop( vertices );
+        source_item->m_clip_plane->getLineLoop( vertices );
 
         m_renderlist_db.castedItemByName<rl::Buffer*>( "clip_plane_pos" )
                 ->set( vertices.data(), vertices.size() );
