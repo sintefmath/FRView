@@ -77,7 +77,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_check_async_reader( false ),
       m_enable_gl_debug( false ),
       m_renderlist_initialized( false ),
-      m_renderlist_state( RENDERLIST_SENT ),
+      m_renderlist_update_revision( true ),
       m_has_pipeline( false )
 {
     m_model->addElement<int>( current_source_item_key, m_current_item );
@@ -507,36 +507,24 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if( currentSourceItemValid() ) {
             currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, -0.1*M_PI_4 ) ) );
             currentSourceItem()->m_do_update_subset = true;
-            if( m_renderlist_state == RENDERLIST_SENT ) {
-                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-            }
         }
     }
     else if( key == "plane_select_NX"  && handleButtonClick(stateElement) ) {
         if(  currentSourceItemValid() ) {
             currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, 0.1*M_PI_4 ) ) );
             currentSourceItem()->m_do_update_subset = true;
-            if( m_renderlist_state == RENDERLIST_SENT ) {
-                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-            }
         }
     }
     else if( key == "plane_select_PY"  && handleButtonClick(stateElement) ) {
         if(  currentSourceItemValid() ) {
             currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( 0.1*M_PI_4, 0.f, 0.f ) ) );
             currentSourceItem()->m_do_update_subset = true;
-            if( m_renderlist_state == RENDERLIST_SENT ) {
-                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-            }
         }
     }
     else if( key == "plane_select_NY"  && handleButtonClick(stateElement) ) {
         if(  currentSourceItemValid() ) {
             currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( -0.1*M_PI_4, 0.f, 0.f ) ) );
             currentSourceItem()->m_do_update_subset = true;
-            if( m_renderlist_state == RENDERLIST_SENT ) {
-                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-            }
         }
     }
     else if( key == "plane_select_shift" ) {
@@ -545,9 +533,6 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
         if(  currentSourceItemValid() ) {
             currentSourceItem()->m_clip_plane->setOffset( (1.7f/1000.f)*(value) );
             currentSourceItem()->m_do_update_subset = true;
-            if( m_renderlist_state == RENDERLIST_SENT ) {
-                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-            }
         }
     }
     else if( key == "index_range_select_min_i" ) {
@@ -559,9 +544,6 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_max_i", min );
         }
         currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
     }
     else if( key == "index_range_select_max_i" ) {
         int max;
@@ -572,9 +554,6 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_min_i", max );
         }
         currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
     }
     else if( key == "index_range_select_min_j" ) {
         int min;
@@ -585,9 +564,6 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_max_j", min );
         }
         currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
     }
     else if( key == "index_range_select_max_j" ) {
         int max;
@@ -598,9 +574,6 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_min_j", max );
         }
         currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
     }
     else if( key == "index_range_select_min_k" ) {
         int min;
@@ -611,9 +584,6 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_max_k", min );
         }
         currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
     }
     else if( key == "index_range_select_max_k" ) {
         int max;
@@ -624,21 +594,12 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "index_range_select_min_k", max );
         }
         currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
     }
     else if( key == "field_select_min" ) {
         currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
     }
     else if( key == "field_select_max" ) {
         currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
     }
     else if( key == "surface_subset" ) {
         string value;
@@ -670,9 +631,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             m_model->updateElement( "surface_subset_plane", true );
         }
         currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
+        m_renderlist_update_revision = true;
     }
     else if( key == "field_range_enable" && currentSourceItemValid() ) {
         
@@ -685,9 +644,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     }
     else if( key == "tess_flip_orientation" ) {
         currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
+        m_renderlist_update_revision = true;
     }
     m_care_about_updates = true;
     doLogic();
@@ -916,6 +873,7 @@ FRViewJob::setSource( size_t index )
     Logger log = getLogger( package + ".selected" );
 
     boost::shared_ptr<SourceItem> source_item;
+
     if( index < m_source_items.size() ) {
         m_current_item = index;
         source_item = m_source_items[index];
@@ -946,7 +904,6 @@ FRViewJob::setSource( size_t index )
         
         m_grid_stats.update( source_item->m_source, source_item->m_grid_tess );
      
-        
     }
     else {
         std::list<std::string> solutions = {"none"};
@@ -962,38 +919,41 @@ FRViewJob::setSource( size_t index )
 void
 FRViewJob::doLogic()
 {
+    
     if( m_zscale != m_grid_stats.zScale() ) {
         m_zscale = m_grid_stats.zScale();
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
-//        if( !m_do_update_renderlist ) {
-//            m_do_update_renderlist = true;
-            // trigger render list update
-//        }
-
-        if( m_render_clip_plane && currentSourceItemValid() ) {
-            currentSourceItem()->m_do_update_subset = true;
+        
+        // If the z-scale changes and we use a clip-plane, the subsets will
+        // change (since the model-clipplane relation changes).
+        if( m_render_clip_plane ) {
+            for( size_t i=0; i<m_source_items.size(); i++ ) {
+                m_source_items[i]->m_do_update_subset = true;
+                m_source_items[i]->m_do_update_renderlist = true;
+            }
+            m_renderlist_update_revision = true;
         }
     }
 
     models::Appearance::VisibilityMask new_mask = m_appearance.visibilityMask();
-    if( currentSourceItemValid() && ( (m_visibility_mask != new_mask) || m_under_the_hood.profilingEnabled() ) ) {
-        currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+    if( ( (m_visibility_mask != new_mask) || m_under_the_hood.profilingEnabled() ) ) {
+        
+        for( size_t i=0; i<m_source_items.size(); i++ ) {
+            m_source_items[i]->m_do_update_subset = true;
+            m_source_items[i]->m_do_update_renderlist = true;
         }
-//        m_do_update_renderlist = true;
+        m_renderlist_update_revision = true;
         m_visibility_mask = new_mask;
     }
 
+    // If we clients have asked for renderlists at least once, we inform them
+    // that they should query for a new one. 
+    if( m_renderlist_initialized &&  m_renderlist_update_revision ) {
+        m_renderlist_update_revision = false;
 
-    if( m_renderlist_state == RENDERLIST_CHANGED_NOTIFY_CLIENTS ) {
-        m_renderlist_state = RENDERLIST_CHANGED_CLIENTS_NOTIFIED;
         int val;
         m_model->getElementValue( "renderlist", val );
         m_model->updateElement( "renderlist", val+1 );
-   }
+    }
 }
 
 bool

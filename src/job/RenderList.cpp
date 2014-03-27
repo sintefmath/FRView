@@ -58,10 +58,22 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
     fetchData();
     updateModelMatrices();
     doCompute();
+    
+    if( m_has_pipeline ) {
+            
+        
 
+
+
+        
+    }
+
+    
+    
     if( currentSourceItemValid() && m_has_pipeline ) {
-        if( m_renderlist_state == RENDERLIST_CHANGED_CLIENTS_NOTIFIED ) {
-            m_renderlist_state = RENDERLIST_SENT;
+        if( 1 ) {
+        //if( m_renderlist_state == RENDERLIST_CHANGED_CLIENTS_NOTIFIED ) {
+          //  m_renderlist_state = RENDERLIST_SENT;
 
             if( m_under_the_hood.profilingEnabled() ) {
                 m_under_the_hood.proxyGenerateTimer().beginQuery();

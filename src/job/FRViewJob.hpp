@@ -155,14 +155,9 @@ private:
     /** @{ */
     /** True if observer has asked at least once for renderlists. */
     bool                                            m_renderlist_initialized;
-    enum {
-        /** Renderlist should be modified, trigger update from client. */
-        RENDERLIST_CHANGED_NOTIFY_CLIENTS,
-        /** Renderlist modification notified, do geometry creation. */
-        RENDERLIST_CHANGED_CLIENTS_NOTIFIED,
-        /** Client should have latest version of renderlist. */
-        RENDERLIST_SENT
-    }                                               m_renderlist_state;
+
+    /** True if e.g. clip plane has changed and needs to be updated. */
+    bool                                            m_renderlist_update_revision;
     tinia::renderlist::DataBase                     m_renderlist_db;
     /** @} */
 

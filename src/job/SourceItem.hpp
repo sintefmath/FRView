@@ -45,6 +45,11 @@ namespace models {
 }
 
 struct SourceItem {
+    SourceItem()
+        : m_load_color_field( true ),
+          m_do_update_subset( true ),
+          m_do_update_renderlist( true )
+    {}
     
     boost::shared_ptr<dataset::AbstractDataSource>         m_source;
     boost::shared_ptr<render::ClipPlane>                   m_clip_plane;
@@ -60,5 +65,6 @@ struct SourceItem {
     
     bool                                            m_load_color_field;
     bool                                            m_do_update_subset;
+    bool                                            m_do_update_renderlist;
     
 };

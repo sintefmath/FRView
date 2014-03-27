@@ -38,9 +38,16 @@
 void
 FRViewJob::doCompute()
 {
-    Logger log = getLogger( "CPViewJob.doCompute" );
+    Logger log = getLogger( "FRViewJob.doCompute" );
     if( !m_has_pipeline ) {
-        return;
+        if( m_has_context ) {
+            if(!setupPipeline()) {
+                return;
+            }
+        }
+        else {
+            LOGGER_DEBUG( log, "OpenGL context isn't initialized yet." );
+        }
     }
 
     bool profile;
@@ -50,7 +57,10 @@ FRViewJob::doCompute()
         boost::shared_ptr<SourceItem> source_item = m_source_items[i];
         if( source_item->m_do_update_subset ) {
             source_item->m_do_update_subset = false;
+            // we will probably change one or more surfaces, so renderlist must
+            // be updated.
             try {
+                LOGGER_DEBUG( log, "updating item " << i << " of " << m_source_items.size() << ": " << source_item->m_source->name() );
                 
                 bool flip_faces;
                 //            bool geometric_edges = false;
@@ -158,20 +168,12 @@ FRViewJob::doCompute()
                     m_under_the_hood.surfaceGenerateTimer().endQuery();
                 }
                 // -----------------------------------------------------------------
+                LOGGER_DEBUG( log, "...done" );
             }
             catch( std::runtime_error& e ) {
                 LOGGER_ERROR( log, "While extracting subset: " << e.what() );
             }
             m_model->updateElement<int>( "renderlist", m_renderlist_db.bump() );
-            if( m_renderlist_state == RENDERLIST_SENT ) {
-                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-            }
-            //m_renderlist_rethink = true;
         }
-        //    else if( m_do_update_renderlist ) {
-        //        m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        //        //m_renderlist_rethink = true;
-        //    }
-        //m_do_update_renderlist = false;
     }
 }

@@ -67,7 +67,7 @@ main()
         vec2 a = in_g[1].scr_pos - in_g[0].scr_pos;
         vec2 b = in_g[2].scr_pos - in_g[0].scr_pos;
         float z = a.x*b.y - b.x*a.y;
-        if( z < 0.f ) {
+        if( z > 0.f ) {
             flip = true;
         }
     }

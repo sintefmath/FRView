@@ -81,6 +81,7 @@ FRViewJob::handleFetchSource()
 
     
     if( polyhedral_bridge ) {
+        LOGGER_DEBUG( log, "Adding polyhedral mesh (source " << m_source_items.size() << ")." );
         
         shared_ptr<PolyhedralMeshGPUModel> gpu_polyhedronmesh( new PolyhedralMeshGPUModel );
         
@@ -92,24 +93,15 @@ FRViewJob::handleFetchSource()
         source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
         source_item.m_grid_tess_subset.reset( new render::subset::Representation );
         source_item.m_wells.reset( new render::wells::Representation );
-        source_item.m_do_update_subset = true;
-        source_item.m_load_color_field = true;
         source_item.m_subset_selector_data.reset( new models::SubsetSelectorData );
-        
         gpu_polyhedronmesh->update( *polyhedral_bridge );
-        LOGGER_DEBUG( log, "Updated polyhedral mesh" );
-
         size_t index = m_source_items.size();
         m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( source_item ) ) );
         setSource( index );
-
-        if( !m_has_pipeline ) {
-            if(!setupPipeline()) {
-                return;
-            }
-        }
     }
+
     else if( polygon_bridge ) {
+        LOGGER_DEBUG( log, "Adding polygon mesh (source " << m_source_items.size() << ")." );
         shared_ptr<PolygonMeshGPUModel> gpu_polygonmesh( new PolygonMeshGPUModel );
         
         source_item.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
@@ -119,51 +111,25 @@ FRViewJob::handleFetchSource()
         source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
         source_item.m_grid_tess_subset.reset( new render::subset::Representation );
         source_item.m_wells.reset( new render::wells::Representation );
-        source_item.m_do_update_subset = true;
-        source_item.m_load_color_field = true;
         source_item.m_subset_selector_data.reset( new models::SubsetSelectorData );
 
 
         
         gpu_polygonmesh->update( polygon_bridge );
-        LOGGER_DEBUG( log, "Updated polygon mesh" );
 
         size_t index = m_source_items.size();
         m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( source_item ) ) );
         setSource( index );
-
-        if( !m_has_pipeline ) {
-            if(!setupPipeline()) {
-                return;
-            }
-        }
     }
     
+    // Update list of sources in exposedmodel/GUI
     std::vector<std::string> sources;
     for( size_t i=0; i<m_source_items.size(); i++ ) {
         sources.push_back( m_source_items[i]->m_source->name() );
     }
     m_source_selector.updateSources( sources );
-    
-    
-    
-    
-    LOGGER_DEBUG( log, "currentSourceItemValid()=" << currentSourceItemValid() );
-    
-    
-    
-    
-    // update state variables
-    m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
-    
-        
-    
-    if( m_renderlist_state == RENDERLIST_SENT ) {
-        m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-    }
-    //m_do_update_renderlist = true;
-    //m_renderlist_rethink = true;
 
+    m_renderlist_update_revision = true;
 }
 
 void
@@ -186,6 +152,9 @@ FRViewJob::handleFetchField()
         // find the corresponding source and update
         if( m_source_items[i]->m_source == source ) {
             boost::shared_ptr<SourceItem> source_item = m_source_items[i];
+            
+            // maybe also subset if subset select.
+            source_item->m_do_update_renderlist = true;
             
             source_item->m_grid_field.reset();
             if( bridge ) {
@@ -231,12 +200,6 @@ FRViewJob::handleFetchField()
                 }
             }
             updateCurrentFieldData();
-            
-            if( m_renderlist_state == RENDERLIST_SENT ) {
-                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-            }
-            //            m_renderlist_rethink = true;
-            
         }
     }
 }
