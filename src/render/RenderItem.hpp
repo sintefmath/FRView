@@ -23,6 +23,7 @@ namespace render {
         class AbstractMeshGPUModel;
     }
     class GridField;
+    class GLTexture;
 
     namespace wells {
         class Representation;
@@ -41,6 +42,7 @@ struct RenderItem {
     boost::shared_ptr<const GridField>                   m_field;
     boost::shared_ptr<const surface::GridTessSurf>       m_surf;
     boost::shared_ptr<wells::Representation>             m_well;
+    boost::shared_ptr<const GLTexture>                   m_color_map;
     //bool                                    m_field;
     bool                                    m_field_log_map;
     float                                   m_field_min;

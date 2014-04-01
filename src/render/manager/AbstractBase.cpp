@@ -38,7 +38,6 @@ AbstractBase::AbstractBase( const models::Appearance& appearance,
                             const GLsizei height )
     : m_width( width ),
       m_height( height ),
-      m_color_map( "color_map" ),
       m_appearance_revision( appearance.revision() ),
       m_shading_model( appearance.shadingModel() ),
       m_legend_min( std::numeric_limits<float>::max() ),
@@ -61,23 +60,6 @@ AbstractBase::AbstractBase( const models::Appearance& appearance,
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
     glBindVertexArray( 0 );
 
-    // --- create color map texture --------------------------------------------
-    std::vector<glm::vec3> ramp( 256 );
-    for(size_t i=0; i<ramp.size(); i++ ) {
-        float x = static_cast<float>(i)/static_cast<float>(ramp.size()-1);
-        ramp[i].x = (x < 0.50f ? 0.f   : (x < 0.75f ? 4.f*(x-0.5f)        : 1.f                 ));
-        ramp[i].y = (x < 0.25f ? 4.f*x : (x < 0.75f ? 1.f                 : 1.f - 4.f*(x-0.75f) ));
-        ramp[i].z = (x < 0.25f ? 1.f   : (x < 0.50f ? 1.f - 4.f*(x-0.25f) : 0.f                 ));
-    }
-    
-    glBindTexture( GL_TEXTURE_1D, m_color_map.get() );
-    glTexImage1D( GL_TEXTURE_1D, 0, GL_RGB, 256, 0, GL_RGB, GL_FLOAT, ramp.data() );
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_BASE_LEVEL, 0 );
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAX_LEVEL, 0 );
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glBindTexture( GL_TEXTURE_1D, 0 );
     
     // --- create legend shader ------------------------------------------------
     GLuint vs = utils::compileShader( log, glsl::AbstractBase_legend_vs, GL_VERTEX_SHADER );
@@ -218,21 +200,23 @@ AbstractBase::renderOverlay( const GLsizei                       width,
     };
 
     
-    glDisable( GL_DEPTH_TEST );
-    glViewport( 35, glm::max(0, height-130), 120, 120 );
-    m_legend_text.render( 120, 120, MP );
-
-    glViewport( 10, glm::max(0, height-130), 20, 120 );
-    glActiveTexture( GL_TEXTURE0 );
-    glBindTexture( GL_TEXTURE_1D, m_color_map.get() );
-    
-    glUseProgram( m_legend_prog.get() );
-    glUniformMatrix4fv( glGetUniformLocation( m_legend_prog.get(), "MP"),
-                        1, GL_FALSE, MP );
-    
-    glBindVertexArray( m_fsq_vao.get() );
-    glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );    
-    glBindVertexArray( 0 );
+    if( !items.empty() && items.front().m_color_map ) {
+        glDisable( GL_DEPTH_TEST );
+        glViewport( 35, glm::max(0, height-130), 120, 120 );
+        m_legend_text.render( 120, 120, MP );
+        
+        glViewport( 10, glm::max(0, height-130), 20, 120 );
+        glActiveTexture( GL_TEXTURE0 );
+        glBindTexture( GL_TEXTURE_1D, items.front().m_color_map->get() );
+        
+        glUseProgram( m_legend_prog.get() );
+        glUniformMatrix4fv( glGetUniformLocation( m_legend_prog.get(), "MP"),
+                            1, GL_FALSE, MP );
+        
+        glBindVertexArray( m_fsq_vao.get() );
+        glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );    
+        glBindVertexArray( 0 );
+    }
 }
 
 

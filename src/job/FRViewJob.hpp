@@ -45,6 +45,7 @@ namespace render {
         class BuilderSelectInsideHalfplane;
     }
 
+    class GLTexture;
     class GridCubeRenderer;
     class TextRenderer;
     class CoordSysRenderer;
@@ -55,6 +56,7 @@ namespace render {
         class GridTessSurfBuilder;
     }
     namespace rlgen {
+        class SplatCompacter;
         class GridVoxelization;
         class VoxelSurface;
     }
@@ -174,9 +176,14 @@ private:
     boost::shared_ptr<render::subset::BuilderSelectInsideHalfplane> m_half_plane_selector;
     boost::shared_ptr<render::GridCubeRenderer>                     m_grid_cube_renderer;
     boost::shared_ptr<render::CoordSysRenderer>                     m_coordsys_renderer;
+    boost::shared_ptr<render::rlgen::SplatCompacter>                m_splat_compacter;
     boost::shared_ptr<render::rlgen::GridVoxelization>              m_grid_voxelizer;
     boost::shared_ptr<render::rlgen::VoxelSurface>                  m_voxel_surface;
     boost::shared_ptr<render::manager::AbstractBase>                 m_screen_manager;
+
+    // Color map that can be used by items
+    boost::shared_ptr<render::GLTexture>                            m_color_maps;
+    
     /** @} */
 
 

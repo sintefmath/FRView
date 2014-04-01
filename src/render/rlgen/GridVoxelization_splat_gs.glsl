@@ -26,16 +26,42 @@ in GI {
 } gi[];
 
 out FI {
-    flat uint cell;
+    flat vec3 col;
 } go;
 
-uniform vec2            slice;
+layout(binding=2)   uniform samplerBuffer   field;
+layout(binding=3)   uniform sampler1D       color_map;
+                    uniform vec2            slice;
+                    uniform vec2            field_remap;
+                    uniform bool            use_field;
+                    uniform bool            log_map;
+                    uniform vec3            surface_color;
 
 void
 main()
 {
     if( (slice.x <= gi[0].bbmax.z ) && (gi[0].bbmin.z <= slice.y)  ) {
-        go.cell = gi[0].cell;
+
+        if( use_field ) {
+            // colorize using a field
+            uint cid = gi[0].cell & 0x0fffffffu;
+            float value = texelFetch( field, int(cid) ).r;
+            if( log_map ) {
+                // field_remap.x = 1.0/min_value
+                // field_remap.y = 1.0/log(max_value/min_value)
+                value = log( value*field_remap.x )*field_remap.y;
+            }
+            else {
+                // field_remap.x = min_value
+                // field_remap.y = 1.0/(max_value-min_value)
+                value = field_remap.y*( value - field_remap.x);
+            }
+            go.col = texture( color_map, value ).rgb;
+        }
+        else {
+            go.col = surface_color;
+        }
+        
         gl_Position = vec4( gi[0].bbmin.x, gi[0].bbmin.y, 0.f, 1.f );
         EmitVertex();
         gl_Position = vec4( gi[0].bbmax.x, gi[0].bbmin.y, 0.f, 1.f );

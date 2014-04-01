@@ -23,7 +23,9 @@
 #include "utils/Logger.hpp"
 #include "render/mesh/CellSetInterface.hpp"
 #include "render/mesh/VertexPositionInterface.hpp"
+#include "render/GridField.hpp"
 #include "render/subset/Representation.hpp"
+#include "render/rlgen/Splats.hpp"
 #include "render/rlgen/GridVoxelization.hpp"
 
 namespace {
@@ -48,9 +50,11 @@ GridVoxelization::GridVoxelization()
     
     glGenTextures( 1, &m_voxels_tex );
     glBindTexture( GL_TEXTURE_3D, m_voxels_tex );
-    glTexImage3D( GL_TEXTURE_3D, 0, GL_R32UI,
+    
+    //GL_RGB5_A1 might be a good fit since we only need 1 bit of alpha.
+    glTexImage3D( GL_TEXTURE_3D, 0, GL_RGBA,
                   m_resolution, m_resolution, m_resolution, 0,
-                  GL_RED_INTEGER , GL_INT, NULL );
+                  GL_RGBA , GL_FLOAT, NULL );
     glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP);
     glTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP);
@@ -139,6 +143,69 @@ GridVoxelization::dimension( GLsizei* dim ) const
     dim[1] = m_resolution;
     dim[2] = m_resolution;
 }
+void
+GridVoxelization::apply( std::list<boost::shared_ptr<SourceItem> > items )
+{
+    Logger log = getLogger( package + ".apply" );
+    
+    glUseProgram( m_voxelizer_program );
+
+    glBindFramebuffer( GL_FRAMEBUFFER, m_slice_fbo );
+    glViewport( 1, 1, m_resolution-2, m_resolution-2 );
+
+    glDisable( GL_DEPTH_TEST );
+    glDisable( GL_BLEND );
+    glClearColor( 0.f, 0.f, 0.f, 0.f );
+    for(GLsizei i=0; i<m_resolution; i++ ) {
+        glFramebufferTexture3D( GL_FRAMEBUFFER,
+                                GL_COLOR_ATTACHMENT0,
+                                GL_TEXTURE_3D,
+                                m_voxels_tex,
+                                0,
+                                i );
+        utils::checkFBO( log );
+        glClear( GL_COLOR_BUFFER_BIT );
+        if( (0 < i) && (i+1<m_resolution) ) {
+            typedef std::list<boost::shared_ptr<SourceItem> >::iterator iterator;
+            
+            glUniform2f( m_voxelizer_slice_loc, (i-1.f)/(m_resolution-2.f), (i+0.f)/(m_resolution-2.f) );
+            for( iterator it=items.begin(); it!=items.end(); ++it ) {
+                if( (*it)->m_grid_field && (*it)->m_color_map ) {
+                    glActiveTexture( GL_TEXTURE0 );
+                    glBindTexture( GL_TEXTURE_BUFFER, (*it)->m_grid_field->texture() );
+                    glActiveTexture( GL_TEXTURE1 );
+                    glBindTexture( GL_TEXTURE_1D, (*it)->m_color_map->get() );
+                }
+                glBindVertexArray( (*it)->m_splats->asAttributes().get() );
+                glDrawArrays( GL_POINTS, 0, (*it)->m_splats->count() );
+            }
+        }
+    }
+    glActiveTexture( GL_TEXTURE0 );
+    glBindTexture( GL_TEXTURE_BUFFER, 0 );
+    glActiveTexture( GL_TEXTURE1 );
+    glBindTexture( GL_TEXTURE_1D, 0 );
+    glBindVertexArray( 0 );
+    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+
+    /*
+    // populate slices
+    glBindVertexArray( m_compacted_vao );
+    glBindFramebuffer( GL_FRAMEBUFFER, m_slice_fbo );
+
+    // make sure that the outer rim of voxels are always empty
+
+    /
+    layout(binding=2)   uniform samplerBuffer   field;
+    layout(binding=3)   uniform sampler1D       color_map;
+                        uniform vec2            slice;
+                        uniform vec2            field_remap;
+                        uniform bool            use_field;
+                        uniform bool            log_map;
+                        uniform vec3            surface_color;
+    /
+    */
+}
 
 void
 GridVoxelization::build( boost::shared_ptr<const mesh::CellSetInterface> cell_set,
@@ -198,6 +265,15 @@ GridVoxelization::build( boost::shared_ptr<const mesh::CellSetInterface> cell_se
     glViewport( 1, 1, m_resolution-2, m_resolution-2 );
     glUseProgram( m_voxelizer_program );
 
+    /*
+    layout(binding=2)   uniform samplerBuffer   field;
+    layout(binding=3)   uniform sampler1D       color_map;
+                        uniform vec2            slice;
+                        uniform vec2            field_remap;
+                        uniform bool            use_field;
+                        uniform bool            log_map;
+                        uniform vec3            surface_color;
+    */
     glDisable( GL_DEPTH_TEST );
     glDisable( GL_BLEND );
     glClearColor( 0.f, 0.f, 0.f, 0.f );

@@ -155,6 +155,7 @@ FRViewJob::render( const float*  projection,
                 items.back().m_surf = source_item->m_subset_surface;
                 items.back().m_field = source_item->m_grid_field;
                 items.back().m_field_log_map = log_map;
+                items.back().m_color_map = source_item->m_color_map;
                 items.back().m_field_min = min;
                 items.back().m_field_max = max;
                 items.back().m_line_thickness =m_appearance.lineThickness();
@@ -177,6 +178,7 @@ FRViewJob::render( const float*  projection,
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
                 items.back().m_surf = source_item->m_boundary_surface;
                 items.back().m_field = source_item->m_grid_field;
+                items.back().m_color_map = source_item->m_color_map;
                 items.back().m_field_log_map = log_map;
                 items.back().m_field_min = min;
                 items.back().m_field_max = max;

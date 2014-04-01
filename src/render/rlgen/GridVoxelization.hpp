@@ -16,9 +16,10 @@
  */
 
 #pragma once
-#include <memory>
+#include <list>
 #include <boost/shared_ptr.hpp>
 #include <boost/utility.hpp>
+#include "job/SourceItem.hpp"
 
 namespace render {
     namespace mesh {
@@ -29,6 +30,7 @@ namespace render {
         class Representation;
     }
     namespace rlgen {
+        class Splats;
 
 class GridVoxelization : public boost::noncopyable
 {
@@ -48,6 +50,9 @@ public:
     void
     dimension( GLsizei* dim ) const;
 
+    void
+    apply(std::list<boost::shared_ptr<SourceItem> > items );
+    
     /** Populate the voxel set. */
     void
     build(boost::shared_ptr<const mesh::CellSetInterface> cell_set,

@@ -23,14 +23,12 @@ uniform mat4 mvp;
 void
 extractVertex( out vec3 a, out vec3 b, out vec3 p, out vec3 n );
 
-out vec4 position;
+out vec3 out_pos;
+out vec3 out_col;
 
 uniform vec3            scale;
 uniform vec3            shift;
-uniform bool            use_field;
-uniform vec2            field_remap;
-uniform samplerBuffer   field;
-uniform usampler3D      voxels;
+uniform sampler3D       voxels;
 #define VOXEL_SAMPLER_DEFINED
 
 void
@@ -39,19 +37,19 @@ main()
     vec3 a, b, p, n;
     extractVertex( a, b, p, n );
 
-    // see voxel_surface_extractor_fetch.glsl for texture definition
-    float value = 0.5;
-    if( use_field ) {
-        uint cell = (max( texture( voxels, a ).r, texture( voxels, b).r )-1u) & 0x0fffffffu;
-        float v = texelFetch( field, int(cell) ).r;
-        value = clamp( field_remap.y*( v - field_remap.x), 0.0, 1.0 );
+    // Fetch color from voxel field. One end of the edge [a,b] on which the
+    // intersection sits is inside the field (and has nonzero w).
+    vec4 col = texture( voxels, a );
+    if( col.w < 0.5 ) {
+        col = texture( voxels, b );
     }
 
-
+    // Since the field is binary, the normal vector has a limited set of
+    // directions, and we encode this in the integer part of the position.
     vec3 an = abs( n );
     float s = 1.f/max( max( an.x, an.y ), an.z );   // taxicab-norm-scale
-
     vec3 ni = clamp( vec3(round(s*n)+vec3(2)), vec3(1.0), vec3(3.0));                       // shift zero to 2 (range should be [1,3])
 
-    position = vec4(clamp(scale*p+shift, vec3(0.0), vec3(0.9999)) + floor(ni), value );
+    out_pos = vec3(clamp(scale*p+shift, vec3(0.0), vec3(0.9999)) + floor(ni));
+    out_col = vec3( col );
 }

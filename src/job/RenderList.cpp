@@ -36,8 +36,11 @@
 #include "render/ClipPlane.hpp"
 #include "render/mesh/AbstractMeshGPUModel.hpp"
 #include "render/mesh/CellSetInterface.hpp"
+#include "render/mesh/VertexPositionInterface.hpp"
 #include "render/rlgen/GridVoxelization.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
+#include "render/rlgen/SplatCompacter.hpp"
+#include "render/rlgen/Splats.hpp"
 
 namespace resources {
     extern const std::string gles_solid_vs;
@@ -49,6 +52,10 @@ namespace resources {
 const tinia::renderlist::DataBase*
 FRViewJob::getRenderList( const std::string& session, const std::string& key )
 {
+    using boost::dynamic_pointer_cast;
+    using render::mesh::CellSetInterface;
+    using render::mesh::VertexPositionInterface;
+    
     if( !m_renderlist_initialized ) {
         initRenderList();
         m_renderlist_initialized = true;
@@ -59,15 +66,41 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
     updateModelMatrices();
     doCompute();
     
-    if( m_has_pipeline ) {
+    if( m_has_context ) {
+
+        // Make sure we have the objects we need.
+        if( !m_splat_compacter ) {
+            m_splat_compacter.reset( new render::rlgen::SplatCompacter() );
+        }
+        if( !m_grid_voxelizer ) {
+            m_grid_voxelizer.reset( new render::rlgen::GridVoxelization() );
+        }
+        if( !m_voxel_surface ) {
+            m_voxel_surface.reset( new render::rlgen::VoxelSurface() );
+        }
+        
+        
+        std::list<boost::shared_ptr<SourceItem> > splats;
+        for( size_t i=0; i<m_source_items.size(); i++ ) {
+            boost::shared_ptr<SourceItem> source_item = m_source_items[i];
             
-        
+            // Make sure we have the objects we need.
+            if( !source_item->m_splats) {
+                source_item->m_splats.reset( new render::rlgen::Splats() );
+            }
+            
+            m_splat_compacter->process( source_item->m_splats,
+                                        dynamic_pointer_cast<const VertexPositionInterface>( source_item->m_grid_tess ),
+                                        dynamic_pointer_cast<const CellSetInterface>( source_item->m_grid_tess ),
+                                        source_item->m_grid_tess_subset,
+                                        glm::value_ptr( m_local_to_world ) );
+            
+            splats.push_back( source_item );
+        }
 
-
-
-        
+        // Populate voxel grid
+        m_grid_voxelizer->apply( splats );
     }
-
     
     
     if( currentSourceItemValid() && m_has_pipeline ) {
@@ -87,10 +120,10 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
                 boost::shared_ptr<const render::mesh::CellSetInterface> cell_set =
                         boost::dynamic_pointer_cast<const render::mesh::CellSetInterface>( source_item->m_grid_tess );
                 if( cell_set && source_item->m_grid_tess_subset ) {
-                    m_grid_voxelizer->build( cell_set,
+                    /*m_grid_voxelizer->build( cell_set,
                                              source_item->m_grid_tess_subset,
                                              glm::value_ptr( m_local_to_world ) );
-                
+                */
                     // FIXME: coloring should be part of splatting and surface
                     // extraction should be moved outside of loop (independent on
                     // geometries).
@@ -181,7 +214,8 @@ FRViewJob::initRenderList()
     m_renderlist_db.createBuffer( "surface_pos" );
     m_renderlist_db.createAction<rl::SetInputs>( "surface_input" )
             ->setShader( "surface" )
-            ->setInput( "position", "surface_pos", 4 );
+            ->setInput( "in_pos", "surface_pos", 3, 0, 6 )
+            ->setInput( "in_col", "surface_pos", 3, 3, 6 );
     m_renderlist_db.createAction<rl::Draw>( "surface_draw" );
 
 

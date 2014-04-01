@@ -44,7 +44,7 @@ VoxelSurface::VoxelSurface()
     m_surface_alloc = 5000;
     glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_surface_buf );
     glBufferData( GL_TRANSFORM_FEEDBACK_BUFFER,
-                  sizeof(GLfloat)*4*m_surface_alloc,
+                  sizeof(GLfloat)*6*m_surface_alloc,
                   NULL,
                   GL_STREAM_READ );
     glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, 0 );
@@ -165,10 +165,11 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
         free( traversal_code );
         glAttachShader( m_extraction_program, vs );
         glDeleteShader( vs );
-        const char* varyings[1] = {
-            "position"
+        const char* varyings[2] = {
+            "out_pos",
+            "out_col"
         };
-        glTransformFeedbackVaryings( m_extraction_program, 1, varyings, GL_INTERLEAVED_ATTRIBS );
+        glTransformFeedbackVaryings( m_extraction_program, 2, varyings, GL_INTERLEAVED_ATTRIBS );
         utils::linkProgram( log, m_extraction_program );
         glUseProgram( m_extraction_program );
         m_extraction_loc_scale = glGetUniformLocation( m_extraction_program, "scale" );
@@ -195,7 +196,7 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
         m_surface_alloc = 1.1f*N;
         glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_surface_buf );
         glBufferData( GL_TRANSFORM_FEEDBACK_BUFFER,
-                      sizeof(GLfloat)*4*m_surface_alloc,
+                      sizeof(GLfloat)*6*m_surface_alloc,
                       NULL,
                       GL_STREAM_READ );
         glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, 0 );
@@ -240,11 +241,11 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
     glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, 0 );
     glDisable( GL_RASTERIZER_DISCARD );
 
-    m_surface_host.resize( 4*N );
+    m_surface_host.resize( 6*N );
     glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_surface_buf );
     glGetBufferSubData( GL_TRANSFORM_FEEDBACK_BUFFER,
                         0,
-                        sizeof(GLfloat)*4*N,
+                        sizeof(GLfloat)*6*N,
                         m_surface_host.data() );
     glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, 0 );
 

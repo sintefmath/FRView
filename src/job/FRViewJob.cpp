@@ -818,6 +818,8 @@ FRViewJob::initGL()
         glDebugMessageControl( GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE );
 
     }
+    
+    
     m_has_context = true;
     return true;
 }
@@ -838,6 +840,7 @@ FRViewJob::releasePipeline()
     m_coordsys_renderer = boost::shared_ptr<render::CoordSysRenderer>();
     m_grid_voxelizer = boost::shared_ptr<render::rlgen::GridVoxelization>();
     m_voxel_surface = boost::shared_ptr<render::rlgen::VoxelSurface>();
+    m_color_maps.reset();
     m_has_pipeline = false;
 }
 
@@ -857,6 +860,25 @@ bool FRViewJob::setupPipeline()
         m_coordsys_renderer.reset( new render::CoordSysRenderer );
         m_grid_voxelizer.reset( new render::rlgen::GridVoxelization );
         m_voxel_surface.reset( new render::rlgen::VoxelSurface );
+
+        // --- create color map texture --------------------------------------------
+        m_color_maps.reset( new render::GLTexture() );
+        std::vector<glm::vec3> ramp( 256 );
+        for(size_t i=0; i<ramp.size(); i++ ) {
+            float x = static_cast<float>(i)/static_cast<float>(ramp.size()-1);
+            ramp[i].x = (x < 0.50f ? 0.f   : (x < 0.75f ? 4.f*(x-0.5f)        : 1.f                 ));
+            ramp[i].y = (x < 0.25f ? 4.f*x : (x < 0.75f ? 1.f                 : 1.f - 4.f*(x-0.75f) ));
+            ramp[i].z = (x < 0.25f ? 1.f   : (x < 0.50f ? 1.f - 4.f*(x-0.25f) : 0.f                 ));
+        }
+        glBindTexture( GL_TEXTURE_1D, m_color_maps->get() );
+        glTexImage1D( GL_TEXTURE_1D, 0, GL_RGB, 256, 0, GL_RGB, GL_FLOAT, ramp.data() );
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_BASE_LEVEL, 0 );
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAX_LEVEL, 0 );
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glBindTexture( GL_TEXTURE_1D, 0 );
+        
         m_has_pipeline = true;
     }
     catch( std::runtime_error& e ) {

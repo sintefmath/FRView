@@ -94,6 +94,8 @@ FRViewJob::handleFetchSource()
         source_item.m_grid_tess_subset.reset( new render::subset::Representation );
         source_item.m_wells.reset( new render::wells::Representation );
         source_item.m_subset_selector_data.reset( new models::SubsetSelectorData );
+        source_item.m_color_map = m_color_maps;
+
         gpu_polyhedronmesh->update( *polyhedral_bridge );
         size_t index = m_source_items.size();
         m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( source_item ) ) );
@@ -112,8 +114,7 @@ FRViewJob::handleFetchSource()
         source_item.m_grid_tess_subset.reset( new render::subset::Representation );
         source_item.m_wells.reset( new render::wells::Representation );
         source_item.m_subset_selector_data.reset( new models::SubsetSelectorData );
-
-
+        source_item.m_color_map = m_color_maps;
         
         gpu_polygonmesh->update( polygon_bridge );
 

@@ -189,8 +189,7 @@ TransparencyAdditive::render(GLuint                              fbo,
     m_surface_renderer.draw( glm::value_ptr( M ),
                              projection,
                              m_width,
-                             m_height,
-                             m_color_map, items );
+                             m_height, items );
     renderMiscellaneous( width, height,
                          local_to_world, modelview, projection,
                          items );
@@ -208,8 +207,7 @@ TransparencyAdditive::render(GLuint                              fbo,
     m_surface_renderer.draw( glm::value_ptr( M ),
                              projection,
                              m_width,
-                             m_height,
-                             m_color_map, items );
+                             m_height, items );
 
     glDepthMask( GL_TRUE );
     glDisable( GL_BLEND );

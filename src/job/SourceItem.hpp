@@ -27,6 +27,8 @@ namespace render {
     class GridField;
     class ClipPlane;
 
+    class GLTexture;
+    
     namespace mesh {
         class AbstractMeshGPUModel;
     }
@@ -35,6 +37,9 @@ namespace render {
     }
     namespace surface {
         class GridTessSurf;
+    }
+    namespace rlgen {
+        class Splats;
     }
     namespace wells {
         class Representation;
@@ -60,7 +65,11 @@ struct SourceItem {
     boost::shared_ptr<render::surface::GridTessSurf>       m_boundary_surface;
     boost::shared_ptr<render::GridField>                   m_grid_field;
     boost::shared_ptr<render::wells::Representation>       m_wells;
+    boost::shared_ptr<render::GLTexture>                   m_color_map;
 
+    /** Compacted list of cell splat info used for render list creation. */
+    boost::shared_ptr<render::rlgen::Splats>               m_splats;
+    
     boost::shared_ptr<models::SubsetSelectorData>          m_subset_selector_data;
     
     bool                                            m_load_color_field;

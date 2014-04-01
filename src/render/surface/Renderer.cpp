@@ -77,7 +77,6 @@ Renderer::draw( const GLfloat*                            modelview,
                 const GLfloat*                            projection,
                 const GLsizei                             width,
                 const GLsizei                             height,
-                GLTexture&                                color_map,
                 const std::vector<RenderItem>&            render_items )
 {
     using boost::shared_ptr;
@@ -113,8 +112,6 @@ Renderer::draw( const GLfloat*                            modelview,
 
     // bind normal vector texture
 
-    glActiveTexture( GL_TEXTURE3 );
-    glBindTexture( GL_TEXTURE_1D, color_map.get() );
 
     // Bind vertex position VAO
    
@@ -145,6 +142,11 @@ Renderer::draw( const GLfloat*                            modelview,
         if( item.m_field ) {
             glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), 1 );
             glBindTexture( GL_TEXTURE_BUFFER, item.m_field->texture() );
+
+            if( item.m_color_map ) {
+                glActiveTexture( GL_TEXTURE3 );
+                glBindTexture( GL_TEXTURE_1D, item.m_color_map->get() );
+            }
         }
         else {
             glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), 0 );

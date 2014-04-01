@@ -17,12 +17,12 @@
  */
 
 in FI {
-    flat uint cell;
+    flat vec3 col;
 } fi;
 
-layout(location=0)  out uint  frag_color;
+layout(location=0)  out vec4  frag_color;
 
 void main(void)
 {
-    frag_color = fi.cell;
+    frag_color = vec4(fi.col, 1.f);
 }
