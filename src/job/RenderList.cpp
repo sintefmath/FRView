@@ -40,6 +40,7 @@
 #include "render/rlgen/GridVoxelization.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
 #include "render/rlgen/SplatCompacter.hpp"
+#include "render/rlgen/SplatRenderer.hpp"
 #include "render/rlgen/Splats.hpp"
 
 namespace resources {
@@ -78,16 +79,23 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
         if( !m_voxel_surface ) {
             m_voxel_surface.reset( new render::rlgen::VoxelSurface() );
         }
+        if( !m_splat_renderer ) {
+            m_splat_renderer.reset( new render::rlgen::SplatRenderer() );
+        }
         
+        for( size_t i=0; i<m_source_items.size(); i++ ) {
+            if( !m_source_items[i]->m_splats ) {
+                m_source_items[i]->m_splats.reset( new render::rlgen::Splats() );
+            }
+        }
         
+        // =====================================================================
+        if( m_under_the_hood.profilingEnabled() ) {
+            m_under_the_hood.proxyGenerateTimer().beginQuery();
+        }
         std::list<boost::shared_ptr<SourceItem> > splats;
         for( size_t i=0; i<m_source_items.size(); i++ ) {
             boost::shared_ptr<SourceItem> source_item = m_source_items[i];
-            
-            // Make sure we have the objects we need.
-            if( !source_item->m_splats) {
-                source_item->m_splats.reset( new render::rlgen::Splats() );
-            }
             
             m_splat_compacter->process( source_item->m_splats,
                                         dynamic_pointer_cast<const VertexPositionInterface>( source_item->m_grid_tess ),
@@ -100,42 +108,18 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
 
         // Populate voxel grid
         m_grid_voxelizer->apply( splats );
-    }
-    
-    
-    if( currentSourceItemValid() && m_has_pipeline ) {
-        if( 1 ) {
-        //if( m_renderlist_state == RENDERLIST_CHANGED_CLIENTS_NOTIFIED ) {
-          //  m_renderlist_state = RENDERLIST_SENT;
 
-            if( m_under_the_hood.profilingEnabled() ) {
-                m_under_the_hood.proxyGenerateTimer().beginQuery();
-            }
-
-            for( size_t i=0; i<m_source_items.size(); i++ ) {
-                boost::shared_ptr<SourceItem> source_item = m_source_items[i];
-                
-                // FIXME: Needs to add support for multi-object
-                
-                boost::shared_ptr<const render::mesh::CellSetInterface> cell_set =
-                        boost::dynamic_pointer_cast<const render::mesh::CellSetInterface>( source_item->m_grid_tess );
-                if( cell_set && source_item->m_grid_tess_subset ) {
-                    /*m_grid_voxelizer->build( cell_set,
-                                             source_item->m_grid_tess_subset,
-                                             glm::value_ptr( m_local_to_world ) );
-                */
-                    // FIXME: coloring should be part of splatting and surface
-                    // extraction should be moved outside of loop (independent on
-                    // geometries).
-                }
-                m_voxel_surface->build( m_grid_voxelizer, source_item->m_grid_field );
-            }
-            if( m_under_the_hood.profilingEnabled() ) {
-                m_under_the_hood.proxyGenerateTimer().endQuery();
-            }
-            updateRenderList();
+        if( currentSourceItemValid() ) {
+            m_voxel_surface->build( m_grid_voxelizer, currentSourceItem()->m_grid_field );
         }
+        
+        if( m_under_the_hood.profilingEnabled() ) {
+            m_under_the_hood.proxyGenerateTimer().endQuery();
+        }
+        updateRenderList();
+        // =====================================================================
     }
+
     return &m_renderlist_db;
 }
 
