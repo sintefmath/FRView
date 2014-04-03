@@ -37,7 +37,7 @@
 #include "render/mesh/AbstractMeshGPUModel.hpp"
 #include "render/mesh/CellSetInterface.hpp"
 #include "render/mesh/VertexPositionInterface.hpp"
-#include "render/rlgen/GridVoxelization.hpp"
+#include "render/rlgen/VoxelGrid.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
 #include "render/rlgen/SplatCompacter.hpp"
 #include "render/rlgen/SplatRenderer.hpp"
@@ -69,12 +69,12 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
     
     if( m_has_context ) {
 
-        // Make sure we have the objects we need.
+        // --- make sure we have the objects we need ---------------------------
         if( !m_splat_compacter ) {
             m_splat_compacter.reset( new render::rlgen::SplatCompacter() );
         }
-        if( !m_grid_voxelizer ) {
-            m_grid_voxelizer.reset( new render::rlgen::GridVoxelization() );
+        if( !m_voxel_grid ) {
+            m_voxel_grid.reset( new render::rlgen::GridVoxelization() );
         }
         if( !m_voxel_surface ) {
             m_voxel_surface.reset( new render::rlgen::VoxelSurface() );
@@ -88,15 +88,16 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
                 m_source_items[i]->m_splats.reset( new render::rlgen::Splats() );
             }
         }
-        
-        // =====================================================================
+
+        // --- create renderlist geometry -------------------------------------- 
         if( m_under_the_hood.profilingEnabled() ) {
             m_under_the_hood.proxyGenerateTimer().beginQuery();
         }
+
+        // find sets of world-space bbox'es of active cells
         std::list<boost::shared_ptr<SourceItem> > splats;
         for( size_t i=0; i<m_source_items.size(); i++ ) {
             boost::shared_ptr<SourceItem> source_item = m_source_items[i];
-            
             m_splat_compacter->process( source_item->m_splats,
                                         dynamic_pointer_cast<const VertexPositionInterface>( source_item->m_grid_tess ),
                                         dynamic_pointer_cast<const CellSetInterface>( source_item->m_grid_tess ),
@@ -106,18 +107,17 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
             splats.push_back( source_item );
         }
 
-        // Populate voxel grid
-        m_grid_voxelizer->apply( splats );
+        // populate voxel grid
+        m_splat_renderer->apply( m_voxel_grid, splats );
 
-        if( currentSourceItemValid() ) {
-            m_voxel_surface->build( m_grid_voxelizer, currentSourceItem()->m_grid_field );
-        }
+        // extract iso-surface
+        m_voxel_surface->build( m_voxel_grid );
         
         if( m_under_the_hood.profilingEnabled() ) {
             m_under_the_hood.proxyGenerateTimer().endQuery();
         }
+        
         updateRenderList();
-        // =====================================================================
     }
 
     return &m_renderlist_db;

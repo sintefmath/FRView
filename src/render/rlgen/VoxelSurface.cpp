@@ -18,7 +18,7 @@
 #include <iostream>
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
-#include "GridVoxelization.hpp"
+#include "render/rlgen/VoxelGrid.hpp"
 #include "render/GridField.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
 
@@ -62,8 +62,7 @@ VoxelSurface::~VoxelSurface()
 }
 
 void
-VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
-                     boost::shared_ptr<const GridField> field )
+VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels )
 {
     
     Logger log = getLogger( "VoxelSurface.build" );
@@ -183,7 +182,7 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
 
     // Bind voxel texture to sampler 1
     glActiveTexture( GL_TEXTURE1 );
-    glBindTexture( GL_TEXTURE_3D, voxels->voxelTexture() );
+    glBindTexture( GL_TEXTURE_3D, voxels->voxelTexture().get() );
     HPMCbuildHistopyramid( m_hpmc_hp, 0.5f );
 
     GLsizei N = HPMCacquireNumberOfVertices( m_hpmc_hp );
@@ -208,20 +207,7 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
 
 
     glActiveTexture( GL_TEXTURE3 );
-    glBindTexture( GL_TEXTURE_3D, voxels->voxelTexture() );
-    glActiveTexture( GL_TEXTURE4 );
-    if( field->hasData() ) {
-        glUniform1i( glGetUniformLocation( m_extraction_program, "use_field"), GL_TRUE );
-        glUniform2f( glGetUniformLocation( m_extraction_program, "field_remap"),
-                     field->minValue(),
-                     1.f/(field->maxValue()-field->minValue()) );
-        glBindTexture( GL_TEXTURE_BUFFER, field->texture() );
-    }
-    else {
-        glUniform1i( glGetUniformLocation( m_extraction_program, "use_field"), GL_FALSE );
-        glBindTexture( GL_TEXTURE_BUFFER, 0 );
-
-    }
+    glBindTexture( GL_TEXTURE_3D, voxels->voxelTexture().get() );
 
     // The unit cube is scaled to the interior of voxels (to make sure that the
     // geometry is capped). We need to scale the extracted geometry such that

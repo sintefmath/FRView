@@ -48,7 +48,7 @@
 #include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
-#include "render/rlgen/GridVoxelization.hpp"
+#include "render/rlgen/VoxelGrid.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
 
 using std::string;
@@ -838,7 +838,7 @@ FRViewJob::releasePipeline()
     m_half_plane_selector = boost::shared_ptr<render::subset::BuilderSelectInsideHalfplane>();
     m_grid_cube_renderer = boost::shared_ptr<render::GridCubeRenderer>();
     m_coordsys_renderer = boost::shared_ptr<render::CoordSysRenderer>();
-    m_grid_voxelizer = boost::shared_ptr<render::rlgen::GridVoxelization>();
+    m_voxel_grid = boost::shared_ptr<render::rlgen::GridVoxelization>();
     m_voxel_surface = boost::shared_ptr<render::rlgen::VoxelSurface>();
     m_color_maps.reset();
     m_has_pipeline = false;
@@ -858,7 +858,7 @@ bool FRViewJob::setupPipeline()
         m_half_plane_selector.reset( new render::subset::BuilderSelectInsideHalfplane );
         m_grid_cube_renderer.reset( new render::GridCubeRenderer );
         m_coordsys_renderer.reset( new render::CoordSysRenderer );
-        m_grid_voxelizer.reset( new render::rlgen::GridVoxelization );
+        m_voxel_grid.reset( new render::rlgen::GridVoxelization );
         m_voxel_surface.reset( new render::rlgen::VoxelSurface );
 
         // --- create color map texture --------------------------------------------
@@ -967,6 +967,14 @@ FRViewJob::doLogic()
         m_visibility_mask = new_mask;
     }
 
+    // If subset changes, so do render lists
+    for( size_t i=0; i<m_source_items.size(); i++ ) {
+        if( m_source_items[i]->m_do_update_subset ) {
+            m_renderlist_update_revision = true;
+        }
+    }
+    
+    
     // If we clients have asked for renderlists at least once, we inform them
     // that they should query for a new one. 
     if( m_renderlist_initialized &&  m_renderlist_update_revision ) {

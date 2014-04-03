@@ -38,8 +38,7 @@ public:
     { return m_surface_host; }
 
     void
-    build( boost::shared_ptr<const GridVoxelization> voxels,
-           boost::shared_ptr<const GridField> field );
+    build(boost::shared_ptr<const GridVoxelization> voxels );
 
 protected:
     GLsizei                 m_volume_dim[3];

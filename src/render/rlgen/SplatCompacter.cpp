@@ -29,23 +29,16 @@ const std::string package = "render.rlgen.SplatCompacter";
 namespace render {
 namespace rlgen {
 namespace glsl {
-    extern const std::string GridVoxelization_compact_vs;
-    extern const std::string GridVoxelization_compact_gs;
+    extern const std::string SplatCompacter_vs;
+    extern const std::string SplatCompacter_gs;
 }
 
 SplatCompacter::SplatCompacter()
+    : m_compacter( package + ".m_compacter" )
 {
-    Logger log = getLogger( package + ".constructor" );
-    GLint vs, gs;
+    m_compacter.addShaderStage( glsl::SplatCompacter_vs, GL_VERTEX_SHADER );
+    m_compacter.addShaderStage( glsl::SplatCompacter_gs, GL_GEOMETRY_SHADER );
     
-    vs = utils::compileShader( log, glsl::GridVoxelization_compact_vs, GL_VERTEX_SHADER );
-    glAttachShader( m_compacter.get(), vs );
-    glDeleteShader( vs );
-
-    gs = utils::compileShader( log, glsl::GridVoxelization_compact_gs, GL_GEOMETRY_SHADER );
-    glAttachShader( m_compacter.get(), gs );
-    glDeleteShader( gs );
-
     const char* compact_feedback[3] = {
         "bbmin",
         "bbmax",
@@ -54,9 +47,9 @@ SplatCompacter::SplatCompacter()
     glTransformFeedbackVaryings( m_compacter.get(),
                                  3, compact_feedback,
                                  GL_INTERLEAVED_ATTRIBS );
-    
-    utils::linkProgram( log, m_compacter.get() );
-    m_local_to_world_loc = glGetUniformLocation( m_compacter.get(), "local_to_world" );
+
+    m_compacter.link();
+    m_local_to_world_loc = m_compacter.uniformLocation( "local_to_world" );
 }
 
 SplatCompacter::~SplatCompacter()

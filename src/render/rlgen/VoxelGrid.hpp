@@ -19,6 +19,7 @@
 #include <list>
 #include <boost/shared_ptr.hpp>
 #include <boost/utility.hpp>
+#include "render/ManagedGL.hpp"
 #include "job/SourceItem.hpp"
 
 namespace render {
@@ -37,10 +38,12 @@ class GridVoxelization : public boost::noncopyable
 public:
     GridVoxelization();
 
-    ~GridVoxelization();
+    /** Get the 3D texture containing the voxel set. */
+    GLTexture&
+    voxelTexture() { return m_voxels_tex; }
 
     /** Get the 3D texture containing the voxel set. */
-    GLuint
+    const GLTexture&
     voxelTexture() const { return m_voxels_tex; }
 
     /** Get voxel set dimension.
@@ -50,31 +53,9 @@ public:
     void
     dimension( GLsizei* dim ) const;
 
-    void
-    apply(std::list<boost::shared_ptr<SourceItem> > items );
-    
-    /** Populate the voxel set. */
-    void
-    build(boost::shared_ptr<const mesh::CellSetInterface> cell_set,
-           boost::shared_ptr<const subset::Representation> cell_subset,
-           const GLfloat*                                  world_from_local );
-
 protected:
     GLsizei     m_resolution;
-    GLuint      m_voxels_tex;
-    GLuint      m_slice_fbo;
-
-
-    GLuint      m_compacted_buf;
-    GLsizei     m_compacted_alloc;
-    GLuint      m_compacted_count_query;
-    GLuint      m_compacted_vao;
-
-    GLuint      m_voxelizer_program;
-    GLint       m_voxelizer_slice_loc;
-
-    GLuint      m_compact_program;
-    GLint       m_compact_local_to_world_loc;
+    GLTexture   m_voxels_tex;
 };
 
     } // of namespace rlgen

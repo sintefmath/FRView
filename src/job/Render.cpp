@@ -27,7 +27,7 @@
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
-#include "render/rlgen/GridVoxelization.hpp"          // move to renderlist
+#include "render/rlgen/VoxelGrid.hpp"
 #include "render/rlgen/VoxelSurface.hpp"  // move to renderlist
 #include "render/manager/OnlySolid.hpp"
 #include "render/manager/TransparencyAdditive.hpp"
@@ -117,8 +117,7 @@ FRViewJob::render( const float*  projection,
         
         for(size_t i=0; i<m_source_items.size(); i++ ) {
             boost::shared_ptr<SourceItem> source_item = m_source_items[i];
-        
-            
+
             if( m_appearance.renderWells() ) {
                 items.resize( items.size() + 1 );
                 items.back().m_renderer = render::RenderItem::RENDERER_WELL;

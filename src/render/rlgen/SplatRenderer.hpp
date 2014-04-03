@@ -40,9 +40,13 @@ public:
            const std::list<boost::shared_ptr<SourceItem> >&  items );
     
 protected:
-    GLProgram   m_program;
-    GLint       m_slice_loc;
-    
+    GLFramebuffer   m_slice_fbo;
+    GLProgram       m_program;
+    GLint           m_loc_slice;
+    GLint           m_loc_field_remap;
+    GLint           m_loc_use_field;
+    GLint           m_loc_log_map;
+    GLint           m_loc_surface_color;
 };
             
         

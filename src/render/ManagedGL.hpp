@@ -138,6 +138,26 @@ public:
         create();
     }
 
+    /** Set the shader source of a given shader stage.
+     *
+     * Throws runtime_error on failure.
+     */
+    void
+    addShaderStage(const std::string& source, GLenum type );
+    
+    /** Link shader program.
+     *
+     * Throws runtime_error on failure.
+     */
+    void
+    link();
+    
+    void
+    use() { glUseProgram( m_gl_name ); }
+
+    GLint
+    uniformLocation(const std::string& uniform );
+    
     GLuint
     get() const {
         return m_gl_name;
@@ -145,14 +165,7 @@ public:
 
 protected:
     void
-    create()
-    {
-        m_gl_name = glCreateProgram();
-        if( !m_name.empty() ) {
-            Logger log = getLogger( "GLProgram" );
-            LOGGER_DEBUG( log, "prg " << m_gl_name << ": " << m_name );
-        }
-    }
+    create();
 
     const std::string   m_name;
     GLuint              m_gl_name;
@@ -203,6 +216,9 @@ public:
 
     GLuint
     get() const { return m_gl_name; }
+
+    void
+    bind() { glBindFramebuffer( GL_FRAMEBUFFER, m_gl_name ); }
     
 protected:
     GLuint  m_gl_name;

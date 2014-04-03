@@ -29,8 +29,8 @@ out FI {
     flat vec3 col;
 } go;
 
-layout(binding=2)   uniform samplerBuffer   field;
-layout(binding=3)   uniform sampler1D       color_map;
+layout(binding=0)   uniform samplerBuffer   field;
+layout(binding=1)   uniform sampler1D       color_map;
                     uniform vec2            slice;
                     uniform vec2            field_remap;
                     uniform bool            use_field;

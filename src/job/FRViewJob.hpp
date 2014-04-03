@@ -178,7 +178,7 @@ private:
     boost::shared_ptr<render::GridCubeRenderer>                     m_grid_cube_renderer;
     boost::shared_ptr<render::CoordSysRenderer>                     m_coordsys_renderer;
     boost::shared_ptr<render::rlgen::SplatCompacter>                m_splat_compacter;
-    boost::shared_ptr<render::rlgen::GridVoxelization>              m_grid_voxelizer;
+    boost::shared_ptr<render::rlgen::GridVoxelization>              m_voxel_grid;
     boost::shared_ptr<render::rlgen::SplatRenderer>                 m_splat_renderer;
     boost::shared_ptr<render::rlgen::VoxelSurface>                  m_voxel_surface;
     boost::shared_ptr<render::manager::AbstractBase>                 m_screen_manager;
