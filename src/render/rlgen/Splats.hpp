@@ -47,7 +47,7 @@ public:
     asAttributes() const { return  m_attributes; }
     
     GLQuery&
-    query() { return m_query; }
+    query();
     
     GLsizei
     count();

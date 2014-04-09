@@ -69,7 +69,15 @@ Splats::resize( GLsizei elements )
     }
     return false;
 }
-    
+
+GLQuery&
+Splats::query()
+{
+    m_update = true;
+    return m_query;
+}
+
+
 GLsizei
 Splats::count()
 {

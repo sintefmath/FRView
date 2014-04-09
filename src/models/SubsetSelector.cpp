@@ -460,7 +460,7 @@ SubsetSelector::update(boost::shared_ptr<SourceItem> source_item )
     if( !m_source_item->m_subset_selector_data ) {
         m_source_item->m_subset_selector_data.reset( new SubsetSelectorData );
         
-        m_source_item->m_subset_selector_data->m_selector_type = SubsetSelectorData::SELECTOR_HALFPLANE;
+        m_source_item->m_subset_selector_data->m_selector_type = SubsetSelectorData::SELECTOR_ALL;
         m_source_item->m_subset_selector_data->m_dim = 0;
         m_source_item->m_subset_selector_data->m_nx_min = 0;
         m_source_item->m_subset_selector_data->m_nx_max = 0;
