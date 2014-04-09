@@ -28,11 +28,16 @@ inSubset( int cell )
 {
     uint global = texelFetch( cell_global_index, cell ).r;
 
-    uvec3 index = uvec3( global % grid_dim.x,
-                         (global/grid_dim.x) % grid_dim.y,
-                         (global/grid_dim.x)/grid_dim.y );
-
-    return all(lessThanEqual( index_min, index )) && all(lessThanEqual( index, index_max ));
+    
+    if( grid_dim.z != 0u ) {
+        uvec3 index = uvec3( global % grid_dim.x,
+                             (global/grid_dim.x) % grid_dim.y,
+                             (global/grid_dim.x)/grid_dim.y );
+        return all(lessThanEqual( index_min, index )) && all(lessThanEqual( index, index_max ));
+    }
+    else {
+        return (index_min.x <= global) && (global <= index_max.x );
+    }
 }
 
 
