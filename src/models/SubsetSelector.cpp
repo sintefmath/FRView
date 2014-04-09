@@ -59,13 +59,17 @@ namespace {
     const std::string details_label_key = "details_label";
 
     const std::string package = "models.SubsetSelectorData";
+
+    const char* subsets[models::SubsetSelectorData::SELECTOR_N] = { "all",
+                                                                    "subset_field",
+                                                                    "subset_index",
+                                                                    "subset_plane",
+                                                                    "subset_halfplane" };
+    
 }
 
 namespace models {
 
-SubsetSelectorData::SubsetSelectorData()
-{
-}
 
 
 SubsetSelector::SubsetSelector( boost::shared_ptr<tinia::model::ExposedModel>& model,
@@ -76,11 +80,7 @@ SubsetSelector::SubsetSelector( boost::shared_ptr<tinia::model::ExposedModel>& m
     std::list<std::string> solutions = { "[none]" };
     const double dmax = std::numeric_limits<double>::max();
 
-    const char* subsets[] = { "all",
-                              "subset_field",
-                              "subset_index",
-                              "subset_plane",
-                              "subset_halfplane" };
+    
 
     
     m_model->addConstrainedElement<double>( field_select_min_key, 0.0, -dmax, dmax, "Min" );
@@ -114,6 +114,7 @@ SubsetSelector::SubsetSelector( boost::shared_ptr<tinia::model::ExposedModel>& m
                                                     subsets[0],
                                                     &subsets[0],
                                                     &subsets[5] );
+    m_model->addStateListener( surface_subset_key, this);
 
 }
     
@@ -121,22 +122,72 @@ void
 SubsetSelector::stateElementModified( tinia::model::StateElement * stateElement )
 {
     Logger log = getLogger( package + "stateElementModified" );
-    
+    using std::string;   
     
     if( !m_source_item ) {
         return;
     }
-    LOGGER_DEBUG( log, "mooo" );
     
     const std::string& key = stateElement->getKey();
 
-    if( key == plane_select_PX_key ) {
+    // --- change of selector --------------------------------------------------
+    if( key == surface_subset_key ) {
+        string value;
+        stateElement->getValue<string>( value );
+
+        SubsetSelectorData::SelectorType type = SubsetSelectorData::SELECTOR_N;
+        for(int i=0; i<SubsetSelectorData::SELECTOR_N; i++ ) {
+            if( value == subsets[i] ) {
+                type = static_cast<SubsetSelectorData::SelectorType>(i);
+            }
+        }
+        switch( type ) {
+        case SubsetSelectorData::SELECTOR_ALL:
+            m_model->updateElement( "surface_subset_field_range", false );
+            m_model->updateElement( "surface_subset_index_range", false );
+            m_model->updateElement( "surface_subset_plane", false );
+            break;
+            
+        case SubsetSelectorData::SELECTOR_FIELD:
+            m_model->updateElement( "surface_subset_field_range", true );
+            m_model->updateElement( "surface_subset_index_range", false );
+            m_model->updateElement( "surface_subset_plane", false );
+            break;
+            
+        case SubsetSelectorData::SELECTOR_INDEX:
+            m_model->updateElement( "surface_subset_field_range", false );
+            m_model->updateElement( "surface_subset_index_range", true );
+            m_model->updateElement( "surface_subset_plane", false );
+            break;
+            
+        case SubsetSelectorData::SELECTOR_PLANE:
+            m_model->updateElement( "surface_subset_field_range", false );
+            m_model->updateElement( "surface_subset_index_range", false );
+            m_model->updateElement( "surface_subset_plane", true );
+            break;
+            
+        case SubsetSelectorData::SELECTOR_HALFPLANE:
+            m_model->updateElement( "surface_subset_field_range", false );
+            m_model->updateElement( "surface_subset_index_range", false );
+            m_model->updateElement( "surface_subset_plane", true );
+            break;
+            
+        case SubsetSelectorData::SELECTOR_N:
+            // this should never happen.
+            LOGGER_FATAL( log, "element '" << surface_subset_key << "' got illegal value '" << value << "'." );
+            break;
+        }
+        
+        m_source_item->m_subset_selector_data->m_selector_type = type;
+        m_source_item->m_do_update_subset = true;
+    }
+    else if( key == plane_select_PX_key ) {
         bool value;
         stateElement->getValue( value );
         if( value ) {
             m_model->updateElement( key, false );
             m_source_item->m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, -0.1*M_PI_4 ) ) );
-            m_source_item->m_do_update_subset;
+            m_source_item->m_do_update_subset = true;
         }
     }
     else if( key == plane_select_NX_key ) {
@@ -145,7 +196,7 @@ SubsetSelector::stateElementModified( tinia::model::StateElement * stateElement 
         if( value ) {
             m_model->updateElement( key, false );
             m_source_item->m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, 0.1*M_PI_4 ) ) );
-            m_source_item->m_do_update_subset;
+            m_source_item->m_do_update_subset = true;
         }
     }
     else if( key == plane_select_PY_key ) {
@@ -154,7 +205,7 @@ SubsetSelector::stateElementModified( tinia::model::StateElement * stateElement 
         if( value ) {
             m_model->updateElement( key, false );
             m_source_item->m_clip_plane->rotate( glm::quat( glm::vec3( 0.1*M_PI_4, 0.f, 0.f ) ) );
-            m_source_item->m_do_update_subset;
+            m_source_item->m_do_update_subset = true;
         }
     }
     else if( key == plane_select_NY_key ) {
@@ -163,14 +214,14 @@ SubsetSelector::stateElementModified( tinia::model::StateElement * stateElement 
         if( value ) {
             m_model->updateElement( key, false );
             m_source_item->m_clip_plane->rotate( glm::quat( glm::vec3( -0.1*M_PI_4, 0.f, 0.f ) ) );
-            m_source_item->m_do_update_subset;
+            m_source_item->m_do_update_subset = true;
         }
     }
     else if( key == plane_select_shift_key ) {
         int value;
         stateElement->getValue<int>( value );
         m_source_item->m_clip_plane->setOffset( (1.7f/1000.f)*(value) );
-        m_source_item->m_do_update_subset;
+        m_source_item->m_do_update_subset = true;
     }
 #if 0
     else if( key == "index_range_select_min_i" ) {
@@ -384,41 +435,14 @@ SubsetSelector::guiFactory() const
 void
 SubsetSelector::update(boost::shared_ptr<SourceItem> source_item )
 {
+    using std::string;
+    using boost::shared_ptr;
+    using boost::dynamic_pointer_cast;
+    using dataset::CellLayoutInterface;
     m_source_item = source_item;
-    if( m_source_item ) {
-        int nx_min = 0;
-        int nx_max = 0;
-        int ny_min = 0;
-        int ny_max = 0;
-        int nz_min = 0;
-        int nz_max = 0;
-        boost::shared_ptr< dataset::CellLayoutInterface > cell_layout =
-                boost::dynamic_pointer_cast< dataset::CellLayoutInterface >( m_source_item->m_source );
-        if( cell_layout ) {
-            int dim = cell_layout->indexDim();
-            if( dim > 0 ) {
-                nx_min = cell_layout->minIndex(0);
-                nx_max = std::max( 1, cell_layout->maxIndex(0) ) - 1u;
-                if( dim > 1 ) {
-                    ny_min = cell_layout->minIndex(1);
-                    ny_max = std::max( 1, cell_layout->maxIndex(1) ) - 1u;
-                    if( dim > 2 ) {
-                        nz_min = cell_layout->minIndex(2);
-                        nz_max = std::max( 1, cell_layout->maxIndex(2) ) - 1u;
-                    }
-                }
-            }
-        }
-        m_model->updateConstraints<int>( "index_range_select_min_i", nx_min, nx_min, nx_max );
-        m_model->updateConstraints<int>( "index_range_select_max_i", nx_max, nx_min, nx_max );
-        m_model->updateConstraints<int>( "index_range_select_min_j", ny_min, ny_min, ny_max );
-        m_model->updateConstraints<int>( "index_range_select_max_j", ny_max, ny_min, ny_max );
-        m_model->updateConstraints<int>( "index_range_select_min_k", nz_min, nz_min, nz_max );
-        m_model->updateConstraints<int>( "index_range_select_max_k", nz_max, nz_min, nz_max );
-        
-        
-    }
-    else {
+
+    // --- no valid source item, set defaults ----------------------------------
+    if( !m_source_item ) {
         std::list<std::string> solutions = {"none"};
         m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
         m_model->updateConstraints<int>("field_report_step", 0, 0, 0 );
@@ -429,7 +453,71 @@ SubsetSelector::update(boost::shared_ptr<SourceItem> source_item )
         m_model->updateConstraints<int>( "index_range_select_max_j", 0, 0, 0 );
         m_model->updateConstraints<int>( "index_range_select_min_k", 0, 0, 0 );
         m_model->updateConstraints<int>( "index_range_select_max_k", 0, 0, 0 );
+        return;
     }
+    
+    // --- initialize data for this source if first time it is encountered -----
+    if( !m_source_item->m_subset_selector_data ) {
+        m_source_item->m_subset_selector_data.reset( new SubsetSelectorData );
+        
+        m_source_item->m_subset_selector_data->m_selector_type = SubsetSelectorData::SELECTOR_HALFPLANE;
+        m_source_item->m_subset_selector_data->m_dim = 0;
+        m_source_item->m_subset_selector_data->m_nx_min = 0;
+        m_source_item->m_subset_selector_data->m_nx_max = 0;
+        m_source_item->m_subset_selector_data->m_ny_min = 0;
+        m_source_item->m_subset_selector_data->m_ny_max = 0;
+        m_source_item->m_subset_selector_data->m_nz_min = 0;
+        m_source_item->m_subset_selector_data->m_nz_max = 0;
+        
+        shared_ptr<CellLayoutInterface> cl = dynamic_pointer_cast<CellLayoutInterface>( m_source_item->m_source );
+        if( cl ) {
+            int dim = cl->indexDim();
+            m_source_item->m_subset_selector_data->m_dim = dim;
+            if( dim > 0 ) {
+                m_source_item->m_subset_selector_data->m_nx_min = cl->minIndex(0);
+                m_source_item->m_subset_selector_data->m_nx_max = std::max( 1, cl->maxIndex(0) ) - 1u;
+                if( dim > 1 ) {
+                    m_source_item->m_subset_selector_data->m_ny_min = cl->minIndex(1);
+                    m_source_item->m_subset_selector_data->m_ny_max = std::max( 1, cl->maxIndex(1) ) - 1u;
+                    if( dim > 2 ) {
+                        m_source_item->m_subset_selector_data->m_nz_min = cl->minIndex(2);
+                        m_source_item->m_subset_selector_data->m_nz_max = std::max( 1, cl->maxIndex(2) ) - 1u;
+                    }
+                }
+            }
+        }
+    }
+    
+    // --- push restrictions from newly selected source to GUI -----------------
+    if( m_source_item->m_subset_selector_data->m_selector_type < SubsetSelectorData::SELECTOR_N ) {
+        m_model->updateElement<string>( surface_subset_key,
+                                        subsets[ m_source_item->m_subset_selector_data->m_selector_type ] );
+    }
+    
+    m_model->updateConstraints<int>( index_range_select_min_i_key,
+                                     m_source_item->m_subset_selector_data->m_nx_min,
+                                     m_source_item->m_subset_selector_data->m_nx_min,
+                                     m_source_item->m_subset_selector_data->m_nx_max );
+    m_model->updateConstraints<int>( index_range_select_max_i_key,
+                                     m_source_item->m_subset_selector_data->m_nx_max,
+                                     m_source_item->m_subset_selector_data->m_nx_min,
+                                     m_source_item->m_subset_selector_data->m_nx_max );
+    m_model->updateConstraints<int>( index_range_select_min_j_key,
+                                     m_source_item->m_subset_selector_data->m_ny_min,
+                                     m_source_item->m_subset_selector_data->m_ny_min,
+                                     m_source_item->m_subset_selector_data->m_ny_max );
+    m_model->updateConstraints<int>( index_range_select_max_j_key,
+                                     m_source_item->m_subset_selector_data->m_ny_max,
+                                     m_source_item->m_subset_selector_data->m_ny_min,
+                                     m_source_item->m_subset_selector_data->m_ny_max );
+    m_model->updateConstraints<int>( index_range_select_min_k_key,
+                                     m_source_item->m_subset_selector_data->m_nz_min,
+                                     m_source_item->m_subset_selector_data->m_nz_min,
+                                     m_source_item->m_subset_selector_data->m_nz_max );
+    m_model->updateConstraints<int>( index_range_select_max_k_key,
+                                     m_source_item->m_subset_selector_data->m_nz_max,
+                                     m_source_item->m_subset_selector_data->m_nz_min,
+                                     m_source_item->m_subset_selector_data->m_nz_max );
 }
 
 void

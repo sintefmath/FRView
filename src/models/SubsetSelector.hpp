@@ -26,19 +26,15 @@
 
 namespace models {
 
-class SubsetSelectorData
-{
-public:    
-    SubsetSelectorData();
-
-protected:
-    
-};
+        
 
 class SubsetSelector
         : public tinia::model::StateListener
 {
 public:
+            
+    
+    
     typedef int Revision;
     
 
@@ -64,6 +60,36 @@ protected:
 
     void
     bumpRevision(); 
+
+    
+
+};
+
+/** Private per-source data for subset selector model. */
+
+class SubsetSelectorData
+{
+    friend class SubsetSelector;
+public:
+    enum SelectorType {
+        SELECTOR_ALL,
+        SELECTOR_FIELD,
+        SELECTOR_INDEX,
+        SELECTOR_PLANE,
+        SELECTOR_HALFPLANE,
+        SELECTOR_N
+    };
+protected:
+    
+    SelectorType    m_selector_type;
+    int             m_dim;
+    int             m_nx_min;
+    int             m_nx_max;
+    int             m_ny_min;
+    int             m_ny_max;
+    int             m_nz_min;
+    int             m_nz_max;
+    
 };
 
 

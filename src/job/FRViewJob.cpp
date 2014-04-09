@@ -228,7 +228,6 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_model->addStateListener( "index_range_select_max_k", this);
     m_model->addStateListener( "field_select_min", this);
     m_model->addStateListener( "field_select_max", this);
-    m_model->addStateListener( "surface_subset", this);
     m_model->addStateListener( "field_range_enable", this);
     m_model->addStateListener( "tess_flip_orientation", this);
 
@@ -601,38 +600,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     else if( key == "field_select_max" ) {
         currentSourceItem()->m_do_update_subset = true;
     }
-    else if( key == "surface_subset" ) {
-        string value;
-        stateElement->getValue<string>( value );
-        if( value == "all" ) {
-            m_model->updateElement( "surface_subset_field_range", false );
-            m_model->updateElement( "surface_subset_index_range", false );
-            m_model->updateElement( "surface_subset_plane", false );
-        }
-        else if( value == "subset_field" ) {
-            m_model->updateElement( "surface_subset_field_range", true );
-            m_model->updateElement( "surface_subset_index_range", false );
-            m_model->updateElement( "surface_subset_plane", false );
-        }
-        else if( value == "subset_index" ) {
-            m_model->updateElement( "surface_subset_field_range", false );
-            m_model->updateElement( "surface_subset_index_range", true );
-            m_model->updateElement( "surface_subset_plane", false );
-        }
-        else if( value == "subset_plane" ) {
-            m_model->updateElement( "surface_subset_field_range", false );
-            m_model->updateElement( "surface_subset_index_range", false );
-            m_model->updateElement( "surface_subset_plane", true );
-
-        }
-        else if( value == "subset_halfplane" ) {
-            m_model->updateElement( "surface_subset_field_range", false );
-            m_model->updateElement( "surface_subset_index_range", false );
-            m_model->updateElement( "surface_subset_plane", true );
-        }
-        currentSourceItem()->m_do_update_subset = true;
-        m_renderlist_update_revision = true;
-    }
+    
     else if( key == "field_range_enable" && currentSourceItemValid() ) {
         
         bool value;
