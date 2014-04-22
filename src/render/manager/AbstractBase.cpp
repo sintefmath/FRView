@@ -33,7 +33,7 @@ namespace render {
         }
         static const std::string package = "render.manager.AbstractBase";
 
-AbstractBase::AbstractBase( const models::Appearance& appearance,
+AbstractBase::AbstractBase( const models::RenderConfig& appearance,
                             const GLsizei width,
                             const GLsizei height )
     : m_width( width ),
@@ -76,7 +76,7 @@ AbstractBase::~AbstractBase()
 }
 
 bool
-AbstractBase::expired( const models::Appearance& appearance )
+AbstractBase::expired( const models::RenderConfig& appearance )
 {
     if( m_appearance_revision != appearance.revision() ) {
         if( appearance.shadingModel() != m_shading_model ) {
@@ -91,14 +91,14 @@ AbstractBase::defines() const
 {
     std::string ret;
     switch( m_shading_model ) {
-    case models::Appearance::Solid:
+    case models::RenderConfig::Solid:
         ret += "#define SHADING_MODEL_SOLID\n";
         break;
-    case models::Appearance::Diffuse:
+    case models::RenderConfig::Diffuse:
         ret += "#define SHADING_MODEL_DIFFUSE\n";
         ret += "#define SHADING_DIFFUSE_COMPONENT\n";
         break;
-    case models::Appearance::DiffuseSpecular:
+    case models::RenderConfig::DiffuseSpecular:
         ret += "#define SHADING_MODEL_DIFFUSE_SPECULAR\n";
         ret += "#define SHADING_DIFFUSE_COMPONENT\n";
         ret += "#define SHADING_SPECULAR_COMPONENT\n";

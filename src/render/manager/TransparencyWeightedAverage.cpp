@@ -32,7 +32,7 @@ namespace manager {
         }
         static const std::string package = "render.screen.TransparencyWeightedAverage";
 
-TransparencyWeightedAverage::TransparencyWeightedAverage( const models::Appearance& appearance,
+TransparencyWeightedAverage::TransparencyWeightedAverage( const models::RenderConfig& appearance,
                                                           const GLsizei width,
                                                           const GLsizei height )
     : AbstractBase( appearance, width, height ),

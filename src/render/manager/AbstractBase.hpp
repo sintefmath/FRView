@@ -21,11 +21,11 @@
 #include <boost/shared_ptr.hpp>
 #include <render/RenderItem.hpp>
 #include <render/wells/Renderer.hpp>
-#include <models/Appearance.hpp>
+#include "models/RenderConfig.hpp"
 #include "render/TextRenderer.hpp"
 
 namespace models {
-    class Appearance;
+    class RenderConfig;
 }
 namespace render {
     namespace mesh {
@@ -38,7 +38,7 @@ namespace render {
 class AbstractBase : public boost::noncopyable
 {
 public:
-    AbstractBase( const models::Appearance& appearance,
+    AbstractBase( const models::RenderConfig& appearance,
                   const GLsizei width,
                   const GLsizei height );
     
@@ -61,15 +61,15 @@ public:
      */
     virtual
     bool
-    expired( const models::Appearance& appearance );
+    expired( const models::RenderConfig& appearance );
     
 protected:
     GLsizei                             m_width;
     GLsizei                             m_height;
 
 
-    models::Appearance::Revision        m_appearance_revision;
-    models::Appearance::ShadingModel    m_shading_model;
+    models::RenderConfig::Revision        m_appearance_revision;
+    models::RenderConfig::ShadingModel    m_shading_model;
     
     wells::WellRenderer                 m_well_renderer;
     TextRenderer                        m_legend_text;

@@ -125,7 +125,7 @@ FRViewJob::render( const float*  projection,
             }
             
             if( source_item->m_faults_surface
-                    && (m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS ) )
+                    && (m_visibility_mask & models::RenderConfig::VISIBILITY_MASK_FAULTS ) )
             {
                 const glm::vec4& fc = m_appearance.faultsFillColor();
                 const glm::vec4& oc = m_appearance.faultsOutlineColor();
@@ -144,7 +144,7 @@ FRViewJob::render( const float*  projection,
                 items.back().m_face_color[3] = fc.a;
             }
             if( source_item->m_subset_surface
-                    && (m_visibility_mask & models::Appearance::VISIBILITY_MASK_SUBSET ) )
+                    && (m_visibility_mask & models::RenderConfig::VISIBILITY_MASK_SUBSET ) )
             {
                 const glm::vec4& fc = m_appearance.subsetFillColor();
                 const glm::vec4& oc = m_appearance.subsetOutlineColor();
@@ -168,7 +168,7 @@ FRViewJob::render( const float*  projection,
                 items.back().m_face_color[3] = fc.a;
             }
             if( source_item->m_boundary_surface
-                    && (m_visibility_mask & models::Appearance::VISIBILITY_MASK_BOUNDARY ) )
+                    && (m_visibility_mask & models::RenderConfig::VISIBILITY_MASK_BOUNDARY ) )
             {
                 const glm::vec4& fc = m_appearance.boundaryFillColor();
                 const glm::vec4& oc = m_appearance.boundaryOutlineColor();

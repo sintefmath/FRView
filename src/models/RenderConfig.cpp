@@ -15,7 +15,7 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "models/Appearance.hpp"
+#include "models/RenderConfig.hpp"
 
 namespace {
     const char* shading_model_strings[] = { "Solid",
@@ -55,7 +55,7 @@ static const std::string faults_opacity_outline_key     = "faults_outline_opacit
 
 
 
-Appearance::Appearance(boost::shared_ptr<tinia::model::ExposedModel>& model)
+RenderConfig::RenderConfig(boost::shared_ptr<tinia::model::ExposedModel>& model)
     : m_model( model ),
       m_revision( 1 ),
       //m_reload( reload ),
@@ -130,31 +130,31 @@ Appearance::Appearance(boost::shared_ptr<tinia::model::ExposedModel>& model)
     m_model->addStateListener( render_clipplane_key, this );
 }
 
-Appearance::~Appearance()
+RenderConfig::~RenderConfig()
 {
 
 }
 void
-Appearance::bumpRevision()
+RenderConfig::bumpRevision()
 {
     m_revision++;
 }
 
 const std::string&
-Appearance::titleKey() const
+RenderConfig::titleKey() const
 {
     return appearance_title_key;
 }
 
 const std::string&
-Appearance::renderQualityStringKey() const
+RenderConfig::renderQualityStringKey() const
 {
     return render_quality_string_key;
 }
 
 
 void
-Appearance::setLightTheme()
+RenderConfig::setLightTheme()
 {
     m_theme = 1;
     m_background_color          = glm::vec4( 1.f, 1.f, 1.f, 0.f );
@@ -168,7 +168,7 @@ Appearance::setLightTheme()
 }
 
 void
-Appearance::setDarkTheme()
+RenderConfig::setDarkTheme()
 {
     m_theme = 2;
     m_background_color          = glm::vec4( 0.f, 0.f, 0.f, 0.f );
@@ -182,8 +182,8 @@ Appearance::setDarkTheme()
 }
 
 
-Appearance::VisibilityMask
-Appearance::visibilityMask() const
+RenderConfig::VisibilityMask
+RenderConfig::visibilityMask() const
 {
     int mask =
             (m_subset_fill_color.w > 0.f        ? VISIBILITY_MASK_SUBSET : VISIBILITY_MASK_NONE ) |
@@ -200,7 +200,7 @@ Appearance::visibilityMask() const
 
 
 void
-Appearance::stateElementModified( tinia::model::StateElement * stateElement )
+RenderConfig::stateElementModified( tinia::model::StateElement * stateElement )
 {
     const std::string& key = stateElement->getKey();
     if( key == render_quality_key ) {
@@ -289,7 +289,7 @@ Appearance::stateElementModified( tinia::model::StateElement * stateElement )
 }
 
 tinia::model::gui::Element*
-Appearance::guiFactory() const
+RenderConfig::guiFactory() const
 {
     VerticalLayout* root = new VerticalLayout;
 

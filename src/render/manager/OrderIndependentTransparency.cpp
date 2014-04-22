@@ -27,7 +27,7 @@ namespace render {
         }
         static const std::string package = "render.screen.OrderIndependentTransparency";
 
-OrderIndependentTransparency::OrderIndependentTransparency( const models::Appearance& appearance,
+OrderIndependentTransparency::OrderIndependentTransparency( const models::RenderConfig& appearance,
                                                             const GLsizei width,
                                                             const GLsizei height )
     : FragmentList( appearance, width, height )

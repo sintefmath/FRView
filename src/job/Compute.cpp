@@ -147,15 +147,15 @@ FRViewJob::doCompute()
                 source_item->m_boundary_surface->setTriangleCount( 0 );
                 source_item->m_faults_surface->setTriangleCount( 0 );
                 boost::shared_ptr<render::surface::GridTessSurf> subset_surf;
-                if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_SUBSET ) {
+                if( m_visibility_mask & models::RenderConfig::VISIBILITY_MASK_SUBSET ) {
                     subset_surf = source_item->m_subset_surface;
                 }
                 boost::shared_ptr<render::surface::GridTessSurf> boundary_surf;
-                if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_BOUNDARY ) {
+                if( m_visibility_mask & models::RenderConfig::VISIBILITY_MASK_BOUNDARY ) {
                     boundary_surf = source_item->m_boundary_surface;
                 }
                 boost::shared_ptr<render::surface::GridTessSurf> faults_surf;
-                if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS ) {
+                if( m_visibility_mask & models::RenderConfig::VISIBILITY_MASK_FAULTS ) {
                     faults_surf = source_item->m_faults_surface;
                 }
                 

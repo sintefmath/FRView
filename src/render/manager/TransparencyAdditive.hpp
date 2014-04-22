@@ -27,7 +27,7 @@ namespace render {
 class TransparencyAdditive : public AbstractBase
 {
 public:
-    TransparencyAdditive( const models::Appearance& appearance,
+    TransparencyAdditive( const models::RenderConfig& appearance,
                           const GLsizei width,
                           const GLsizei height );
     

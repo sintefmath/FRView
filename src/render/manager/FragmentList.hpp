@@ -26,7 +26,7 @@ namespace render {
 class FragmentList : public AbstractBase
 {
 public:
-    FragmentList( const models::Appearance& appearance,
+    FragmentList( const models::RenderConfig& appearance,
                   const GLsizei width,
                   const GLsizei height );
    

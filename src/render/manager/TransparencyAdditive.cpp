@@ -32,7 +32,7 @@ namespace render {
         static const std::string package = "render.screen.TransparencyAdditive";
 
 
-TransparencyAdditive::TransparencyAdditive(  const models::Appearance& appearance,
+TransparencyAdditive::TransparencyAdditive(  const models::RenderConfig& appearance,
                                              const GLsizei width,
                                              const GLsizei height )
     : AbstractBase( appearance, width, height ),

@@ -69,7 +69,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_subset_selector( m_model, *this ),
       m_under_the_hood( m_model, *this ),
       m_appearance( m_model ),
-      m_visibility_mask( models::Appearance::VISIBILITY_MASK_NONE ),
+      m_visibility_mask( models::RenderConfig::VISIBILITY_MASK_NONE ),
       m_theme( 0 ),
       m_grid_stats( m_model, *this ),
       m_has_context( false ),
@@ -924,7 +924,7 @@ FRViewJob::doLogic()
         }
     }
 
-    models::Appearance::VisibilityMask new_mask = m_appearance.visibilityMask();
+    models::RenderConfig::VisibilityMask new_mask = m_appearance.visibilityMask();
     if( ( (m_visibility_mask != new_mask) || m_under_the_hood.profilingEnabled() ) ) {
         
         for( size_t i=0; i<m_source_items.size(); i++ ) {

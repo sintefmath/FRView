@@ -25,7 +25,7 @@
 #include <tinia/renderlist/DataBase.hpp>
 #include "utils/PerfTimer.hpp"
 #include "models/Logic.hpp"
-#include "models/Appearance.hpp"
+#include "models/RenderConfig.hpp"
 #include "models/GridStats.hpp"
 #include "models/File.hpp"
 #include "models/UnderTheHood.hpp"
@@ -138,9 +138,9 @@ private:
     models::SourceSelector                          m_source_selector;
     models::SubsetSelector                          m_subset_selector;
     models::UnderTheHood                            m_under_the_hood;
-    models::Appearance                              m_appearance;
-    models::Appearance::VisibilityMask              m_visibility_mask;
-    models::Appearance::Theme                       m_theme;
+    models::RenderConfig                              m_appearance;
+    models::RenderConfig::VisibilityMask              m_visibility_mask;
+    models::RenderConfig::Theme                       m_theme;
     models::GridStats                               m_grid_stats;
     float                                           m_zscale;
     /** True if job initGL has been called, and glew is set up. */

@@ -29,7 +29,7 @@ namespace render {
         static const std::string package = "render.screen.FragmentList";
 
 
-FragmentList::FragmentList( const models::Appearance& appearance,
+FragmentList::FragmentList( const models::RenderConfig& appearance,
                             const GLsizei             width,
                             const GLsizei             height )
     : AbstractBase( appearance, width, height ),

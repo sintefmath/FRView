@@ -24,7 +24,7 @@ namespace render {
 class OrderIndependentTransparency : public FragmentList
 {
 public:
-    OrderIndependentTransparency( const models::Appearance& appearance,
+    OrderIndependentTransparency( const models::RenderConfig& appearance,
                                   const GLsizei width,
                                   const GLsizei height );
     

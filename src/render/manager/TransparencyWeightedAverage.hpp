@@ -27,7 +27,7 @@ namespace render {
 class TransparencyWeightedAverage : public AbstractBase
 {
 public:
-    TransparencyWeightedAverage( const models::Appearance& appearance,
+    TransparencyWeightedAverage( const models::RenderConfig& appearance,
                                  const GLsizei width,
                                  const GLsizei height );
    

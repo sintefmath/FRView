@@ -24,7 +24,7 @@
 
 namespace models {
 
-class Appearance
+class RenderConfig
         : public tinia::model::StateListener
 {
 public:
@@ -48,9 +48,9 @@ public:
         DiffuseSpecular = 2
     } ShadingModel;
     
-    Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model );
+    RenderConfig( boost::shared_ptr<tinia::model::ExposedModel>& model );
 
-    ~Appearance();
+    ~RenderConfig();
 
     Revision
     revision() const { return m_revision; }

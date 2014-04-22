@@ -210,7 +210,7 @@ FRViewJob::updateRenderList( )
 {
     namespace rl = tinia::renderlist;
 
-    models::Appearance::Theme theme = m_appearance.theme();
+    models::RenderConfig::Theme theme = m_appearance.theme();
     if( m_theme != theme ) {
 
     }
