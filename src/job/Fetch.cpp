@@ -166,7 +166,7 @@ FRViewJob::handleFetchField()
             //m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
             
             source_item->m_wells->clear();
-            if( m_appearance.renderWells() ) {
+            if( m_renderconfig.renderWells() ) {
                 boost::shared_ptr< dataset::WellDataInterace > well_source =
                         boost::dynamic_pointer_cast< dataset::WellDataInterace >( source_item->m_source );
                 if( well_source ) {

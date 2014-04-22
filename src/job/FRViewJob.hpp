@@ -24,6 +24,7 @@
 #include <tinia/model/StateListener.hpp>
 #include <tinia/renderlist/DataBase.hpp>
 #include "utils/PerfTimer.hpp"
+#include "models/Appearance.hpp"
 #include "models/Logic.hpp"
 #include "models/RenderConfig.hpp"
 #include "models/GridStats.hpp"
@@ -137,8 +138,9 @@ private:
     models::File                                    m_file;
     models::SourceSelector                          m_source_selector;
     models::SubsetSelector                          m_subset_selector;
+    models::Appearance                              m_appearance;
     models::UnderTheHood                            m_under_the_hood;
-    models::RenderConfig                              m_appearance;
+    models::RenderConfig                              m_renderconfig;
     models::RenderConfig::VisibilityMask              m_visibility_mask;
     models::RenderConfig::Theme                       m_theme;
     models::GridStats                               m_grid_stats;

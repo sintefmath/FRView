@@ -67,8 +67,9 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_file( m_model, *this ),
       m_source_selector( m_model, *this ),
       m_subset_selector( m_model, *this ),
+      m_appearance( m_model, *this ),
       m_under_the_hood( m_model, *this ),
-      m_appearance( m_model ),
+      m_renderconfig( m_model ),
       m_visibility_mask( models::RenderConfig::VISIBILITY_MASK_NONE ),
       m_theme( 0 ),
       m_grid_stats( m_model, *this ),
@@ -107,12 +108,6 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     }
     std::list<string> solutions = { "[none]" };
 
-   const char* colormap_types[] = { "Linear", "Logarithmic" };
-
-    
-
-
-    const double dmax = std::numeric_limits<double>::max();
     using namespace tinia::model::gui;
 
     VerticalLayout* root = new VerticalLayout;
@@ -127,8 +122,8 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     tab_buttons->addChild( file_popup );
 
     // Appearance
-    PopupButton* appearance_popup = new PopupButton( m_appearance.titleKey(), false );
-    appearance_popup->setChild( m_appearance.guiFactory() );
+    PopupButton* appearance_popup = new PopupButton( m_renderconfig.titleKey(), false );
+    appearance_popup->setChild( m_renderconfig.guiFactory() );
     tab_buttons->addChild( appearance_popup );
 
     // Profile dialogue
@@ -192,22 +187,12 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_model->addAnnotation( "field_solution", "Solution" );
     m_model->addElement<bool>( "has_field", false );
 
-    m_model->addElement<bool>( "colormap_label", true, "Color map" );
-    m_model->addElementWithRestriction<string>( "colormap_type",
-                                                    colormap_types[0],
-                                                    &colormap_types[0],
-                                                    &colormap_types[2] );
-    m_model->addAnnotation( "colormap_type", "Type" );
-    m_model->addElement<bool>( "field_range_enable", false, "Lock min and max" );
-    m_model->addConstrainedElement<double>( "field_range_min", 0.0, -dmax, dmax, "Min" );
-    m_model->addConstrainedElement<double>( "field_range_max", 0.0, -dmax, dmax, "Max" );
+
     m_model->addElement<bool>("grid_subset", true, "Subset" );
 
     m_model->addElement<bool>( "surface_subset_field_range", false );
     m_model->addElement<bool>( "surface_subset_index_range", false );
     m_model->addElement<bool>( "surface_subset_plane", false );
-    m_model->addElement<bool>( "tessellation_label", true, "Tessellation" );
-    m_model->addElement<bool>( "tess_flip_orientation", false, "Flip orientation" );
     m_model->addElement<bool>( "field_select_report_step_override", false, "Specific report step" );
     m_model->addConstrainedElement<int>( "field_select_report_step", 0, 0, 0, "Field select report step" );
     m_model->addAnnotation( "field_select_solution_override", "Specific solution");
@@ -228,8 +213,6 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_model->addStateListener( "index_range_select_max_k", this);
     m_model->addStateListener( "field_select_min", this);
     m_model->addStateListener( "field_select_max", this);
-    m_model->addStateListener( "field_range_enable", this);
-    m_model->addStateListener( "tess_flip_orientation", this);
 
     // --- info
     tinia::model::gui::TabLayout* tabs = new tinia::model::gui::TabLayout;
@@ -265,37 +248,14 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     subset_tab->setChild( subset_tab_layout );
     tabs->addChild( subset_tab );
 
+
+    tinia::model::gui::VerticalLayout* appearance_layout = new tinia::model::gui::VerticalLayout;
+    appearance_layout->addChild( m_appearance.guiFactory() );
+    appearance_layout->addChild( new tinia::model::gui::VerticalExpandingSpace );
+    tinia::model::gui::Tab* appearance_tab = new tinia::model::gui::Tab( m_appearance.titleKey(), true );
+    appearance_tab->setChild( appearance_layout );
+    tabs->addChild( appearance_tab );
     
-    // -- surface
-
-    Grid* colormap_range_grid = new Grid( 2, 3 );
-    colormap_range_grid->setVisibilityKey( "field_range_enable" );
-    colormap_range_grid->setChild( 0, 0, new Label( "field_range_min" ) );
-    colormap_range_grid->setChild( 0, 1, new DoubleSpinBox( "field_range_min" ) );
-    colormap_range_grid->setChild( 1, 0, new Label( "field_range_max" ) );
-    colormap_range_grid->setChild( 1, 1, new DoubleSpinBox( "field_range_max" ) );
-    colormap_range_grid->setChild( 0, 2, new HorizontalExpandingSpace );
-    VerticalLayout* colormap_layout = new VerticalLayout;
-    colormap_layout->addChild( new RadioButtons("colormap_type") );
-    colormap_layout->addChild( new CheckBox("field_range_enable") );
-    colormap_layout->addChild( colormap_range_grid);
-    colormap_layout->addChild( new VerticalExpandingSpace );
-    PopupButton* colormap_popup = new PopupButton( "colormap_type", true );
-    colormap_popup->setChild( colormap_layout );
-    //colormap_popup->setEnabledKey( "has_field" );
-
-    ElementGroup* surf_details_group = new ElementGroup( "surface_tab" );
-    Grid* surf_details_grid = new Grid( 4, 4 );
-    surf_details_grid->setChild( 0, 1, new HorizontalSpace );
-    surf_details_grid->setChild( 0, 3, new HorizontalExpandingSpace );
-    surf_details_grid->setChild( 1, 0, new Label( "tessellation_label" ) );
-    surf_details_grid->setChild( 1, 2, new CheckBox( "tess_flip_orientation" ) );
-    surf_details_grid->setChild( 2, 0, new Label( "colormap_label" ) );
-    surf_details_grid->setChild( 2, 2, colormap_popup );
-
-    surf_details_group->setChild( surf_details_grid );
-    right_column->addChild( surf_details_group );
-
 
     right_master->addChild( new tinia::model::gui::VerticalExpandingSpace );
 
@@ -390,13 +350,6 @@ FRViewJob::updateCurrentFieldData()
         
         if( source_item->m_grid_field ) {
             has_field = true;
-
-            bool fix;
-            m_model->getElementValue( "field_range_enable", fix );
-            if( !fix ) {
-                m_model->updateElement<double>( "field_range_min", source_item->m_grid_field->minValue() );
-                m_model->updateElement<double>( "field_range_max", source_item->m_grid_field->maxValue() );
-            }
             
             if( source_item->m_grid_tess_subset ) {
                 boost::shared_ptr<dataset::PolyhedralDataInterface> poly_data =
@@ -600,20 +553,7 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     else if( key == "field_select_max" ) {
         currentSourceItem()->m_do_update_subset = true;
     }
-    
-    else if( key == "field_range_enable" && currentSourceItemValid() ) {
-        
-        bool value;
-        stateElement->getValue( value );
-        if( !value && currentSourceItem()->m_grid_field ) {
-            m_model->updateElement<double>( "field_range_min", currentSourceItem()->m_grid_field->minValue() );
-            m_model->updateElement<double>( "field_range_max", currentSourceItem()->m_grid_field->maxValue() );
-        }
-    }
-    else if( key == "tess_flip_orientation" ) {
-        currentSourceItem()->m_do_update_subset = true;
-        m_renderlist_update_revision = true;
-    }
+
     m_care_about_updates = true;
     doLogic();
 }
@@ -902,6 +842,7 @@ FRViewJob::setSource( size_t index )
         m_grid_stats.update();
     }
     m_subset_selector.update( source_item );
+    m_appearance.update( source_item );
     updateCurrentFieldData();
 }
 
@@ -924,7 +865,7 @@ FRViewJob::doLogic()
         }
     }
 
-    models::RenderConfig::VisibilityMask new_mask = m_appearance.visibilityMask();
+    models::RenderConfig::VisibilityMask new_mask = m_renderconfig.visibilityMask();
     if( ( (m_visibility_mask != new_mask) || m_under_the_hood.profilingEnabled() ) ) {
         
         for( size_t i=0; i<m_source_items.size(); i++ ) {

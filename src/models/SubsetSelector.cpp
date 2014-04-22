@@ -348,21 +348,8 @@ SubsetSelector::stateElementModified( tinia::model::StateElement * stateElement 
             m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
         }
     }
-    else if( key == "field_range_enable" && currentSourceItemValid() ) {
-        
-        bool value;
-        stateElement->getValue( value );
-        if( !value && currentSourceItem()->m_grid_field ) {
-            m_model->updateElement<double>( "field_range_min", currentSourceItem()->m_grid_field->minValue() );
-            m_model->updateElement<double>( "field_range_max", currentSourceItem()->m_grid_field->maxValue() );
-        }
-    }
-    else if( key == "tess_flip_orientation" ) {
-        currentSourceItem()->m_do_update_subset = true;
-        if( m_renderlist_state == RENDERLIST_SENT ) {
-            m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-        }
-    }
+    
+    
     m_care_about_updates = true;
     doLogic();
 #endif    

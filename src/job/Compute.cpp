@@ -63,15 +63,17 @@ FRViewJob::doCompute()
             try {
                 LOGGER_DEBUG( log, "updating item " << i << " of " << m_source_items.size() << ": " << source_item->m_source->name() );
                 
-                bool flip_faces;
+                bool flip_faces = false;
+                if( source_item->m_appearance_data ) {
+                    flip_faces = source_item->m_appearance_data->flipOrientation();
+                }
+                
                 //            bool geometric_edges = false;
                 //            std::string edge_render_mode;
                 //            m_model->getElementValue( "edge_render_mode", edge_render_mode );
                 //            if( edge_render_mode == "Geometric" ) {
                 //                geometric_edges = true;
                 //            }
-                
-                m_model->getElementValue( "tess_flip_orientation", flip_faces );
                 
                 std::string subset;
                 m_model->getElementValue( "surface_subset", subset );

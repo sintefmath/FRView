@@ -37,7 +37,7 @@ static const string line_thickness_key = "_line_thickness";
 
 static const string shading_model_key = "shading_model_key";
 
-static const std::string appearance_title_key       = "appearance_title";
+static const std::string renderconfig_title_key       = "renderconfig_title";
 static const std::string render_quality_key             = "render_quality";
 static const std::string render_quality_string_key      = "render_quality_string";
 
@@ -73,7 +73,7 @@ RenderConfig::RenderConfig(boost::shared_ptr<tinia::model::ExposedModel>& model)
       m_faults_outline_color( 1.f )
 {
     setDarkTheme();
-    m_model->addElement<bool>( appearance_title_key, true, "Appearance" );
+    m_model->addElement<bool>( renderconfig_title_key, true, "Rendering" );
 
     m_model->addConstrainedElement<int>( line_thickness_key,
                                          static_cast<int>(50.f*m_line_thickness), 1, 100, "Line thickness" );
@@ -143,7 +143,7 @@ RenderConfig::bumpRevision()
 const std::string&
 RenderConfig::titleKey() const
 {
-    return appearance_title_key;
+    return renderconfig_title_key;
 }
 
 const std::string&

@@ -47,6 +47,7 @@ namespace render {
 }
 namespace models {
     class SubsetSelectorData;
+    class AppearanceData;
 }
 
 struct SourceItem {
@@ -71,6 +72,7 @@ struct SourceItem {
     boost::shared_ptr<render::rlgen::Splats>               m_splats;
     
     boost::shared_ptr<models::SubsetSelectorData>          m_subset_selector_data;
+    boost::shared_ptr<models::AppearanceData>              m_appearance_data;
     
     bool                                            m_load_color_field;
     bool                                            m_do_update_subset;
