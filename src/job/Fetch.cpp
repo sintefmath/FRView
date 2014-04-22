@@ -199,7 +199,10 @@ FRViewJob::handleFetchField()
                         }
                     }
                 }
+
+                m_subset_selector.sourceFieldHasChanged( m_source_items[i] );
             }
+            
             updateCurrentFieldData();
         }
     }

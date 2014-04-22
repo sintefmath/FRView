@@ -52,6 +52,9 @@ public:
     void
     update( boost::shared_ptr<SourceItem> source_item );
 
+    void
+    sourceFieldHasChanged( boost::shared_ptr<SourceItem> source_item );
+    
 protected:
     boost::shared_ptr<tinia::model::ExposedModel>   m_model;
     Logic&                                          m_logic;
@@ -66,22 +69,53 @@ protected:
 };
 
 /** Private per-source data for subset selector model. */
-
 class SubsetSelectorData
 {
     friend class SubsetSelector;
 public:
-    enum SelectorType {
+    typedef enum SelectorType {
         SELECTOR_ALL,
         SELECTOR_FIELD,
         SELECTOR_INDEX,
         SELECTOR_PLANE,
         SELECTOR_HALFPLANE,
         SELECTOR_N
-    };
-protected:
+    } SelectorType;
     
+    SelectorType
+    selectorType() const { return m_selector_type; }
+    
+    double
+    fieldSelectMin() const { return m_field_select_min; }
+
+    double
+    fieldSelectMax() const { return m_field_select_max; }
+    
+    int
+    logicalGridDim() const { return m_dim; }
+    
+    int
+    logicalGridMinI() const { return m_nx_min; }
+
+    int
+    logicalGridMaxI() const { return m_nx_max; }
+
+    int
+    logicalGridMinJ() const { return m_ny_min; }
+
+    int
+    logicalGridMaxJ() const { return m_ny_max; }
+
+    int
+    logicalGridMinK() const { return m_nz_min; }
+
+    int
+    logicalGridMaxK() const { return m_nz_max; }
+    
+protected:
     SelectorType    m_selector_type;
+    double          m_field_select_min;
+    double          m_field_select_max;
     int             m_dim;
     int             m_nx_min;
     int             m_nx_max;
@@ -89,7 +123,6 @@ protected:
     int             m_ny_max;
     int             m_nz_min;
     int             m_nz_max;
-    
 };
 
 

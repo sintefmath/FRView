@@ -174,6 +174,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_model->addElement<bool>( "field_info_enable", true, "Field" );
     m_model->addElement<string>( "field_info_calendar", "n/a", "Date" );
     m_model->addElement<string>( "field_info_range", "n/a", "Range" );
+
     m_model->addElement<bool>( "project_tab", true, "Project" );
     m_model->addElement<bool>( "transparency_label", true, "Transparency" );
     m_model->addElement<bool>( "surface_tab", true, "Surfaces" );
@@ -190,14 +191,11 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
     m_model->addElement<bool>("grid_subset", true, "Subset" );
 
-    m_model->addElement<bool>( "surface_subset_field_range", false );
-    m_model->addElement<bool>( "surface_subset_index_range", false );
-    m_model->addElement<bool>( "surface_subset_plane", false );
     m_model->addElement<bool>( "field_select_report_step_override", false, "Specific report step" );
     m_model->addConstrainedElement<int>( "field_select_report_step", 0, 0, 0, "Field select report step" );
     m_model->addAnnotation( "field_select_solution_override", "Specific solution");
     m_model->addElement<bool>( "field_range_label", true, "Range" );
-    m_model->addElement<bool>( "color_label", true, "Color" );
+    //m_model->addElement<bool>( "color_label", true, "Color" );
     m_model->addElement<bool>( "details_label", true, "Details" );
 
     m_model->addElement<string>( "source_tab", "Source", "Source" );
@@ -205,14 +203,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_model->addStateListener( "asyncreader_ticket", this);
     m_model->addStateListener( "field_solution", this);
     m_model->addStateListener( "field_report_step", this);
-    m_model->addStateListener( "index_range_select_min_i", this);
-    m_model->addStateListener( "index_range_select_max_i", this);
-    m_model->addStateListener( "index_range_select_min_j", this);
-    m_model->addStateListener( "index_range_select_max_j", this);
-    m_model->addStateListener( "index_range_select_min_k", this);
-    m_model->addStateListener( "index_range_select_max_k", this);
-    m_model->addStateListener( "field_select_min", this);
-    m_model->addStateListener( "field_select_max", this);
+
 
     // --- info
     tinia::model::gui::TabLayout* tabs = new tinia::model::gui::TabLayout;
@@ -455,104 +446,8 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             }
         }
     }
-    else if( key == "plane_select_PX" && handleButtonClick(stateElement) ) {
-        if( currentSourceItemValid() ) {
-            currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, -0.1*M_PI_4 ) ) );
-            currentSourceItem()->m_do_update_subset = true;
-        }
-    }
-    else if( key == "plane_select_NX"  && handleButtonClick(stateElement) ) {
-        if(  currentSourceItemValid() ) {
-            currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( 0.f, 0.f, 0.1*M_PI_4 ) ) );
-            currentSourceItem()->m_do_update_subset = true;
-        }
-    }
-    else if( key == "plane_select_PY"  && handleButtonClick(stateElement) ) {
-        if(  currentSourceItemValid() ) {
-            currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( 0.1*M_PI_4, 0.f, 0.f ) ) );
-            currentSourceItem()->m_do_update_subset = true;
-        }
-    }
-    else if( key == "plane_select_NY"  && handleButtonClick(stateElement) ) {
-        if(  currentSourceItemValid() ) {
-            currentSourceItem()->m_clip_plane->rotate( glm::quat( glm::vec3( -0.1*M_PI_4, 0.f, 0.f ) ) );
-            currentSourceItem()->m_do_update_subset = true;
-        }
-    }
-    else if( key == "plane_select_shift" ) {
-        int value;
-        stateElement->getValue<int>( value );
-        if(  currentSourceItemValid() ) {
-            currentSourceItem()->m_clip_plane->setOffset( (1.7f/1000.f)*(value) );
-            currentSourceItem()->m_do_update_subset = true;
-        }
-    }
-    else if( key == "index_range_select_min_i" ) {
-        int min;
-        stateElement->getValue<int>( min );
-        int max;
-        m_model->getElementValue( "index_range_select_max_i", max );
-        if( max < min ) {
-            m_model->updateElement( "index_range_select_max_i", min );
-        }
-        currentSourceItem()->m_do_update_subset = true;
-    }
-    else if( key == "index_range_select_max_i" ) {
-        int max;
-        stateElement->getValue<int>( max );
-        int min;
-        m_model->getElementValue( "index_range_select_min_i", min );
-        if( max < min ) {
-            m_model->updateElement( "index_range_select_min_i", max );
-        }
-        currentSourceItem()->m_do_update_subset = true;
-    }
-    else if( key == "index_range_select_min_j" ) {
-        int min;
-        stateElement->getValue<int>( min );
-        int max;
-        m_model->getElementValue( "index_range_select_max_j", max );
-        if( max < min ) {
-            m_model->updateElement( "index_range_select_max_j", min );
-        }
-        currentSourceItem()->m_do_update_subset = true;
-    }
-    else if( key == "index_range_select_max_j" ) {
-        int max;
-        stateElement->getValue<int>( max );
-        int min;
-        m_model->getElementValue( "index_range_select_min_j", min );
-        if( max < min ) {
-            m_model->updateElement( "index_range_select_min_j", max );
-        }
-        currentSourceItem()->m_do_update_subset = true;
-    }
-    else if( key == "index_range_select_min_k" ) {
-        int min;
-        stateElement->getValue<int>( min );
-        int max;
-        m_model->getElementValue( "index_range_select_max_k", max );
-        if( max < min ) {
-            m_model->updateElement( "index_range_select_max_k", min );
-        }
-        currentSourceItem()->m_do_update_subset = true;
-    }
-    else if( key == "index_range_select_max_k" ) {
-        int max;
-        stateElement->getValue<int>( max );
-        int min;
-        m_model->getElementValue( "index_range_select_min_k", min );
-        if( max < min ) {
-            m_model->updateElement( "index_range_select_min_k", max );
-        }
-        currentSourceItem()->m_do_update_subset = true;
-    }
-    else if( key == "field_select_min" ) {
-        currentSourceItem()->m_do_update_subset = true;
-    }
-    else if( key == "field_select_max" ) {
-        currentSourceItem()->m_do_update_subset = true;
-    }
+    
+    
 
     m_care_about_updates = true;
     doLogic();

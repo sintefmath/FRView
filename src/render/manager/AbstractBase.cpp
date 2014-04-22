@@ -147,17 +147,21 @@ AbstractBase::renderOverlay( const GLsizei                       width,
                              const GLfloat*                      projection,
                              const std::vector<RenderItem>&      items )
 {
+    boost::shared_ptr<const GLTexture> color_map;
+    
     bool redo_text = false;
 
     bool has_field = false;
     for( size_t i=0; i<items.size(); i++ ) {
         const RenderItem& item = items[i];
         if( (item.m_renderer != RenderItem::RENDERER_SURFACE)
-                || (!item.m_field ) )
+                || (!item.m_field )
+                || (!item.m_color_map))
         {
             continue;
         }
         has_field = true;
+        color_map = item.m_color_map;
         
         if( (m_legend_max != item.m_field_max )
                 || (m_legend_min != item.m_field_min )
@@ -172,6 +176,7 @@ AbstractBase::renderOverlay( const GLsizei                       width,
     if( !has_field ) {
         return;
     }
+    
     if( redo_text ) {
         m_legend_text.clear();
 
@@ -200,14 +205,14 @@ AbstractBase::renderOverlay( const GLsizei                       width,
     };
 
     
-    if( !items.empty() && items.front().m_color_map ) {
+    if( !items.empty()  ) {
         glDisable( GL_DEPTH_TEST );
         glViewport( 35, glm::max(0, height-130), 120, 120 );
         m_legend_text.render( 120, 120, MP );
         
         glViewport( 10, glm::max(0, height-130), 20, 120 );
         glActiveTexture( GL_TEXTURE0 );
-        glBindTexture( GL_TEXTURE_1D, items.front().m_color_map->get() );
+        glBindTexture( GL_TEXTURE_1D, color_map->get() );
         
         glUseProgram( m_legend_prog.get() );
         glUniformMatrix4fv( glGetUniformLocation( m_legend_prog.get(), "MP"),

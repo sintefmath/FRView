@@ -85,22 +85,27 @@ FRViewJob::doCompute()
                         
                         boost::shared_ptr< dataset::CellLayoutInterface > cell_layout =
                                 boost::dynamic_pointer_cast< dataset::CellLayoutInterface >( source_item->m_source );
-                        if( cell_layout ) {
-                            int min_i, min_j, min_k, max_i, max_j, max_k;
+                        if( cell_layout && source_item->m_subset_selector_data ) {
+
+                            /*int min_i, min_j, min_k, max_i, max_j, max_k;
                             m_model->getElementValue( "index_range_select_min_i", min_i );
                             m_model->getElementValue( "index_range_select_min_j", min_j );
                             m_model->getElementValue( "index_range_select_min_k", min_k );
                             m_model->getElementValue( "index_range_select_max_i", max_i );
                             m_model->getElementValue( "index_range_select_max_j", max_j );
-                            m_model->getElementValue( "index_range_select_max_k", max_k );
+                            m_model->getElementValue( "index_range_select_max_k", max_k );*/
                             m_index_selector->apply( source_item->m_grid_tess_subset,
                                                      cell_set,
                                                      cell_layout->maxIndex(0),
                                                      cell_layout->maxIndex(1),
                                                      cell_layout->maxIndex(2),
                                                      //nx(), cell_layout->ny(), cell_layout->nz(),
-                                                     min_i, min_j, min_k,
-                                                     max_i, max_j, max_k );
+                                                     source_item->m_subset_selector_data->logicalGridMinI(),
+                                                     source_item->m_subset_selector_data->logicalGridMinJ(),
+                                                     source_item->m_subset_selector_data->logicalGridMinK(),
+                                                     source_item->m_subset_selector_data->logicalGridMaxI(),
+                                                     source_item->m_subset_selector_data->logicalGridMaxJ(),
+                                                     source_item->m_subset_selector_data->logicalGridMaxK() );
                             m_render_clip_plane = false;
                         }
                     }
