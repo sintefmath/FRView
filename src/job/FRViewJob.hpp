@@ -206,9 +206,6 @@ private:
     glm::mat4                                       m_proxy_from_world;
 
     void
-    releaseSourceItems();
-    
-    void
     updateCurrentFieldData();
 
     void
@@ -244,9 +241,6 @@ private:
             unsigned int        fbo,
             const size_t        width,
             const size_t        height );
-
-    bool
-    handleButtonClick( tinia::model::StateElement *stateElement );
 
     void
     triggerRedraw( const std::string& viewer_key );

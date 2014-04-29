@@ -57,7 +57,7 @@ using std::stringstream;
 namespace {
     const std::string package = "FRViewJob";
     const std::string current_source_item_key = "current_item";
-
+    const std::string new_key = "new";
 }
 
 
@@ -83,6 +83,11 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 {
     m_model->addElement<int>( current_source_item_key, m_current_item );
     m_model->addStateListener( current_source_item_key, this);
+    
+    // Triggers release of all sources.
+    m_model->addElement<bool>( new_key, false, "New" );
+    m_model->addStateListener( new_key, this );
+    
     
     m_render_clip_plane = false;
     m_care_about_updates = true;
@@ -116,6 +121,10 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
     root->addChild( tab_buttons );
 
+    
+    Button* new_button = new Button( new_key );
+    tab_buttons->addChild( new_button );
+    
     // File dialogue
     PopupButton* file_popup = new PopupButton( m_file.titleKey(), false );
     file_popup->setChild( m_file.guiFactory() );
@@ -300,13 +309,6 @@ FRViewJob::currentSourceItem() const
     return m_source_items[ m_current_item ];
 }
 
-void
-FRViewJob::releaseSourceItems()
-{
-    m_source_items.clear();
-    m_model->updateElement<int>( current_source_item_key, ~0);
-}
-
 
 bool
 FRViewJob::init()
@@ -319,17 +321,6 @@ FRViewJob::~FRViewJob()
    m_model->removeStateListener(this);
 }
 
-bool
-FRViewJob::handleButtonClick( tinia::model::StateElement *stateElement )
-{
-    bool value;
-    stateElement->getValue<bool>( value );
-    if( value ) {
-        m_model->updateElement( stateElement->getKey(), false );
-        return true;
-    }
-    return false;
-}
 
 
 void
@@ -379,7 +370,7 @@ FRViewJob::loadFile( const std::string& filename,
 {
     m_file.setFileName( filename );
 
-    releaseSourceItems();
+    m_source_items.clear();
     setSource( 0 );
 
     releasePipeline();
@@ -404,15 +395,33 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
 
     const string& key = stateElement->getKey();
 
-    if( key == current_source_item_key ) {
+    // --- 'New'-button has been pressed; release all sources ------------------
+    if( key == new_key ) {
+        bool value;
+        stateElement->getValue<bool>( value );
+        if( value ) {
+            m_model->updateElement( stateElement->getKey(), false );
+            m_source_items.clear();
+            std::vector<std::string> sources;
+            m_source_selector.updateSources( sources );
+
+            setSource( 0 );
+
+            releasePipeline();
+        }
+    }
+    
+    else if( key == current_source_item_key ) {
         int value;
         stateElement->getValue<int>( value );
         m_current_item = value;
         LOGGER_DEBUG( log, "m_current_item=" << m_current_item );
     }
-    if( key == "asyncreader_ticket" ) { // Async job is finished
+
+    else if( key == "asyncreader_ticket" ) { // Async job is finished
         m_check_async_reader = true;
     }
+    
     else if( currentSourceItemValid() && (key == "field_solution") ) {
         boost::shared_ptr<SourceItem> source_item = currentSourceItem();
         boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
