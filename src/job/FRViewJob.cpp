@@ -115,11 +115,39 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
     using namespace tinia::model::gui;
 
+    /* 
+     * +- root ----------------------------------------------------------------+
+     * | +-- left_right_wrapper ---------------------------------------------+ |
+     * | | +- main ---------------------------+ +- source -----------------+ | |
+     * | | | +- tab_buttons ----------------+ | |
+     * | | | |                              | | |
+     * | | | +------------------------------+ | |
+     * | | | +- canvas ---------------------+ | |
+     * | | | |                              | | |
+     * | | | |                              | | |
+     * | | | +------------------------------+ | |
+     * | | +----------------------------------+ +--------------------------+ | |
+     * | +-------------------------------------------------------------------+ |
+     * | +-- asyncreader_working --------------------------------------------+ |
+     * | |                                                                   | |
+     * | +-------------------------------------------------------------------+ |
+     * + ----------------------------------------------------------------------+
+     */
+    
     VerticalLayout* root = new VerticalLayout;
+    HorizontalLayout* left_right_wrapper = new HorizontalLayout;
+    VerticalLayout* main  = new VerticalLayout;
+    VerticalLayout* source = new VerticalLayout;
+
+    left_right_wrapper->addChild( main );
+    left_right_wrapper->addChild( source );
+    root->addChild( left_right_wrapper );
+
+    
     HorizontalLayout* tab_buttons = new HorizontalLayout;
     //tab_buttons->setEnabledKey( "asyncreader_working", true );
 
-    root->addChild( tab_buttons );
+    main->addChild( tab_buttons );
 
     
     Button* new_button = new Button( new_key );
@@ -141,15 +169,10 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     tab_buttons->addChild( under_the_hood_popup );
     tab_buttons->addChild( new HorizontalExpandingSpace );
 
-    tab_buttons->addChild( m_source_selector.guiFactory() );
     
-    HorizontalLayout* app_pane = new HorizontalLayout;
-    root->addChild( app_pane );
+    source->addChild( m_source_selector.guiFactory() );
+    
     m_model->addElement<bool>("has_project", false );
-    //app_pane->setEnabledKey( "has_project" );
-
-    VerticalLayout* right_master = new VerticalLayout;
-    VerticalLayout* right_column = new VerticalLayout;
 
 
     // Preprocess dialogue
@@ -174,9 +197,8 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     Canvas* canvas = new Canvas("viewer", "renderlist", "boundingbox" );
     canvas->boundingBoxKey( "boundingbox" );
     canvas->setViewerType( std::string( "MouseClickResponder" ) );
-    app_pane->addChild( canvas );
-    app_pane->addChild( right_master );
-    right_master->addChild( right_column );
+    main->addChild( canvas );
+
 
 
 
@@ -216,7 +238,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
     // --- info
     tinia::model::gui::TabLayout* tabs = new tinia::model::gui::TabLayout;
-    right_column->addChild( tabs );
+    source->addChild( tabs );
     
     tinia::model::gui::Tab* source_tab = new tinia::model::gui::Tab( "source_tab", true );
     tinia::model::gui::VerticalLayout* source_tab_layout = new tinia::model::gui::VerticalLayout; 
@@ -257,7 +279,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     tabs->addChild( appearance_tab );
     
 
-    right_master->addChild( new tinia::model::gui::VerticalExpandingSpace );
+    source->addChild( new tinia::model::gui::VerticalExpandingSpace );
 
     std::vector<tinia::model::StateSchemaElement> elements;
     m_model->getFullStateSchema(elements);
@@ -370,11 +392,6 @@ FRViewJob::loadFile( const std::string& filename,
 {
     m_file.setFileName( filename );
 
-    m_source_items.clear();
-    setSource( 0 );
-
-    releasePipeline();
-    
     m_async_reader->issueOpenSource( filename,
                                       refine_i,
                                       refine_j,

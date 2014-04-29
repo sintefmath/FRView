@@ -58,7 +58,7 @@ ASyncReader::issueOpenSource( const std::string& file,
     cmd.m_refine_j = refine_j;
     cmd.m_refine_k = refine_k;
     cmd.m_triangulate = triangulate;
-    postCommand( cmd );
+    postCommand( cmd, false );
     return true;
 }
 

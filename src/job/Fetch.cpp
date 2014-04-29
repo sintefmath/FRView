@@ -97,6 +97,9 @@ FRViewJob::handleFetchSource()
         source_item.m_color_map = m_color_maps;
 
         gpu_polyhedronmesh->update( *polyhedral_bridge );
+
+        source_item.setName( m_source_items );
+        
         size_t index = m_source_items.size();
         m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( source_item ) ) );
         setSource( index );
@@ -118,6 +121,8 @@ FRViewJob::handleFetchSource()
         
         gpu_polygonmesh->update( polygon_bridge );
 
+        source_item.setName( m_source_items );
+        
         size_t index = m_source_items.size();
         m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( source_item ) ) );
         setSource( index );
@@ -126,7 +131,7 @@ FRViewJob::handleFetchSource()
     // Update list of sources in exposedmodel/GUI
     std::vector<std::string> sources;
     for( size_t i=0; i<m_source_items.size(); i++ ) {
-        sources.push_back( m_source_items[i]->m_source->name() );
+        sources.push_back( m_source_items[i]->m_name );
     }
     m_source_selector.updateSources( sources );
 

@@ -56,12 +56,12 @@ FRViewJob::doCompute()
     for( size_t i=0; i<m_source_items.size(); i++ ) {
         boost::shared_ptr<SourceItem> source_item = m_source_items[i];
         if( source_item->m_do_update_subset ) {
-            LOGGER_DEBUG( log, "Updating subset geometry of " << source_item->m_source->name() );
+            LOGGER_DEBUG( log, "Updating subset geometry of " << source_item->m_name );
             source_item->m_do_update_subset = false;
             // we will probably change one or more surfaces, so renderlist must
             // be updated.
             try {
-                LOGGER_DEBUG( log, "updating item " << i << " of " << m_source_items.size() << ": " << source_item->m_source->name() );
+                LOGGER_DEBUG( log, "updating item " << i << " of " << m_source_items.size() << ": " << source_item->m_name );
                 
                 bool flip_faces = false;
                 if( source_item->m_appearance_data ) {

@@ -74,8 +74,13 @@ struct SourceItem {
     boost::shared_ptr<models::SubsetSelectorData>          m_subset_selector_data;
     boost::shared_ptr<models::AppearanceData>              m_appearance_data;
     
+    
+    std::string                                             m_name;
     bool                                            m_load_color_field;
     bool                                            m_do_update_subset;
     bool                                            m_do_update_renderlist;
+
+    void
+    setName( const  std::vector<boost::shared_ptr<SourceItem> >& sources );    
     
 };
