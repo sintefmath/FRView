@@ -66,8 +66,12 @@ namespace render {
         class AbstractBase;
     }
 } // of namespace render
-
-
+namespace dataset {
+    class AbstractDataSource;
+}
+namespace bridge {
+    class AbstractMeshBridge;
+}
 
 class FRViewJob
         : public tinia::jobcontroller::OpenGLJob,
@@ -106,6 +110,10 @@ public:
 
     void
     setSource( size_t index );
+
+    void
+    addSource( boost::shared_ptr<dataset::AbstractDataSource > source,
+               boost::shared_ptr<render::mesh::AbstractMeshGPUModel> gpu_mesh );
 
     void
     cloneSource();

@@ -69,6 +69,7 @@ FRViewJob::handleFetchSource()
     if( !m_async_reader->getSource( source, mesh_bridge ) ) {
         return; // Nothing.
     }
+
     
     SourceItem source_item;
     source_item.m_source = source;
@@ -84,8 +85,10 @@ FRViewJob::handleFetchSource()
         LOGGER_DEBUG( log, "Adding polyhedral mesh (source " << m_source_items.size() << ")." );
         
         shared_ptr<PolyhedralMeshGPUModel> gpu_polyhedronmesh( new PolyhedralMeshGPUModel );
-        
-        
+        gpu_polyhedronmesh->update( *polyhedral_bridge );
+
+        addSource( source, gpu_polyhedronmesh );
+/*
         source_item.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
         source_item.m_grid_tess = gpu_polyhedronmesh;
         source_item.m_faults_surface.reset( new render::surface::GridTessSurf );
@@ -96,19 +99,22 @@ FRViewJob::handleFetchSource()
         //source_item.m_subset_selector_data.reset( new models::SubsetSelectorData );
         source_item.m_color_map = m_color_maps;
 
-        gpu_polyhedronmesh->update( *polyhedral_bridge );
 
         source_item.setName( m_source_items );
         
         size_t index = m_source_items.size();
         m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( source_item ) ) );
-        setSource( index );
+        setSource( index );*/
     }
 
     else if( polygon_bridge ) {
         LOGGER_DEBUG( log, "Adding polygon mesh (source " << m_source_items.size() << ")." );
+
         shared_ptr<PolygonMeshGPUModel> gpu_polygonmesh( new PolygonMeshGPUModel );
-        
+        gpu_polygonmesh->update( polygon_bridge );
+
+        addSource( source, gpu_polygonmesh );
+/*
         source_item.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
         source_item.m_grid_tess = gpu_polygonmesh;
         source_item.m_faults_surface.reset( new render::surface::GridTessSurf );
@@ -116,26 +122,16 @@ FRViewJob::handleFetchSource()
         source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
         source_item.m_grid_tess_subset.reset( new render::subset::Representation );
         source_item.m_wells.reset( new render::wells::Representation );
-        //source_item.m_subset_selector_data.reset( new models::SubsetSelectorData );
         source_item.m_color_map = m_color_maps;
-        
-        gpu_polygonmesh->update( polygon_bridge );
-
         source_item.setName( m_source_items );
         
         size_t index = m_source_items.size();
         m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( source_item ) ) );
         setSource( index );
+*/
     }
     
-    // Update list of sources in exposedmodel/GUI
-    std::vector<std::string> sources;
-    for( size_t i=0; i<m_source_items.size(); i++ ) {
-        sources.push_back( m_source_items[i]->m_name );
-    }
-    m_source_selector.updateSources( sources );
 
-    m_renderlist_update_revision = true;
 }
 
 void

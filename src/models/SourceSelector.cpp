@@ -140,7 +140,7 @@ SourceSelector::guiFactory() const
 
     HorizontalLayout* hl = new HorizontalLayout;
     hl->addChild( new Button( source_clone_key ) );
-    hl->addChild( new HorizontalExpandingSpace );
+    hl->addChild( new HorizontalSpace );
     hl->addChild( new Button( source_delete_key ) );
     vl->addChild( hl );
 

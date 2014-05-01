@@ -139,8 +139,6 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
     root->addChild( left_right_wrapper );
 
-    m_model->addElement<bool>("has_project", false );
-
 
     // --- main ----------------------------------------------------------------
     {

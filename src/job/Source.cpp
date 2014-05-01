@@ -18,6 +18,9 @@
 #include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 #include "render/ClipPlane.hpp"
+#include "render/surface/GridTessSurf.hpp"
+#include "render/subset/Representation.hpp"
+#include "render/wells/Representation.hpp"
 #include "dataset/AbstractDataSource.hpp"
 #include "dataset/PolyhedralDataInterface.hpp"
 
@@ -32,16 +35,17 @@ namespace {
 void
 FRViewJob::setSource( size_t index )
 {
-    Logger log = getLogger( package + ".selected" );
+    Logger log = getLogger( package + ".setSource" );
 
     boost::shared_ptr<SourceItem> source_item;
 
-    if( index < m_source_items.size() ) {
+    if( !m_source_items.empty() ) {
+        index = std::min( m_source_items.size()-1, index );
+
         m_current_item = index;
         source_item = m_source_items[index];
 
         // --- update model variables --------------------------------------
-        m_model->updateElement<bool>("has_project", true );
 
         boost::shared_ptr< dataset::PolyhedralDataInterface > polydata =
                 boost::dynamic_pointer_cast< dataset::PolyhedralDataInterface >( source_item->m_source );
@@ -66,6 +70,7 @@ FRViewJob::setSource( size_t index )
 
         m_grid_stats.update( source_item->m_source, source_item->m_grid_tess );
 
+        LOGGER_DEBUG( log, "current source is " << m_current_item << ": " << source_item->m_name )
     }
     else {
         std::list<std::string> solutions = {"none"};
@@ -78,20 +83,47 @@ FRViewJob::setSource( size_t index )
     updateCurrentFieldData();
 }
 
+
+void
+FRViewJob::addSource( boost::shared_ptr< dataset::AbstractDataSource > source,
+                      boost::shared_ptr<render::mesh::AbstractMeshGPUModel> gpu_mesh )
+{
+    Logger log = getLogger( package + ".addSource" );
+    SourceItem si;
+
+    si.m_source = source;
+    si.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
+    si.m_grid_tess = gpu_mesh;
+    si.m_faults_surface.reset( new render::surface::GridTessSurf );
+    si.m_subset_surface.reset( new render::surface::GridTessSurf );
+    si.m_boundary_surface.reset( new render::surface::GridTessSurf );
+    si.m_grid_tess_subset.reset( new render::subset::Representation );
+    si.m_wells.reset( new render::wells::Representation );
+    si.m_color_map = m_color_maps;
+    si.setName( m_source_items );
+
+    size_t index = m_source_items.size();
+    m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( si ) ) );
+    setSource( index );
+
+    // Update list of sources in exposedmodel/GUI
+    std::vector<std::string> sources;
+    for( size_t i=0; i<m_source_items.size(); i++ ) {
+        sources.push_back( m_source_items[i]->m_name );
+        LOGGER_DEBUG( log, "source " << i << ": " << sources.back() );
+    }
+    m_source_selector.updateSources( sources );
+    m_renderlist_update_revision = true;
+}
+
 void
 FRViewJob::cloneSource()
 {
+    if( m_current_item < m_source_items.size() ) {
+        addSource( m_source_items[ m_current_item ]->m_source,
+                   m_source_items[ m_current_item ]->m_grid_tess );
 
-    /*if( m_current_item < m_source_items.size() ) {
-        SourceItem& src = *m_source_items[ m_current_item ];
-        SourceItem dst;
-
-        dst.m_source = src.m_source;
-        dst.m_clip_plane.reset( new render::ClipPlane( *dst.m_clip_plane ) );
-
-        //source_item.m_grid_tess = gpu_polyhedronmesh;
     }
-*/
 }
 
 void
@@ -101,15 +133,17 @@ FRViewJob::deleteSource()
         deleteAllSources();
     }
     else if( m_current_item < m_source_items.size() ) {
+        Logger log = getLogger( package + ".deleteSource" );
+
         m_source_items.erase( m_source_items.begin() + m_current_item );
 
         std::vector<std::string> sources;
         for( size_t i=0; i<m_source_items.size(); i++ ) {
             sources.push_back( m_source_items[i]->m_name );
+            LOGGER_DEBUG( log, "source " << i << ": " << sources.back() );
         }
         m_source_selector.updateSources( sources );
-
-        setSource( std::min( m_source_items.size()-1, m_current_item ) );
+        setSource( m_current_item );
     }
 }
 
