@@ -106,7 +106,16 @@ public:
 
     void
     setSource( size_t index );
-    
+
+    void
+    cloneSource();
+
+    void
+    deleteSource();
+
+    void
+    deleteAllSources();
+
     void
     loadFile( const std::string& filename,
               int refine_i,
@@ -114,9 +123,6 @@ public:
               int refine_k,
               bool triangulate );
 
-    // ExposedPolicyKey that changes when current item changes
-    const std::string&
-    currentSourceItemKey() const;
     
     // Returns true if there is a valid source item
     bool

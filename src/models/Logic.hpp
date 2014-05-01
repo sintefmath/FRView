@@ -30,6 +30,14 @@ public:
     virtual
     void
     setSource( size_t index ) = 0;
+
+    virtual
+    void
+    cloneSource() = 0;
+
+    virtual
+    void
+    deleteSource() = 0;
     
     virtual
     void

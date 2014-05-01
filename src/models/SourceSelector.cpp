@@ -21,8 +21,13 @@
 namespace {
     using std::string;
 
-static const string source_selector_key = "source_selector_key";
-const char* source_selector_none[1] = { "None" };
+    const string source_selector_key = "source_selector";
+    const string source_clone_key = "source_selector_clone";
+    const string source_delete_key = "source_selector_delete";
+
+    const char* source_selector_none[1] = { "None" };
+
+
 
 } // of anonymous namespace
 
@@ -38,6 +43,12 @@ SourceSelector::SourceSelector(boost::shared_ptr<tinia::model::ExposedModel>& mo
                                                     &source_selector_none[0],
                                                     &source_selector_none[1] );
     m_model->addStateListener( source_selector_key, this );
+
+    m_model->addElement<bool>( source_clone_key, false, "Clone" );
+    m_model->addStateListener( source_clone_key, this );
+
+    m_model->addElement<bool>( source_delete_key, false, "Delete" );
+    m_model->addStateListener( source_delete_key, this );
 }
 
 void
@@ -85,7 +96,8 @@ SourceSelector::bumpRevision()
 void
 SourceSelector::stateElementModified( tinia::model::StateElement * stateElement )
 {
-    if( stateElement->getKey() == source_selector_key ) {
+    const std::string& key = stateElement->getKey();
+    if( key == source_selector_key ) {
         std::string value;
         stateElement->getValue( value );
         
@@ -96,13 +108,43 @@ SourceSelector::stateElementModified( tinia::model::StateElement * stateElement 
             }
         }
     }
+
+    else if( key == source_clone_key ) {
+        bool value;
+        stateElement->getValue<bool>( value );
+        if( value ) {
+            m_model->updateElement( key, false );
+            m_logic.cloneSource();
+            return;
+        }
+    }
+
+    else if( key == source_delete_key ) {
+        bool value;
+        stateElement->getValue<bool>( value );
+        if( value ) {
+            m_model->updateElement( key, false );
+            m_logic.deleteSource();
+        }
+    }
+
 }
 
 tinia::model::gui::Element*
 SourceSelector::guiFactory() const
 {
     using namespace tinia::model::gui;
-    return  new ComboBox( source_selector_key );
+
+    VerticalLayout* vl = new VerticalLayout;
+    vl->addChild( new ComboBox( source_selector_key ) );
+
+    HorizontalLayout* hl = new HorizontalLayout;
+    hl->addChild( new Button( source_clone_key ) );
+    hl->addChild( new HorizontalExpandingSpace );
+    hl->addChild( new Button( source_delete_key ) );
+    vl->addChild( hl );
+
+    return vl;
 }
 
 } // of namespace models
