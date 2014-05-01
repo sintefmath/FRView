@@ -28,15 +28,6 @@ class RenderConfig
         : public tinia::model::StateListener
 {
 public:
-    typedef enum {
-        VISIBILITY_MASK_NONE            = 0x0,
-        VISIBILITY_MASK_SUBSET          = 0x1,
-        VISIBILITY_MASK_BOUNDARY        = 0x2,
-        VISIBILITY_MASK_FAULTS_INSIDE   = 0x4,
-        VISIBILITY_MASK_FAULTS_OUTSIDE  = 0x8,
-        VISIBILITY_MASK_FAULTS          = 0xc,
-        VISIBILITY_MASK_ALL             = 0xf
-    } VisibilityMask;
 
     typedef int Revision;
     
@@ -55,9 +46,6 @@ public:
     Revision
     revision() const { return m_revision; }
     
-    VisibilityMask
-    visibilityMask() const;
-
     void
     setLightTheme();
 
@@ -102,24 +90,6 @@ public:
     const glm::vec4&
     clipPlaneColor() const { return m_clip_plane_color; }
 
-    const glm::vec4&
-    subsetFillColor() const { return m_subset_fill_color; }
-
-    const glm::vec4&
-    subsetOutlineColor() const { return m_subset_outline_color; }
-
-    const glm::vec4&
-    boundaryFillColor() const { return m_boundary_fill_color; }
-
-    const glm::vec4&
-    boundaryOutlineColor() const { return m_boundary_outline_color; }
-
-    const glm::vec4&
-    faultsFillColor() const { return m_faults_fill_color; }
-
-    const glm::vec4&
-    faultsOutlineColor() const { return m_faults_outline_color; }
-
     Theme
     theme() const { return m_theme; }
 
@@ -137,12 +107,6 @@ protected:
     glm::vec4                                   m_background_color;
     bool                                        m_clip_plane_visible;
     glm::vec4                                   m_clip_plane_color;
-    glm::vec4                                   m_subset_fill_color;
-    glm::vec4                                   m_subset_outline_color;
-    glm::vec4                                   m_boundary_fill_color;
-    glm::vec4                                   m_boundary_outline_color;
-    glm::vec4                                   m_faults_fill_color;
-    glm::vec4                                   m_faults_outline_color;
 
     void
     bumpRevision();

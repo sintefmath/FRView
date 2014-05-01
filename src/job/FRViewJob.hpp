@@ -141,7 +141,7 @@ private:
     models::Appearance                              m_appearance;
     models::UnderTheHood                            m_under_the_hood;
     models::RenderConfig                              m_renderconfig;
-    models::RenderConfig::VisibilityMask              m_visibility_mask;
+    //models::RenderConfig::VisibilityMask              m_visibility_mask;
     models::RenderConfig::Theme                       m_theme;
     models::GridStats                               m_grid_stats;
     float                                           m_zscale;

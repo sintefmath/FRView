@@ -100,6 +100,8 @@ FRViewJob::render( const float*  projection,
                 currentSourceItem()->m_clip_plane->render( projection, modelview );
             }
         }
+
+        glm::vec3 line_color = glm::vec3(0.0, 0.0, 0.0 );
         
         for(size_t i=0; i<m_source_items.size(); i++ ) {
             boost::shared_ptr<SourceItem> source_item = m_source_items[i];
@@ -112,14 +114,18 @@ FRViewJob::render( const float*  projection,
                 min = source_item->m_grid_field->minValue();
                 max = source_item->m_grid_field->maxValue();
             }
-            if( source_item->m_appearance_data ) {
-                const models::AppearanceData& ap = *source_item->m_appearance_data;
+
+            if( source_item->m_appearance_data == NULL ) {
+                LOGGER_ERROR( log, "Source item " << i << " has no appearance data" );
+                continue;
+            }
+
+            const models::AppearanceData& ap = *source_item->m_appearance_data;
                 
-                log_map = ap.colorMapType() == models::AppearanceData::COLORMAP_LOGARITMIC;
-                if( ap.colorMapFixed() ) {
-                    min = ap.colorMapFixedMin();
-                    max = ap.colorMapFixedMax();
-                }
+            log_map = ap.colorMapType() == models::AppearanceData::COLORMAP_LOGARITMIC;
+            if( ap.colorMapFixed() ) {
+                min = ap.colorMapFixedMin();
+                max = ap.colorMapFixedMax();
             }
             
             if( m_renderconfig.renderWells() ) {
@@ -129,29 +135,30 @@ FRViewJob::render( const float*  projection,
             }
             
             if( source_item->m_faults_surface
-                    && (m_visibility_mask & models::RenderConfig::VISIBILITY_MASK_FAULTS ) )
+                    && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_FAULTS ) )
             {
-                const glm::vec4& fc = m_renderconfig.faultsFillColor();
-                const glm::vec4& oc = m_renderconfig.faultsOutlineColor();
+                const glm::vec3 fc = ap.faultsColor();
+
                 items.resize( items.size() + 1 );
                 items.back().m_mesh = source_item->m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
                 items.back().m_surf = source_item->m_faults_surface;
                 items.back().m_line_thickness = m_renderconfig.lineThickness();
-                items.back().m_edge_color[0] = oc.r;
-                items.back().m_edge_color[1] = oc.g;
-                items.back().m_edge_color[2] = oc.b;
-                items.back().m_edge_color[3] = oc.a;
+                items.back().m_edge_color[0] = line_color.r;
+                items.back().m_edge_color[1] = line_color.g;
+                items.back().m_edge_color[2] = line_color.b;
+                items.back().m_edge_color[3] = ap.faultsOutlineAlpha();
                 items.back().m_face_color[0] = fc.r;
                 items.back().m_face_color[1] = fc.g;
                 items.back().m_face_color[2] = fc.b;
-                items.back().m_face_color[3] = fc.a;
+                items.back().m_face_color[3] = ap.faultsFillAlpha();
             }
+
             if( source_item->m_subset_surface
-                    && (m_visibility_mask & models::RenderConfig::VISIBILITY_MASK_SUBSET ) )
+                    && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_SUBSET ) )
             {
-                const glm::vec4& fc = m_renderconfig.subsetFillColor();
-                const glm::vec4& oc = m_renderconfig.subsetOutlineColor();
+                const glm::vec3 fc = ap.subsetColor();
+
                 items.resize( items.size() + 1 );
                 items.back().m_mesh = source_item->m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
@@ -162,20 +169,21 @@ FRViewJob::render( const float*  projection,
                 items.back().m_field_min = min;
                 items.back().m_field_max = max;
                 items.back().m_line_thickness =m_renderconfig.lineThickness();
-                items.back().m_edge_color[0] = oc.r;
-                items.back().m_edge_color[1] = oc.g;
-                items.back().m_edge_color[2] = oc.b;
-                items.back().m_edge_color[3] = oc.a;
+                items.back().m_edge_color[0] = line_color.r;
+                items.back().m_edge_color[1] = line_color.g;
+                items.back().m_edge_color[2] = line_color.b;
+                items.back().m_edge_color[3] = ap.subsetOutlineAlpha();
                 items.back().m_face_color[0] = fc.r;
                 items.back().m_face_color[1] = fc.g;
                 items.back().m_face_color[2] = fc.b;
-                items.back().m_face_color[3] = fc.a;
+                items.back().m_face_color[3] = ap.subsetFillAlpha();
             }
+
             if( source_item->m_boundary_surface
-                    && (m_visibility_mask & models::RenderConfig::VISIBILITY_MASK_BOUNDARY ) )
+                    && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_BOUNDARY ) )
             {
-                const glm::vec4& fc = m_renderconfig.boundaryFillColor();
-                const glm::vec4& oc = m_renderconfig.boundaryOutlineColor();
+                const glm::vec3 fc = ap.boundaryColor();
+
                 items.resize( items.size() + 1 );
                 items.back().m_mesh = source_item->m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
@@ -186,14 +194,14 @@ FRViewJob::render( const float*  projection,
                 items.back().m_field_min = min;
                 items.back().m_field_max = max;
                 items.back().m_line_thickness = m_renderconfig.lineThickness();
-                items.back().m_edge_color[0] = oc.r;
-                items.back().m_edge_color[1] = oc.g;
-                items.back().m_edge_color[2] = oc.b;
-                items.back().m_edge_color[3] = oc.a;
+                items.back().m_edge_color[0] = line_color.r;
+                items.back().m_edge_color[1] = line_color.g;
+                items.back().m_edge_color[2] = line_color.b;
+                items.back().m_edge_color[3] = ap.boundaryOutlineAlpha();
                 items.back().m_face_color[0] = fc.r;
                 items.back().m_face_color[1] = fc.g;
                 items.back().m_face_color[2] = fc.b;
-                items.back().m_face_color[3] = fc.a;
+                items.back().m_face_color[3] = ap.boundaryFillAlpha();
             }
         }
         

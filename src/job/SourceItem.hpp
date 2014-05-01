@@ -18,6 +18,7 @@
 
 
 #include <boost/shared_ptr.hpp>
+#include "models/Appearance.hpp"
 
 // Forward decls of shared_ptr contents
 namespace dataset {
@@ -52,7 +53,8 @@ namespace models {
 
 struct SourceItem {
     SourceItem()
-        : m_load_color_field( true ),
+        : m_visibility_mask( models::AppearanceData::VISIBILITY_MASK_NONE ),
+          m_load_color_field( true ),
           m_do_update_subset( true ),
           m_do_update_renderlist( true )
     {}
@@ -76,6 +78,9 @@ struct SourceItem {
     
     
     std::string                                             m_name;
+
+    /** Visibility mask used to generate geometry. */
+    models::AppearanceData::VisibilityMask                  m_visibility_mask;
     bool                                            m_load_color_field;
     bool                                            m_do_update_subset;
     bool                                            m_do_update_renderlist;

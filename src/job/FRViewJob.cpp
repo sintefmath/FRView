@@ -70,7 +70,6 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_appearance( m_model, *this ),
       m_under_the_hood( m_model, *this ),
       m_renderconfig( m_model ),
-      m_visibility_mask( models::RenderConfig::VISIBILITY_MASK_NONE ),
       m_theme( 0 ),
       m_grid_stats( m_model, *this ),
       m_has_context( false ),
@@ -139,8 +138,12 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     VerticalLayout* main  = new VerticalLayout;
     VerticalLayout* source = new VerticalLayout;
 
+    m_model->addElement<string>( "source_element_group", "n/a", "Source" );
+    ElementGroup* source_element_group = new ElementGroup( "source_element_group" );
+    source_element_group->setChild( source );
+
     left_right_wrapper->addChild( main );
-    left_right_wrapper->addChild( source );
+    left_right_wrapper->addChild( source_element_group );
     root->addChild( left_right_wrapper );
 
     
@@ -149,34 +152,31 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
     main->addChild( tab_buttons );
 
+    // --- tab_buttons ---------------------------------------------------------
+    {
+        Button* new_button = new Button( new_key );
+        tab_buttons->addChild( new_button );
     
-    Button* new_button = new Button( new_key );
-    tab_buttons->addChild( new_button );
+        PopupButton* file_popup = new PopupButton( m_file.titleKey(), false );
+        file_popup->setChild( m_file.guiFactory() );
+        tab_buttons->addChild( file_popup );
+
+        PopupButton* appearance_popup = new PopupButton( m_renderconfig.titleKey(), false );
+        appearance_popup->setChild( m_renderconfig.guiFactory() );
+        tab_buttons->addChild( appearance_popup );
+
+        PopupButton* under_the_hood_popup = new PopupButton( m_under_the_hood.titleKey(), false );
+        under_the_hood_popup->setChild( m_under_the_hood.guiFactory() );
+        tab_buttons->addChild( under_the_hood_popup );
+        tab_buttons->addChild( new HorizontalExpandingSpace );
     
-    // File dialogue
-    PopupButton* file_popup = new PopupButton( m_file.titleKey(), false );
-    file_popup->setChild( m_file.guiFactory() );
-    tab_buttons->addChild( file_popup );
-
-    // Appearance
-    PopupButton* appearance_popup = new PopupButton( m_renderconfig.titleKey(), false );
-    appearance_popup->setChild( m_renderconfig.guiFactory() );
-    tab_buttons->addChild( appearance_popup );
-
-    // Profile dialogue
-    PopupButton* under_the_hood_popup = new PopupButton( m_under_the_hood.titleKey(), false );
-    under_the_hood_popup->setChild( m_under_the_hood.guiFactory() );
-    tab_buttons->addChild( under_the_hood_popup );
-    tab_buttons->addChild( new HorizontalExpandingSpace );
-
-    
-    source->addChild( m_source_selector.guiFactory() );
+        source->addChild( m_source_selector.guiFactory() );
+    }
     
     m_model->addElement<bool>("has_project", false );
 
-
-    // Preprocess dialogue
-    if( 1 ) {
+    // --- Async reader info bar -----------------------------------------------
+    {
         ElementGroup* preprocess_group = new ElementGroup( "asyncreader_working", true );
         preprocess_group->setVisibilityKey( "asyncreader_working" );
 
@@ -188,39 +188,30 @@ FRViewJob::FRViewJob( const std::list<string>& files )
         root->addChild( preprocess_group );
     }
 
+    // --- Canvas --------------------------------------------------------------
+    {
+        m_model->addElement("viewer", viewer );
+        m_model->addElement<string>( "boundingbox", "-0.1 -0.1 -0.1 1.1 1.1 1.1" );
+        m_model->addElement<int>( "renderlist", 0 );
+        Canvas* canvas = new Canvas("viewer", "renderlist", "boundingbox" );
+        canvas->boundingBoxKey( "boundingbox" );
+        canvas->setViewerType( std::string( "MouseClickResponder" ) );
 
-    
-    // Viewer
-    m_model->addElement("viewer", viewer );
-    m_model->addElement<string>( "boundingbox", "-0.1 -0.1 -0.1 1.1 1.1 1.1" );
-    m_model->addElement<int>( "renderlist", 0 );
-    Canvas* canvas = new Canvas("viewer", "renderlist", "boundingbox" );
-    canvas->boundingBoxKey( "boundingbox" );
-    canvas->setViewerType( std::string( "MouseClickResponder" ) );
-    main->addChild( canvas );
+        main->addChild( canvas );
+    }
 
 
 
-
-    m_model->addElement<bool>( "field_info_enable", true, "Field" );
-    m_model->addElement<string>( "field_info_calendar", "n/a", "Date" );
-    m_model->addElement<string>( "field_info_range", "n/a", "Range" );
 
     m_model->addElement<bool>( "project_tab", true, "Project" );
-    m_model->addElement<bool>( "transparency_label", true, "Transparency" );
-    m_model->addElement<bool>( "surface_tab", true, "Surfaces" );
-    m_model->addElement<bool>( "well_tab", true, "Wells" );
-    m_model->addElement<bool>("field_group_enable", true, "Field" );
-    m_model->addConstrainedElement<int>("field_report_step", 0,0, 0, "Report step" );
-    m_model->addElementWithRestriction<string>("field_solution",
-                                                        solutions.front(),
-                                                        solutions.begin(),
-                                                        solutions.end() );
-    m_model->addAnnotation( "field_solution", "Solution" );
+    //m_model->addElement<bool>( "transparency_label", true, "Transparency" );
+
+    //m_model->addElement<bool>( "well_tab", true, "Wells" );
+    //m_model->addElement<bool>("field_group_enable", true, "Field" );
     m_model->addElement<bool>( "has_field", false );
 
 
-    m_model->addElement<bool>("grid_subset", true, "Subset" );
+    //m_model->addElement<bool>("grid_subset", true, "Subset" );
 
     m_model->addElement<bool>( "field_select_report_step_override", false, "Specific report step" );
     m_model->addConstrainedElement<int>( "field_select_report_step", 0, 0, 0, "Field select report step" );
@@ -229,46 +220,69 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     //m_model->addElement<bool>( "color_label", true, "Color" );
     m_model->addElement<bool>( "details_label", true, "Details" );
 
-    m_model->addElement<string>( "source_tab", "Source", "Source" );
 
     m_model->addStateListener( "asyncreader_ticket", this);
-    m_model->addStateListener( "field_solution", this);
-    m_model->addStateListener( "field_report_step", this);
 
 
     // --- info
     tinia::model::gui::TabLayout* tabs = new tinia::model::gui::TabLayout;
     source->addChild( tabs );
     
-    tinia::model::gui::Tab* source_tab = new tinia::model::gui::Tab( "source_tab", true );
-    tinia::model::gui::VerticalLayout* source_tab_layout = new tinia::model::gui::VerticalLayout; 
-    
-    tinia::model::gui::ElementGroup* field_details_group = new tinia::model::gui::ElementGroup( "field_info_enable", true );
-    tinia::model::gui::Grid* field_details_grid = new tinia::model::gui::Grid( 4, 4 );
-    field_details_grid->setChild( 0, 1, new tinia::model::gui::HorizontalSpace );
-    field_details_grid->setChild( 0, 3, new tinia::model::gui::HorizontalExpandingSpace );
-    field_details_grid->setChild( 0, 0, new tinia::model::gui::Label( "field_solution" ) );
-    field_details_grid->setChild( 0, 2, new tinia::model::gui::ComboBox( "field_solution" ) );
-    field_details_grid->setChild( 1, 0, new tinia::model::gui::Label( "field_report_step" ) );
-    field_details_grid->setChild( 1, 2, new tinia::model::gui::HorizontalSlider( "field_report_step" ) );
-    field_details_grid->setChild( 2, 0, new tinia::model::gui::Label( "field_info_calendar" ));
-    field_details_grid->setChild( 2, 2, (new tinia::model::gui::Label( "field_info_calendar", true ))->setEnabledKey( "has_field") );
-    field_details_grid->setChild( 3, 0, new tinia::model::gui::Label( "field_info_range" ) );
-    field_details_grid->setChild( 3, 2, (new tinia::model::gui::Label( "field_info_range", true ))->setEnabledKey( "has_field" ) );
-    field_details_group->setChild( field_details_grid );
 
-    source_tab_layout->addChild( m_grid_stats.guiFactory() );
-    source_tab_layout->addChild( field_details_group );
-    source_tab->setChild( source_tab_layout );
-    tabs->addChild( source_tab );
+    // --- details tab ---------------------------------------------------------
+    {
+        m_model->addElement<string>( "details_tab", "", "Details" );
+        tinia::model::gui::Tab* source_tab = new tinia::model::gui::Tab( "details_tab", true );
+        tinia::model::gui::VerticalLayout* source_tab_layout = new tinia::model::gui::VerticalLayout;
 
-    tinia::model::gui::Tab* subset_tab = new tinia::model::gui::Tab( "subset_label", true );
-    tinia::model::gui::VerticalLayout* subset_tab_layout = new tinia::model::gui::VerticalLayout;
-    
-    subset_tab_layout->addChild( m_subset_selector.guiFactory() );
-    subset_tab_layout->addChild( new tinia::model::gui::VerticalExpandingSpace );
-    subset_tab->setChild( subset_tab_layout );
-    tabs->addChild( subset_tab );
+        m_model->addElement<bool>( "field_info_enable", true, "Field" );
+
+        tinia::model::gui::ElementGroup* field_details_group = new tinia::model::gui::ElementGroup( "field_info_enable", true );
+        tinia::model::gui::Grid* field_details_grid = new tinia::model::gui::Grid( 4, 4 );
+        field_details_grid->setChild( 0, 1, new tinia::model::gui::HorizontalSpace );
+        field_details_grid->setChild( 0, 3, new tinia::model::gui::HorizontalExpandingSpace );
+
+        m_model->addElementWithRestriction<string>( "field_solution",
+                                                    solutions.front(),
+                                                    solutions.begin(),
+                                                    solutions.end() );
+        m_model->addAnnotation( "field_solution", "Solution" );
+        m_model->addStateListener( "field_solution", this);
+        field_details_grid->setChild( 0, 0, new tinia::model::gui::Label( "field_solution" ) );
+        field_details_grid->setChild( 0, 2, new tinia::model::gui::ComboBox( "field_solution" ) );
+
+        m_model->addConstrainedElement<int>("field_report_step", 0, 0, 0, "Report step" );
+        m_model->addStateListener( "field_report_step", this);
+        field_details_grid->setChild( 1, 0, new tinia::model::gui::Label( "field_report_step" ) );
+        field_details_grid->setChild( 1, 2, new tinia::model::gui::HorizontalSlider( "field_report_step" ) );
+
+        m_model->addElement<string>( "field_info_calendar", "n/a", "Date" );
+        field_details_grid->setChild( 2, 0, new tinia::model::gui::Label( "field_info_calendar" ));
+        field_details_grid->setChild( 2, 2, (new tinia::model::gui::Label( "field_info_calendar", true ))->setEnabledKey( "has_field") );
+
+        m_model->addElement<string>( "field_info_range", "n/a", "Range" );
+        field_details_grid->setChild( 3, 0, new tinia::model::gui::Label( "field_info_range" ) );
+        field_details_grid->setChild( 3, 2, (new tinia::model::gui::Label( "field_info_range", true ))->setEnabledKey( "has_field" ) );
+        field_details_group->setChild( field_details_grid );
+
+        source_tab_layout->addChild( m_grid_stats.guiFactory() );
+        source_tab_layout->addChild( field_details_group );
+        source_tab_layout->addChild( new tinia::model::gui::VerticalExpandingSpace );
+        source_tab->setChild( source_tab_layout );
+
+        tabs->addChild( source_tab );
+    }
+
+    // --- subset tab ----------------------------------------------------------
+    {
+        tinia::model::gui::Tab* subset_tab = new tinia::model::gui::Tab( "subset_label", true );
+        tinia::model::gui::VerticalLayout* subset_tab_layout = new tinia::model::gui::VerticalLayout;
+
+        subset_tab_layout->addChild( m_subset_selector.guiFactory() );
+        subset_tab_layout->addChild( new tinia::model::gui::VerticalExpandingSpace );
+        subset_tab->setChild( subset_tab_layout );
+        tabs->addChild( subset_tab );
+    }
 
 
     tinia::model::gui::VerticalLayout* appearance_layout = new tinia::model::gui::VerticalLayout;
@@ -374,12 +388,12 @@ FRViewJob::updateCurrentFieldData()
     else {
         
     }
+    m_model->updateElement( "has_field", has_field );
     return;
     if( !has_field ) {
         m_model->updateElement( "field_info_range", "[not available]" );
         m_model->updateElement( "field_info_calendar", "[not available]" );
     }
-    m_model->updateElement( "has_field", has_field );
 }
 
 
@@ -763,7 +777,7 @@ FRViewJob::setSource( size_t index )
         m_grid_stats.update();
     }
     m_subset_selector.update( source_item );
-    m_appearance.update( source_item );
+    m_appearance.update( source_item, index );
     updateCurrentFieldData();
 }
 
@@ -786,16 +800,21 @@ FRViewJob::doLogic()
         }
     }
 
-    models::RenderConfig::VisibilityMask new_mask = m_renderconfig.visibilityMask();
-    if( ( (m_visibility_mask != new_mask) || m_under_the_hood.profilingEnabled() ) ) {
-        
-        for( size_t i=0; i<m_source_items.size(); i++ ) {
-            m_source_items[i]->m_do_update_subset = true;
-            m_source_items[i]->m_do_update_renderlist = true;
+    for( size_t i=0; i<m_source_items.size(); i++ ) {
+        SourceItem& si = *m_source_items[i];
+        if( si.m_appearance_data == NULL ) {
+            continue;
         }
-        m_renderlist_update_revision = true;
-        m_visibility_mask = new_mask;
+
+        models::AppearanceData::VisibilityMask new_mask = si.m_appearance_data->visibilityMask();
+        if( ( (si.m_visibility_mask != new_mask) || m_under_the_hood.profilingEnabled() ) ) {
+            si.m_visibility_mask = new_mask;
+            si.m_do_update_subset = true;
+            si.m_do_update_renderlist = true;
+            m_renderlist_update_revision = true;
+        }
     }
+
 
     // If subset changes, so do render lists
     for( size_t i=0; i<m_source_items.size(); i++ ) {
