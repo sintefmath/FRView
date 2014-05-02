@@ -85,12 +85,14 @@ FRViewJob::setSource( size_t index )
 
 void
 FRViewJob::addSource( boost::shared_ptr< dataset::AbstractDataSource > source,
+                      const std::string&                                    source_file,
                       boost::shared_ptr<render::mesh::AbstractMeshGPUModel> gpu_mesh )
 {
     Logger log = getLogger( package + ".addSource" );
 
     size_t index = m_source_items.size();
     m_source_items.push_back( shared_ptr<SourceItem>( new SourceItem( source,
+                                                                      source_file,
                                                                       gpu_mesh,
                                                                       m_color_maps,
                                                                       m_source_items ) ) );
@@ -112,6 +114,7 @@ FRViewJob::cloneSource()
 {
     if( m_current_item < m_source_items.size() ) {
         addSource( m_source_items[ m_current_item ]->m_source,
+                   m_source_items[ m_current_item ]->m_source_file,
                    m_source_items[ m_current_item ]->m_grid_tess );
 
     }

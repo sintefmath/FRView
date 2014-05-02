@@ -67,8 +67,9 @@ FRViewJob::handleFetchSource()
     Logger log = getLogger( package + ".handleFetchSource" );
     // Try to get source
     shared_ptr< AbstractDataSource > source;
+    std::string source_file;
     shared_ptr< AbstractMeshBridge > mesh_bridge;
-    if( !m_async_reader->getSource( source, mesh_bridge ) ) {
+    if( !m_async_reader->getSource( source, source_file, mesh_bridge ) ) {
         return; // Nothing.
     }
 
@@ -86,7 +87,7 @@ FRViewJob::handleFetchSource()
         shared_ptr<PolyhedralMeshGPUModel> gpu_polyhedronmesh( new PolyhedralMeshGPUModel );
         gpu_polyhedronmesh->update( *polyhedral_bridge );
 
-        addSource( source, gpu_polyhedronmesh );
+        addSource( source, source_file, gpu_polyhedronmesh );
     }
 
     else if( polygon_bridge ) {
@@ -95,7 +96,7 @@ FRViewJob::handleFetchSource()
         shared_ptr<PolygonMeshGPUModel> gpu_polygonmesh( new PolygonMeshGPUModel );
         gpu_polygonmesh->update( polygon_bridge );
 
-        addSource( source, gpu_polygonmesh );
+        addSource( source, source_file, gpu_polygonmesh );
     }
     
 

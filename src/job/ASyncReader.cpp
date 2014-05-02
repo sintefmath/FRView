@@ -90,13 +90,15 @@ ASyncReader::checkForResponse()
 
 
 bool
-ASyncReader::getSource( boost::shared_ptr<dataset::AbstractDataSource> &source,
-                        boost::shared_ptr<bridge::AbstractMeshBridge>  &mesh_bridge )
+ASyncReader::getSource( boost::shared_ptr<dataset::AbstractDataSource>&  source,
+                        std::string&                                     source_file,
+                        boost::shared_ptr<bridge::AbstractMeshBridge>&   mesh_bridge )
 {
     std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
     for(auto it = m_rsp_queue.begin(); it!=m_rsp_queue.end(); ++it ) {
         if( it->m_type == RESPONSE_SOURCE ) {
-            source = it->m_source;
+            source      = it->m_source;
+            source_file = it->m_source_file;
             mesh_bridge = it->m_mesh_bridge;
             m_rsp_queue.erase( it );
             return true;
@@ -247,6 +249,7 @@ ASyncReader::handleOpenSource( const Command& cmd )
                 rsp.m_type = RESPONSE_SOURCE;
                 rsp.m_source = source;
                 rsp.m_mesh_bridge = bridge;
+                rsp.m_source_file = cmd.m_source_file;
                 postResponse( cmd, rsp );
             }
             else {

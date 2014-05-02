@@ -52,13 +52,15 @@ namespace models {
 }
 
 struct SourceItem {
-    SourceItem(boost::shared_ptr< dataset::AbstractDataSource > source,
-                boost::shared_ptr<render::mesh::AbstractMeshGPUModel> gpu_mesh,
-                boost::shared_ptr<render::GLTexture> color_map,
-                const std::vector<boost::shared_ptr<SourceItem> >& sources );
+    SourceItem( boost::shared_ptr< dataset::AbstractDataSource >       source,
+                const std::string&                                     source_file,
+                boost::shared_ptr<render::mesh::AbstractMeshGPUModel>  gpu_mesh,
+                boost::shared_ptr<render::GLTexture>                   color_map,
+                const std::vector<boost::shared_ptr<SourceItem> >&     sources );
 
 
     boost::shared_ptr<dataset::AbstractDataSource>         m_source;
+    std::string                                            m_source_file;
     boost::shared_ptr<render::ClipPlane>                   m_clip_plane;
     boost::shared_ptr<render::mesh::AbstractMeshGPUModel>  m_grid_tess;
     boost::shared_ptr<render::subset::Representation>      m_grid_tess_subset;

@@ -112,8 +112,9 @@ public:
     setSource( size_t index );
 
     void
-    addSource( boost::shared_ptr<dataset::AbstractDataSource > source,
-               boost::shared_ptr<render::mesh::AbstractMeshGPUModel> gpu_mesh );
+    addSource( boost::shared_ptr<dataset::AbstractDataSource >        source,
+               const std::string&                                     source_file,
+               boost::shared_ptr<render::mesh::AbstractMeshGPUModel>  gpu_mesh );
 
     void
     cloneSource();

@@ -28,10 +28,12 @@
 #include "dataset/PolyhedralDataInterface.hpp"
 
 SourceItem::SourceItem( boost::shared_ptr< dataset::AbstractDataSource > source,
+                        const std::string& source_file,
                         boost::shared_ptr<render::mesh::AbstractMeshGPUModel> gpu_mesh,
                         boost::shared_ptr<render::GLTexture> color_map,
                         const  std::vector<boost::shared_ptr<SourceItem> >& sources )
     : m_source( source ),
+      m_source_file( source_file ),
       m_clip_plane( new render::ClipPlane( glm::vec3( -0.1f ),
                                            glm::vec3( 1.1f ),
                                            glm::vec4(0.f, 1.f, 0.f, 0.f ) ) ),

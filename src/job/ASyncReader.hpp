@@ -59,6 +59,7 @@ public:
 
     bool
     getSource( boost::shared_ptr< dataset::AbstractDataSource >&  source,
+               std::string&                                       source_file,
                boost::shared_ptr<bridge::AbstractMeshBridge>&     mesh_bridge );
 
 
@@ -100,6 +101,7 @@ protected:
         boost::shared_ptr<dataset::AbstractDataSource>  m_source;
         boost::shared_ptr<bridge::AbstractMeshBridge>   m_mesh_bridge;
         boost::shared_ptr<bridge::FieldBridge>          m_field_bridge;
+        std::string                                     m_source_file;
         size_t                                          m_field_index;
         size_t                                          m_timestep_index;
     };
