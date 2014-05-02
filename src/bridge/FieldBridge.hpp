@@ -48,14 +48,23 @@ public:
     Real*
     values();
 
+    const Real*
+    values() const;
+
     size_t
     count() const { return m_count; }
 
-    Real&
-    minimum() { return m_min_value; }
+    void
+    setMinimum( Real value ) { m_min_value = value; }
 
-    Real&
-    maximum() { return m_max_value; }
+    void
+    setMaximum( Real value ) { m_max_value = value; }
+
+    Real
+    minimum() const { return m_min_value; }
+
+    Real
+    maximum() const { return m_max_value; }
 
 protected:
     size_t                      m_count;

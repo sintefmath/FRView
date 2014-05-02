@@ -52,6 +52,15 @@ FieldBridge::values()
     return m_memory;
 }
 
+const FieldBridge::Real*
+FieldBridge::values() const
+{
+    if( m_memory == (Real*)0xDEADBEEF ) {
+        throw std::runtime_error( "GridFieldBridge has not been initialized!" );
+    }
+
+    return m_memory;
+}
 
 
 

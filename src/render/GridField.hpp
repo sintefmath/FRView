@@ -55,16 +55,20 @@ public:
     hasData() const { return m_has_data; }
 
     void
-    import( bridge::FieldBridge& bridge );
+    import( boost::shared_ptr<const bridge::FieldBridge> bridge,
+            int                                          field_index,
+            int                                          timestep_index );
 
 protected:
     boost::shared_ptr<mesh::CellSetInterface>   m_cell_set;
-    bool                        m_has_data;
-    GLBuffer                    m_buffer;
-    GLTexture                   m_texture;
-    GLsizei                     m_count;
-    float                       m_min_value;
-    float                       m_max_value;
+    bool                                        m_has_data;
+    int                                         m_field_index;
+    int                                         m_timestep_index;
+    GLBuffer                                    m_buffer;
+    GLTexture                                   m_texture;
+    GLsizei                                     m_count;
+    float                                       m_min_value;
+    float                                       m_max_value;
 };
 
 } // of namespace render

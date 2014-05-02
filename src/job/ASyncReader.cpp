@@ -63,7 +63,7 @@ ASyncReader::issueOpenSource( const std::string& file,
 }
 
 bool
-ASyncReader::issueFetchField( const boost::shared_ptr<dataset::AbstractDataSource>  source,
+ASyncReader::issueFetchField(boost::shared_ptr<dataset::AbstractDataSource> source,
                               size_t                                                field_index,
                               size_t                                                timestep_index )
 {
@@ -106,8 +106,10 @@ ASyncReader::getSource( boost::shared_ptr<dataset::AbstractDataSource> &source,
 }
 
 bool
-ASyncReader::getField( boost::shared_ptr<dataset::AbstractDataSource> &source,
-                       boost::shared_ptr< bridge::FieldBridge >& field_bridge )
+ASyncReader::getField( boost::shared_ptr<const dataset::AbstractDataSource>&  source,
+                       size_t&                                                field_index,
+                       size_t&                                                timestep_index,
+                       boost::shared_ptr< bridge::FieldBridge >&              field_bridge )
 {
     // We kill of all but the latest request of correct type
     bool found_any = false;
@@ -115,8 +117,12 @@ ASyncReader::getField( boost::shared_ptr<dataset::AbstractDataSource> &source,
     std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
     for(auto it = m_rsp_queue.begin(); it!=m_rsp_queue.end(); ++it ) {
         if( it->m_type == RESPONSE_FIELD ) {
-            source = it->m_source;
-            field_bridge = it->m_field_bridge;
+
+            source         = it->m_source;
+            field_index    = it->m_field_index;
+            timestep_index = it->m_timestep_index;
+            field_bridge   = it->m_field_bridge;
+
             found_any = true;
         }
         else {
@@ -276,9 +282,13 @@ ASyncReader::handleReadSolution( const Command& cmd )
             rsp.m_type = RESPONSE_FIELD;
             rsp.m_source = cmd.m_source;
             rsp.m_field_bridge.reset( new bridge::FieldBridge( ) );
+            rsp.m_field_index = cmd.m_field_index;
+            rsp.m_timestep_index = cmd.m_timestep_index;
+
             polydata->field( rsp.m_field_bridge,
                              cmd.m_field_index,
                              cmd.m_timestep_index );
+
             postResponse( cmd, rsp );
         }
         catch( std::exception& e ) {

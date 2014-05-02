@@ -53,7 +53,7 @@ public:
                      bool                triangulate = false );
     
     bool
-    issueFetchField( const boost::shared_ptr<dataset::AbstractDataSource> source,
+    issueFetchField( boost::shared_ptr<dataset::AbstractDataSource> source,
                      size_t                                               field_index,
                      size_t                                               timestep_index );
 
@@ -63,8 +63,10 @@ public:
 
 
     bool
-    getField( boost::shared_ptr< dataset::AbstractDataSource >&  source,
-              boost::shared_ptr< bridge::FieldBridge >& field_bridge );
+    getField( boost::shared_ptr<const dataset::AbstractDataSource >&  source,
+              size_t&                                                 field_index,
+              size_t&                                                 timestep_index,
+              boost::shared_ptr< bridge::FieldBridge >&               field_bridge );
 
     /** Check if there are any responses pending, and if so, return type of the oldest. */
     ResponseType
@@ -98,6 +100,8 @@ protected:
         boost::shared_ptr<dataset::AbstractDataSource>  m_source;
         boost::shared_ptr<bridge::AbstractMeshBridge>   m_mesh_bridge;
         boost::shared_ptr<bridge::FieldBridge>          m_field_bridge;
+        size_t                                          m_field_index;
+        size_t                                          m_timestep_index;
     };
 
     Ticket                                         m_ticket_counter;

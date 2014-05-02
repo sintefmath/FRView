@@ -1035,29 +1035,38 @@ CornerpointGrid::field( boost::shared_ptr<Field>  bridge,
             // Data can be read directly
             bridge->init( sol.m_location.m_unformatted_eclipse.m_size );
             
+            REAL minimum, maximum;
             eclipse::Reader reader( sol.m_path );
             reader.blockContent( bridge->values(),
-                                 bridge->minimum(),
-                                 bridge->maximum(),
+                                 minimum,
+                                 maximum,
                                  sol.m_location.m_unformatted_eclipse );
+            bridge->setMinimum( minimum );
+            bridge->setMaximum( maximum );
             std::cerr << "timestep=" << timestep_index << ", field=" << field_index << "\n";
         }
         else {
             // Grid has been refined, we must duplicate entries
             
             std::vector<float> tmp( sol.m_location.m_unformatted_eclipse.m_size );
+
+            REAL minimum, maximum;
             eclipse::Reader reader( sol.m_path );
             reader.blockContent( tmp.data(),
-                                 bridge->minimum(),
-                                 bridge->maximum(),
+                                 minimum,
+                                 maximum,
                                  sol.m_location.m_unformatted_eclipse );
 
             // duplicate entries as refinement dictates
             bridge->init( m_cornerpoint_geometry.m_refine_map_compact.size() );
             REAL* ptr = bridge->values();
+
+
             for(size_t i=0; i<m_cornerpoint_geometry.m_refine_map_compact.size(); i++ ) {
                 ptr[i] = tmp[ m_cornerpoint_geometry.m_refine_map_compact[i] ];
             }
+            bridge->setMinimum( minimum );
+            bridge->setMaximum( maximum );
         }
     }
     else {

@@ -321,8 +321,6 @@ PolyhedralMeshSource::field( boost::shared_ptr<Field>  bridge,
         // nothing to do
         return;
     }
-    bridge->minimum() = m_cell_field_data[ field_index ][0];
-    bridge->maximum() = m_cell_field_data[ field_index ][0];
     
     float* ptr = bridge->values();
     float minimum = m_cell_field_data[ field_index ][0];
@@ -333,8 +331,8 @@ PolyhedralMeshSource::field( boost::shared_ptr<Field>  bridge,
         maximum = std::max( maximum, v );
         ptr[i] = v;
     }
-    bridge->minimum() = minimum;
-    bridge->maximum() = maximum;
+    bridge->setMinimum( minimum );
+    bridge->setMaximum( maximum );
 }
 
 

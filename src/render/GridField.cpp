@@ -35,23 +35,27 @@ GridField::GridField( boost::shared_ptr<mesh::CellSetInterface> cell_set )
 
 
 void
-GridField::import( bridge::FieldBridge& bridge )
+GridField::import(boost::shared_ptr<const bridge::FieldBridge> bridge,
+                  int field_index,
+                  int timestep_index )
 {
     Logger log = getLogger( "GridField.import" );
 
-    LOGGER_DEBUG( log, "bridge.count=" << bridge.count() << ", cellCount=" << m_cell_set->cellCount() );
 
-    if( true || bridge.count() == m_cell_set->cellCount() ) {
+
+    LOGGER_DEBUG( log, "bridge->count=" << bridge->count() << ", cellCount=" << m_cell_set->cellCount() );
+
+    if( true || bridge->count() == m_cell_set->cellCount() ) {
         // compacted data
         glBindBuffer( GL_TEXTURE_BUFFER, m_buffer.get() );
         glBufferData( GL_TEXTURE_BUFFER,
-                      sizeof(float)*bridge.count(),
-                      bridge.values(),
+                      sizeof(float)*bridge->count(),
+                      bridge->values(),
                       GL_STATIC_DRAW );
         glBindBuffer( GL_TEXTURE_BUFFER, 0 );
 
-        m_min_value = bridge.minimum();
-        m_max_value = bridge.maximum();
+        m_min_value = bridge->minimum();
+        m_max_value = bridge->maximum();
     }
     else {
         // assume that we are dealing with a uncompacted field
@@ -60,7 +64,7 @@ GridField::import( bridge::FieldBridge& bridge )
         std::vector<GLfloat> values( m_cell_set->cellCount() );
         const std::vector<GLuint>& indices = m_cell_set->cellGlobalIndicesInHostMemory();
 
-        float* data = bridge.values();
+        const float* data = bridge->values();
 
         m_min_value =  std::numeric_limits<float>::max();
         m_max_value = -std::numeric_limits<float>::max();

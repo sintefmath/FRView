@@ -127,35 +127,36 @@ FRViewJob::issueFieldFetch()
 void
 FRViewJob::handleFetchField()
 {
-    using boost::shared_ptr;
-    using boost::dynamic_pointer_cast;
     using render::GridField;
     using render::mesh::CellSetInterface;
     
 
-    boost::shared_ptr<dataset::AbstractDataSource> source;
-    boost::shared_ptr<bridge::FieldBridge> bridge;
-    if( !m_async_reader->getField( source, bridge ) ) {
+    shared_ptr<const dataset::AbstractDataSource> source;
+    shared_ptr<bridge::FieldBridge> bridge;
+    size_t field_index, timestep_index;
+    if( !m_async_reader->getField( source, field_index, timestep_index, bridge ) ) {
         return; // Nothing
     }
     
     for( size_t i=0; i<m_source_items.size(); i++ ) {
         
-        // find the corresponding source and update
-        if( m_source_items[i]->m_source == source ) {
+        // --- find matching source item ---------------------------------------
+        if( (m_source_items[i]->m_source == source)
+                && (m_source_items[i]->m_field_current == (int)field_index )
+                && (m_source_items[i]->m_timestep_current == (int)timestep_index ) )
+        {
             boost::shared_ptr<SourceItem> si = m_source_items[i];
-            
-            // maybe also subset if subset select.
+
             si->m_do_update_renderlist = true;
-            
-            si->m_grid_field.reset();
+
             if( bridge ) {
                 si->m_grid_field.reset(  new render::GridField( boost::dynamic_pointer_cast<render::mesh::CellSetInterface>( si->m_grid_tess ) ) );
-                si->m_grid_field->import( *bridge );
+                si->m_grid_field->import( bridge, field_index, timestep_index );
             }
-            
-            //m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
-            
+            else {
+                si->m_grid_field.reset();   // no data
+            }
+
             si->m_wells->clear();
             if( m_renderconfig.renderWells() ) {
                 shared_ptr<dataset::WellDataInterace> well_source =
