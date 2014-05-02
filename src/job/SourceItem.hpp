@@ -52,13 +52,12 @@ namespace models {
 }
 
 struct SourceItem {
-    SourceItem()
-        : m_visibility_mask( models::AppearanceData::VISIBILITY_MASK_NONE ),
-          m_load_color_field( true ),
-          m_do_update_subset( true ),
-          m_do_update_renderlist( true )
-    {}
-    
+    SourceItem(boost::shared_ptr< dataset::AbstractDataSource > source,
+                boost::shared_ptr<render::mesh::AbstractMeshGPUModel> gpu_mesh,
+                boost::shared_ptr<render::GLTexture> color_map,
+                const std::vector<boost::shared_ptr<SourceItem> >& sources );
+
+
     boost::shared_ptr<dataset::AbstractDataSource>         m_source;
     boost::shared_ptr<render::ClipPlane>                   m_clip_plane;
     boost::shared_ptr<render::mesh::AbstractMeshGPUModel>  m_grid_tess;
@@ -85,7 +84,12 @@ struct SourceItem {
     bool                                            m_do_update_subset;
     bool                                            m_do_update_renderlist;
 
-    void
-    setName( const  std::vector<boost::shared_ptr<SourceItem> >& sources );    
+
+    int                                                     m_field_num;
+    int                                                     m_field_current;
+    std::vector<std::string>                                m_field_names;
+    int                                                     m_timestep_num;
+    int                                                     m_timestep_current;
+
     
 };

@@ -16,18 +16,65 @@
  */
 
 #include <sstream>
+#include <boost/shared_ptr.hpp>
 #include "utils/Logger.hpp"
 #include "dataset/AbstractDataSource.hpp"
 #include "job/SourceItem.hpp"
+#include "render/ClipPlane.hpp"
+#include "render/surface/GridTessSurf.hpp"
+#include "render/subset/Representation.hpp"
+#include "render/wells/Representation.hpp"
+#include "dataset/AbstractDataSource.hpp"
+#include "dataset/PolyhedralDataInterface.hpp"
 
-void
-SourceItem::setName( const  std::vector<boost::shared_ptr<SourceItem> >& sources )
+SourceItem::SourceItem( boost::shared_ptr< dataset::AbstractDataSource > source,
+                        boost::shared_ptr<render::mesh::AbstractMeshGPUModel> gpu_mesh,
+                        boost::shared_ptr<render::GLTexture> color_map,
+                        const  std::vector<boost::shared_ptr<SourceItem> >& sources )
+    : m_source( source ),
+      m_clip_plane( new render::ClipPlane( glm::vec3( -0.1f ),
+                                           glm::vec3( 1.1f ),
+                                           glm::vec4(0.f, 1.f, 0.f, 0.f ) ) ),
+      m_grid_tess( gpu_mesh ),
+      m_grid_tess_subset( new render::subset::Representation ),
+      m_faults_surface( new render::surface::GridTessSurf ),
+      m_subset_surface( new render::surface::GridTessSurf ),
+      m_boundary_surface( new render::surface::GridTessSurf ),
+      m_wells( new render::wells::Representation ),
+      m_color_map( color_map ),
+      m_visibility_mask( models::AppearanceData::VISIBILITY_MASK_NONE ),
+      m_load_color_field( true ),
+      m_do_update_subset( true ),
+      m_do_update_renderlist( true ),
+      m_field_num( 0 ),
+      m_field_current( 0 ),
+      m_timestep_num( 0 ),
+      m_timestep_current( 0 )
 {
+    using boost::shared_ptr;
+    using boost::dynamic_pointer_cast;
+    using dataset::PolyhedralDataInterface;
+
+    // --- extract list of files & number of timesteps -------------------------
+    shared_ptr<PolyhedralDataInterface> polydata = dynamic_pointer_cast<PolyhedralDataInterface >( m_source );
+    if( polydata ) {
+        m_field_num = polydata->fields();
+        for(int i=0; i<m_field_num; i++ ) {
+            m_field_names.push_back( polydata->fieldName(i) );
+        }
+        m_timestep_num = (int)polydata->timesteps();
+    }
+    if( m_field_names.empty() ) {
+        m_field_names.push_back( "[none]" );
+    }
+
+
+    // --- make sure that the source has a unique name -------------------------
     std::string stem = m_source->name();
     if( stem.empty() ) {
         stem = "unnamed";
     }
-    
+
     std::string candidate = stem;
 
     bool done = false;
@@ -51,7 +98,8 @@ SourceItem::setName( const  std::vector<boost::shared_ptr<SourceItem> >& sources
         Logger log = getLogger( "SourceItem.setName" );
         LOGGER_FATAL( log, "Failed to set name of source item '" << stem << "'." );
     }
-    
+
 }
-    
-    
+
+
+

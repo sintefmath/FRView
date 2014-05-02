@@ -59,6 +59,8 @@ namespace {
 const std::string package = "FRViewJob";
 }
 
+
+
 void
 FRViewJob::handleFetchSource()
 {
@@ -70,9 +72,6 @@ FRViewJob::handleFetchSource()
         return; // Nothing.
     }
 
-    
-    SourceItem source_item;
-    source_item.m_source = source;
 
     shared_ptr<PolyhedralMeshBridge> polyhedral_bridge =
             dynamic_pointer_cast<PolyhedralMeshBridge>( mesh_bridge );
@@ -88,23 +87,6 @@ FRViewJob::handleFetchSource()
         gpu_polyhedronmesh->update( *polyhedral_bridge );
 
         addSource( source, gpu_polyhedronmesh );
-/*
-        source_item.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
-        source_item.m_grid_tess = gpu_polyhedronmesh;
-        source_item.m_faults_surface.reset( new render::surface::GridTessSurf );
-        source_item.m_subset_surface.reset( new render::surface::GridTessSurf );
-        source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
-        source_item.m_grid_tess_subset.reset( new render::subset::Representation );
-        source_item.m_wells.reset( new render::wells::Representation );
-        //source_item.m_subset_selector_data.reset( new models::SubsetSelectorData );
-        source_item.m_color_map = m_color_maps;
-
-
-        source_item.setName( m_source_items );
-        
-        size_t index = m_source_items.size();
-        m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( source_item ) ) );
-        setSource( index );*/
     }
 
     else if( polygon_bridge ) {
@@ -114,25 +96,33 @@ FRViewJob::handleFetchSource()
         gpu_polygonmesh->update( polygon_bridge );
 
         addSource( source, gpu_polygonmesh );
-/*
-        source_item.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
-        source_item.m_grid_tess = gpu_polygonmesh;
-        source_item.m_faults_surface.reset( new render::surface::GridTessSurf );
-        source_item.m_subset_surface.reset( new render::surface::GridTessSurf );
-        source_item.m_boundary_surface.reset( new render::surface::GridTessSurf );
-        source_item.m_grid_tess_subset.reset( new render::subset::Representation );
-        source_item.m_wells.reset( new render::wells::Representation );
-        source_item.m_color_map = m_color_maps;
-        source_item.setName( m_source_items );
-        
-        size_t index = m_source_items.size();
-        m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( source_item ) ) );
-        setSource( index );
-*/
     }
     
 
 }
+
+void
+FRViewJob::issueFieldFetch()
+{
+    if( currentSourceItemValid() ) {
+        boost::shared_ptr<SourceItem> si = currentSourceItem();
+
+        shared_ptr<dataset::PolyhedralDataInterface> pdi = dynamic_pointer_cast<dataset::PolyhedralDataInterface>( si->m_source );
+        if( pdi ) {
+
+            // TODO: check for mismatch with current field
+
+            if( pdi->validFieldAtTimestep( si->m_field_current,
+                                           si->m_timestep_current ) )
+            {
+                m_async_reader->issueFetchField( si->m_source,
+                                                 si->m_field_current,
+                                                 si->m_timestep_current );
+            }
+        }
+    }
+}
+
 
 void
 FRViewJob::handleFetchField()
@@ -153,38 +143,38 @@ FRViewJob::handleFetchField()
         
         // find the corresponding source and update
         if( m_source_items[i]->m_source == source ) {
-            boost::shared_ptr<SourceItem> source_item = m_source_items[i];
+            boost::shared_ptr<SourceItem> si = m_source_items[i];
             
             // maybe also subset if subset select.
-            source_item->m_do_update_renderlist = true;
+            si->m_do_update_renderlist = true;
             
-            source_item->m_grid_field.reset();
+            si->m_grid_field.reset();
             if( bridge ) {
-                source_item->m_grid_field.reset(  new render::GridField( boost::dynamic_pointer_cast<render::mesh::CellSetInterface>( source_item->m_grid_tess ) ) );
-                source_item->m_grid_field->import( *bridge );
+                si->m_grid_field.reset(  new render::GridField( boost::dynamic_pointer_cast<render::mesh::CellSetInterface>( si->m_grid_tess ) ) );
+                si->m_grid_field->import( *bridge );
             }
             
             //m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
             
-            source_item->m_wells->clear();
+            si->m_wells->clear();
             if( m_renderconfig.renderWells() ) {
-                boost::shared_ptr< dataset::WellDataInterace > well_source =
-                        boost::dynamic_pointer_cast< dataset::WellDataInterace >( source_item->m_source );
+                shared_ptr<dataset::WellDataInterace> well_source =
+                        dynamic_pointer_cast<dataset::WellDataInterace>( si->m_source );
                 if( well_source ) {
                     std::vector<float> colors;
                     std::vector<float> positions;
                     for( unsigned int w=0; w<well_source->wellCount(); w++ ) {
-                        if( !well_source->wellDefined( m_report_step_index, w ) ) {
+                        if( !well_source->wellDefined( si->m_timestep_current, w ) ) {
                             continue;
                         }
-                        source_item->m_wells->addWellHead( well_source->wellName(w),
-                                                           well_source->wellHeadPosition( m_report_step_index, w ) );
+                        si->m_wells->addWellHead( well_source->wellName(w),
+                                                  well_source->wellHeadPosition( si->m_timestep_current, w ) );
                         
                         positions.clear();
                         colors.clear();
-                        const unsigned int bN = well_source->wellBranchCount( m_report_step_index, w );
+                        const unsigned int bN = well_source->wellBranchCount( si->m_timestep_current, w );
                         for( unsigned int b=0; b<bN; b++ ) {
-                            const std::vector<float>& p = well_source->wellBranchPositions( m_report_step_index, w, b );
+                            const std::vector<float>& p = well_source->wellBranchPositions( si->m_timestep_current, w, b );
                             if( p.empty() ) {
                                 continue;
                             }
@@ -196,7 +186,7 @@ FRViewJob::handleFetchField()
                                 colors.push_back( ((i & 0x2) == 0) ? 1.f : 0.5f );
                                 colors.push_back( ((i & 0x4) == 0) ? 1.f : 0.5f );
                             }
-                            source_item->m_wells->addSegments( positions, colors );
+                            si->m_wells->addSegments( positions, colors );
                         }
                     }
                 }
@@ -235,3 +225,5 @@ FRViewJob::fetchData()
         }
     }
 }
+
+

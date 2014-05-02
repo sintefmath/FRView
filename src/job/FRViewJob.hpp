@@ -207,8 +207,6 @@ private:
 
     bool                                            m_care_about_updates;
     bool                                            m_render_clip_plane;
-    unsigned int                                    m_solution_index;
-    unsigned int                                    m_report_step_index;
     float                                           m_proxy_box_min[3];
     float                                           m_proxy_box_max[3];
     float                                           m_proxy_transform[16];
@@ -230,6 +228,9 @@ private:
 
 
     /** Fetches data, if needed. */
+    void
+    issueFieldFetch();
+
     void
     fetchData();
     

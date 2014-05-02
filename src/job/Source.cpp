@@ -15,6 +15,7 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "job/ASyncReader.hpp"
 #include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 #include "render/ClipPlane.hpp"
@@ -24,11 +25,14 @@
 #include "dataset/AbstractDataSource.hpp"
 #include "dataset/PolyhedralDataInterface.hpp"
 
+using std::string;
+using std::vector;
+using boost::shared_ptr;
+using boost::dynamic_pointer_cast;
 
 namespace {
-    using std::string;
 
-    const std::string package = "FRViewJob.Source";
+    const string package = "FRViewJob.Source";
 
 } // of anonymous namespace
 
@@ -37,7 +41,7 @@ FRViewJob::setSource( size_t index )
 {
     Logger log = getLogger( package + ".setSource" );
 
-    boost::shared_ptr<SourceItem> source_item;
+    shared_ptr<SourceItem> source_item;
 
     if( !m_source_items.empty() ) {
         index = std::min( m_source_items.size()-1, index );
@@ -46,27 +50,22 @@ FRViewJob::setSource( size_t index )
         source_item = m_source_items[index];
 
         // --- update model variables --------------------------------------
+        int timestep_max = std::max( 1, source_item->m_timestep_num)-1;
 
-        boost::shared_ptr< dataset::PolyhedralDataInterface > polydata =
-                boost::dynamic_pointer_cast< dataset::PolyhedralDataInterface >( source_item->m_source );
-
-        std::list<std::string> solutions;
-        int timestep_max = 0;
-        if( polydata ) {
-            for(unsigned int i=0; i<polydata->fields(); i++ ) {
-                solutions.push_back( polydata->fieldName(i) );
-            }
-            timestep_max = std::max( (int)1, (int)polydata->timesteps() )-1;
-        }
-
-        if( solutions.empty() ) {
-            solutions.push_back( "[none]" );
-        }
-        m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
-        m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
-        m_model->updateConstraints<int>("field_report_step", 0,0,  timestep_max );
-        m_model->updateConstraints<int>( "field_select_report_step", 0, 0, timestep_max );
-
+        m_model->updateRestrictions( "field_solution",
+                                     source_item->m_field_names[ source_item->m_field_current ],
+                                     source_item->m_field_names );
+        m_model->updateRestrictions( "field_select_solution",
+                                     source_item->m_field_names[ source_item->m_field_current ],
+                                     source_item->m_field_names );
+        m_model->updateConstraints<int>( "field_report_step",
+                                         source_item->m_timestep_current,
+                                         0,
+                                         timestep_max );
+        m_model->updateConstraints<int>( "field_select_report_step",
+                                         source_item->m_timestep_current,
+                                         0,
+                                         timestep_max );
 
         m_grid_stats.update( source_item->m_source, source_item->m_grid_tess );
 
@@ -89,22 +88,14 @@ FRViewJob::addSource( boost::shared_ptr< dataset::AbstractDataSource > source,
                       boost::shared_ptr<render::mesh::AbstractMeshGPUModel> gpu_mesh )
 {
     Logger log = getLogger( package + ".addSource" );
-    SourceItem si;
-
-    si.m_source = source;
-    si.m_clip_plane.reset( new render::ClipPlane( glm::vec3( -0.1f ) , glm::vec3( 1.1f ), glm::vec4(0.f, 1.f, 0.f, 0.f ) ) );
-    si.m_grid_tess = gpu_mesh;
-    si.m_faults_surface.reset( new render::surface::GridTessSurf );
-    si.m_subset_surface.reset( new render::surface::GridTessSurf );
-    si.m_boundary_surface.reset( new render::surface::GridTessSurf );
-    si.m_grid_tess_subset.reset( new render::subset::Representation );
-    si.m_wells.reset( new render::wells::Representation );
-    si.m_color_map = m_color_maps;
-    si.setName( m_source_items );
 
     size_t index = m_source_items.size();
-    m_source_items.push_back( boost::shared_ptr<SourceItem>( new SourceItem( si ) ) );
+    m_source_items.push_back( shared_ptr<SourceItem>( new SourceItem( source,
+                                                                      gpu_mesh,
+                                                                      m_color_maps,
+                                                                      m_source_items ) ) );
     setSource( index );
+    issueFieldFetch();
 
     // Update list of sources in exposedmodel/GUI
     std::vector<std::string> sources;

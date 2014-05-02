@@ -54,6 +54,9 @@
 using std::string;
 using std::stringstream;
 
+using boost::shared_ptr;
+using boost::dynamic_pointer_cast;
+
 namespace {
     const std::string package = "FRViewJob";
     const std::string new_key = "new";
@@ -87,8 +90,6 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     
     m_render_clip_plane = false;
     m_care_about_updates = true;
-    m_report_step_index = 0;
-    m_solution_index = 0;
 
 
     float identity[16] = {
@@ -321,23 +322,23 @@ FRViewJob::updateCurrentFieldData()
 {
     bool has_field = false;
     if( m_current_item < m_source_items.size() ) {
-        boost::shared_ptr<SourceItem> source_item = m_source_items[ m_current_item ];
+        boost::shared_ptr<SourceItem> si = m_source_items[ m_current_item ];
         
-        if( source_item->m_grid_field ) {
+        if( si->m_grid_field ) {
             has_field = true;
             
-            if( source_item->m_grid_tess_subset ) {
+            if( si->m_grid_tess_subset ) {
                 boost::shared_ptr<dataset::PolyhedralDataInterface> poly_data =
-                        boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item->m_source );
+                        boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( si->m_source );
                 if( poly_data ) {
                     has_field = true;
                     std::stringstream o;
-                    o << "[ " << source_item->m_grid_field->minValue()
-                      << ", " << source_item->m_grid_field->maxValue() << " ]";
+                    o << "[ " << si->m_grid_field->minValue()
+                      << ", " << si->m_grid_field->maxValue() << " ]";
                     m_model->updateElement( "field_info_range", o.str() );
                     o.str("");
                     o << "[not implemented]";
-                    m_model->updateElement( "field_info_calendar", poly_data->timestepDescription( m_report_step_index ) );
+                    m_model->updateElement( "field_info_calendar", poly_data->timestepDescription( si->m_timestep_current ) );
                 }
             }
         }
@@ -373,6 +374,7 @@ FRViewJob::loadFile( const std::string& filename,
 void
 FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
 {
+
     if( !m_care_about_updates ) {
         return;
     }
@@ -400,36 +402,29 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     }
     
     else if( currentSourceItemValid() && (key == "field_solution") ) {
-        boost::shared_ptr<SourceItem> source_item = currentSourceItem();
-        boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
-                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item->m_source );
-        if( poly_source ) {
-            string value;
-            stateElement->getValue<string>( value );
-            for(unsigned int i=0; i<poly_source->fields(); i++ ) {
-                if( value == poly_source->fieldName(i) ) {
-                    m_solution_index = i;
-                    break;
-                }
+        string value;
+        stateElement->getValue( value );
+
+        shared_ptr<SourceItem> si = currentSourceItem();
+        int field = -1;
+        for( int i=0; i<(int)si->m_field_names.size(); i++ ) {
+            if( si->m_field_names[ i ] == value ) {
+                field = i;
+                break;
             }
-            if( poly_source->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
-                if( m_async_reader->issueFetchField( source_item->m_source, m_solution_index, m_report_step_index ) ) {
-                }
-            }
+        }
+        if( (field != -1) && (si->m_field_current != field) ) {
+            si->m_field_current = field;
+            issueFieldFetch();
         }
     }
     else if( currentSourceItemValid() && (key == "field_report_step") ) {
-        boost::shared_ptr<SourceItem> source_item = currentSourceItem();
-        boost::shared_ptr<dataset::PolyhedralDataInterface> poly_source =
-                boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( source_item->m_source );
-        if( poly_source ) {
-            int value;
-            stateElement->getValue<int>( value );
-            m_report_step_index = value;
-            if( poly_source->validFieldAtTimestep( m_solution_index, m_report_step_index ) ) {
-                if( m_async_reader->issueFetchField(source_item->m_source, m_solution_index, m_report_step_index ) ) {
-                }
-            }
+        int value;
+        stateElement->getValue( value );
+        shared_ptr<SourceItem> si = currentSourceItem();
+        if( si->m_timestep_current != value ) {
+            si->m_timestep_current = value;
+            issueFieldFetch();
         }
     }
     
