@@ -90,6 +90,7 @@ struct callback_data {
     std::vector<int>                    m_piece_connectivity;
     std::vector<int>                    m_piece_offsets;
     std::vector<int>                    m_piece_types;
+    std::vector<Tag::Type>              m_piece_field_context;
     std::vector<std::string>            m_piece_cell_data_name;
     std::vector< std::vector<float> >   m_piece_cell_data_vals;
 };
@@ -409,8 +410,10 @@ end_element( void* user_data, const xmlChar* name )
                 cbd->m_piece_types.swap( int_buffer );
             }
             break;
-
+            
+        // --- <PointData><DataArray> ------------------------------------------
         // --- <CellData><DataArray> ----------------------------------------------
+        case Tag::TAG_POINT_DATA:
         case Tag::TAG_CELL_DATA:
             // A bit unsure how to interpret Scalars/Normals/.. attributes.
             if( tag.m_data_array_name.empty() ) {
@@ -428,17 +431,24 @@ end_element( void* user_data, const xmlChar* name )
                 }
                 int_buffer.clear();
             }
-            if( float_buffer.size() != cbd->m_piece_cells_n ) {
-                LOGGER_ERROR( cbd->m_log,
-                              tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  << 
-                              "/Name='" << tag.m_data_array_name << "':" <<
-                              "Expected " << cbd->m_piece_cells_n << " values, got " << float_buffer.size() );
-                cbd->m_success = false;
-                return;
+            if( parent.m_type == Tag::TAG_POINT_DATA ) {
+                // push point data
+                // FIXME!
             }
-            cbd->m_piece_cell_data_name.push_back( tag.m_data_array_name );
-            cbd->m_piece_cell_data_vals.push_back( std::vector<float>() );
-            cbd->m_piece_cell_data_vals.back().swap( float_buffer );
+            else if ( parent.m_type == Tag::TAG_CELL_DATA ) {
+                if( float_buffer.size() != cbd->m_piece_cells_n ) {
+                    LOGGER_ERROR( cbd->m_log,
+                                  tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  << 
+                                                               "/Name='" << tag.m_data_array_name << "':" <<
+                                                               "Expected " << cbd->m_piece_cells_n << " values, got " << float_buffer.size() );
+                    cbd->m_success = false;
+                    return;
+                }
+                cbd->m_piece_field_context.push_back( Tag::TAG_CELL_DATA );
+                cbd->m_piece_cell_data_name.push_back( tag.m_data_array_name );
+                cbd->m_piece_cell_data_vals.push_back( std::vector<float>() );
+                cbd->m_piece_cell_data_vals.back().swap( float_buffer );
+            }
             break;
         default:
             break;
