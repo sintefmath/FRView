@@ -271,8 +271,51 @@ PolyhedralMeshSource::geometry( Tessellation&                                  g
         }
         else if( i == j+2 ) {
             // interior face
+
             if( half_polygons[j].m_side == half_polygons[j+1].m_side ) {
-                LOGGER_WARN( log, "Inconsistent mesh face." );
+
+                std::stringstream dbg;
+
+                dbg << " (offending face = { ";
+                for(int q=0; q<half_polygons[j+0].m_n; q++ ) {
+                    if( q != 0 ) {
+                        dbg << ", ";
+                    }
+                    dbg << half_polygons[j+0].m_indices[q];
+                }
+                dbg << "})";
+                for(int l=0; l<2; l++ ) {
+                    Index c =  half_polygons[j+l].m_cell;
+                    dbg << "\n\tcell " << c << " = ";
+                    Index p_o = m_cells[c];
+                    Index p_n = m_cells[c+1]-p_o;
+                    dbg << "{ ";
+                    for(Index p=0; p<p_n; p++ ) {
+                        Index i_o = m_polygons[p_o+p];
+                        Index i_n = m_polygons[p_o+p+1]-i_o;
+                        if( p!=0 ) {
+                            dbg << ", ";
+                        }
+                        dbg << "{ ";
+                        for(Index i=0; i<i_n; i++ ) {
+                            if( i!=0 ) {
+                                dbg << ", ";
+                            }
+                            dbg << m_indices[i_o+i];
+                        }
+                        dbg << "}";
+                    }
+                    dbg << "}";
+                }
+
+                LOGGER_WARN( log, "Inconsistently oriented mesh face between cells "
+                             << half_polygons[j].m_cell << " and "
+                             << half_polygons[j+1].m_cell << dbg.str() );
+                
+                
+
+                
+                j=i;
                 continue;
             }
             if( half_polygons[j].m_side == false ) {
