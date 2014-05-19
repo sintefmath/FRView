@@ -195,9 +195,11 @@ start_element( void* user_data, const xmlChar* name, const xmlChar** attrs )
                         tag.m_data_array_components = atoi( (const char*)attrs[i+1] );
                     }
                     else if( xmlStrEqual( attrs[i], (const xmlChar*)"format" ) ) {
-                        LOGGER_ERROR( cbd->m_log, tag_names[ tag.m_type ]  << ": only format='ascii' is currently supported" );
-                        cbd->m_success = false;
-                        return;
+                        if( !xmlStrEqual( attrs[i+1], (const xmlChar*)"ascii" ) ) {
+                            LOGGER_ERROR( cbd->m_log, tag_names[ tag.m_type ]  << ": format='" << attrs[i+1] << "', only format='ascii' is currently supported" );
+                            cbd->m_success = false;
+                            return;
+                        }
                     }
                     else if( xmlStrEqual( attrs[i], (const xmlChar*)"offset" ) ) {  //(( ascoo, binary, appended))
                         
