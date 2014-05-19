@@ -17,6 +17,8 @@
 
 #pragma once
 #include <limits>
+#include <vector>
+#include <string>
 #include <GL/glew.h>
 #include "utils/Logger.hpp"
 
