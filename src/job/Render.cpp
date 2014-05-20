@@ -113,6 +113,17 @@ FRViewJob::render( const float*  projection,
             if( source_item->m_grid_field ) {
                 min = source_item->m_grid_field->minValue();
                 max = source_item->m_grid_field->maxValue();
+
+                if( !source_item->m_color_map ) {
+                    // FIXME: Sometimes this happens, haven't tracked down
+                    // exactly why yet.
+                    if( m_color_maps ) {
+                        source_item->m_color_map = m_color_maps;
+                    }
+                    else {
+                        LOGGER_ERROR( log, "There is no color map!" );
+                    }
+                }
             }
 
             if( source_item->m_appearance_data == NULL ) {

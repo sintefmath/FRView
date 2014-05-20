@@ -603,7 +603,7 @@ FRViewJob::initGL()
 
     }
     
-    
+    setupPipeline();
     m_has_context = true;
     return true;
 }

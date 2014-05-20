@@ -21,6 +21,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "dataset/CornerpointGrid.hpp"
 #include "dataset/PolyhedralDataInterface.hpp"
+#include "dataset/PolygonDataInterface.hpp"
 #include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
@@ -119,6 +120,18 @@ FRViewJob::issueFieldFetch()
                 m_async_reader->issueFetchField( si->m_source,
                                                  si->m_field_current,
                                                  si->m_timestep_current );
+            }
+        }
+        else {
+            shared_ptr<dataset::PolygonDataInterface> polygons = dynamic_pointer_cast<dataset::PolygonDataInterface>( si->m_source );
+            if( polygons ) {
+                if( polygons->validFieldAtTimestep( si->m_field_current,
+                                                    si->m_timestep_current ) )
+                {
+                    m_async_reader->issueFetchField( si->m_source,
+                                                     si->m_field_current,
+                                                     si->m_timestep_current );
+                }
             }
         }
     }

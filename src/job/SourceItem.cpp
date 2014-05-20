@@ -26,6 +26,7 @@
 #include "render/wells/Representation.hpp"
 #include "dataset/AbstractDataSource.hpp"
 #include "dataset/PolyhedralDataInterface.hpp"
+#include "dataset/PolygonDataInterface.hpp"
 
 SourceItem::SourceItem( boost::shared_ptr< dataset::AbstractDataSource > source,
                         const std::string& source_file,
@@ -56,16 +57,29 @@ SourceItem::SourceItem( boost::shared_ptr< dataset::AbstractDataSource > source,
     using boost::shared_ptr;
     using boost::dynamic_pointer_cast;
     using dataset::PolyhedralDataInterface;
+    using dataset::PolygonDataInterface;
 
     // --- extract list of files & number of timesteps -------------------------
-    shared_ptr<PolyhedralDataInterface> polydata = dynamic_pointer_cast<PolyhedralDataInterface >( m_source );
-    if( polydata ) {
-        m_field_num = polydata->fields();
+    shared_ptr<PolyhedralDataInterface> polyhedra = dynamic_pointer_cast<PolyhedralDataInterface >( m_source );
+
+    if( polyhedra ) {
+        m_field_num = polyhedra->fields();
         for(int i=0; i<m_field_num; i++ ) {
-            m_field_names.push_back( polydata->fieldName(i) );
+            m_field_names.push_back( polyhedra->fieldName(i) );
         }
-        m_timestep_num = (int)polydata->timesteps();
+        m_timestep_num = (int)polyhedra->timesteps();
     }
+    else {
+        shared_ptr<PolygonDataInterface> polygons = dynamic_pointer_cast<PolygonDataInterface>( m_source );
+        if( polygons ) {
+            m_field_num = polygons->fields();
+            for(int i=0; i<m_field_num; i++ ) {
+                m_field_names.push_back( polygons->fieldName(i) );
+            }
+            m_timestep_num = (int)polygons->timesteps();
+        }
+    }
+
     if( m_field_names.empty() ) {
         m_field_names.push_back( "[none]" );
     }

@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "utils/Logger.hpp"
 #include "bridge/PolygonMeshBridge.hpp"
 #include "bridge/FieldBridge.hpp"
 #include "dataset/PolygonMeshSource.hpp"
@@ -90,6 +91,34 @@ PolygonMeshSource::geometry( boost::shared_ptr<bridge::PolygonMeshBridge>   mesh
             mesh_bridge->addPolygon( cell_ix, segments.data(), segments.size() );
         }
     }
+}
+
+void
+PolygonMeshSource::field( boost::shared_ptr<bridge::FieldBridge>  bridge,
+                          const size_t                            field_index,
+                          const size_t                            timestep_index ) const
+{
+    bridge->init( m_cell_field_data[ field_index ].size() );
+
+    if( m_cell_field_data[ field_index ].empty() ) {
+        // nothing to do
+        return;
+    }
+
+    float* ptr = bridge->values();
+    float minimum = m_cell_field_data[ field_index ][0];
+    float maximum = m_cell_field_data[ field_index ][0];
+    for( size_t i=0; i<m_cell_field_data[ field_index ].size(); i++ ) {
+        float v = m_cell_field_data[ field_index ][i];
+        minimum = std::min( minimum, v );
+        maximum = std::max( maximum, v );
+        ptr[i] = v;
+    }
+    bridge->setMinimum( minimum );
+    bridge->setMaximum( maximum );
+
+    //Logger log = getLogger( package + ".field" );
+    //LOGGER_DEBUG( log, "min=" << minimum << ", max=" << maximum );
 }
 
 bool

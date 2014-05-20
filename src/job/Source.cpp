@@ -150,7 +150,7 @@ FRViewJob::deleteAllSources()
 
     setSource( 0 );
 
-    releasePipeline();
+    //releasePipeline();
 }
 
 

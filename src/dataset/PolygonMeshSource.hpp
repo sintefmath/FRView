@@ -58,18 +58,11 @@ public:
               boost::shared_ptr<tinia::model::ExposedModel>  model,
               const std::string&                             progress_description_key,
               const std::string&                             progress_counter_key );
-#if 0
+
     void
-    geometry( Tessellation&                                  geometry_bridge,
-              boost::shared_ptr<tinia::model::ExposedModel>  model,
-              const std::string&                             progress_description_key,
-              const std::string&                             progress_counter_key );
-    
-    void
-    field( boost::shared_ptr<Field>  bridge,
-           const size_t              field_index,
-           const size_t              timestep_index ) const;    
-#endif
+    field( boost::shared_ptr<bridge::FieldBridge>  bridge,
+           const size_t                            field_index,
+           const size_t                            timestep_index ) const;
     
     size_t
     fields() const { return m_cell_field_name.size(); }

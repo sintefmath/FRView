@@ -300,7 +300,33 @@ ASyncReader::handleReadSolution( const Command& cmd )
         }
     }
     else {
-        LOGGER_ERROR( log, "Current data source does not support fields." );
+
+        boost::shared_ptr<dataset::PolygonDataInterface> polygons =
+                boost::dynamic_pointer_cast<dataset::PolygonDataInterface>( cmd.m_source );
+
+        Response rsp;
+        if( polygons != NULL ) {
+            try {
+                rsp.m_type = RESPONSE_FIELD;
+                rsp.m_source = cmd.m_source;
+                rsp.m_field_bridge.reset( new bridge::FieldBridge( ) );
+                rsp.m_field_index = cmd.m_field_index;
+                rsp.m_timestep_index = cmd.m_timestep_index;
+
+                polygons->field( rsp.m_field_bridge,
+                                 cmd.m_field_index,
+                                 cmd.m_timestep_index );
+
+                postResponse( cmd, rsp );
+            }
+            catch( std::exception& e ) {
+                rsp.m_field_bridge.reset();
+                LOGGER_ERROR( log, "Caught error: " << e.what() );
+            }
+        }
+        else {
+            LOGGER_ERROR( log, "Current data source does not support fields." );
+        }
     }
 }
 

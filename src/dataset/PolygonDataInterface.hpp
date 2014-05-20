@@ -21,6 +21,7 @@
 
 namespace bridge {
     class PolygonMeshBridge;
+    class FieldBridge;
 }
 
 namespace dataset {
@@ -41,6 +42,13 @@ public:
               const std::string&                             progress_description_key,
               const std::string&                             progress_counter_key ) = 0;
    
+    /** Extract field from datasource. */
+    virtual
+    void
+    field( boost::shared_ptr<bridge::FieldBridge>  bridge,
+           const size_t                            field_index,
+           const size_t                            timestep_index ) const = 0;
+
     /** Number of fields in datasource. */
     virtual
     size_t
