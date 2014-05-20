@@ -90,7 +90,10 @@ struct callback_data {
     std::vector<int>                    m_piece_connectivity;
     std::vector<int>                    m_piece_offsets;
     std::vector<int>                    m_piece_types;
-    std::vector<Tag::Type>              m_piece_field_context;
+
+    std::vector<std::string>            m_piece_vtx_data_name;
+    std::vector< std::vector<float> >   m_piece_vtx_data_vals;
+
     std::vector<std::string>            m_piece_cell_data_name;
     std::vector< std::vector<float> >   m_piece_cell_data_vals;
 };
@@ -223,6 +226,142 @@ start_element( void* user_data, const xmlChar* name, const xmlChar** attrs )
     }
 }
 
+#if 0
+void
+handle_field_data( callback_data*                     cbd,
+                   std::vector<std::string>&          names,
+                   std::vector<std::vector<float> >&  values,
+                   const size_t                       N,
+                   const Tag&                         tag )
+{
+    if( cbd->m_success == false ) {
+        return;
+    }
+
+    if( tag.m_data_array_name.empty() ) {
+        LOGGER_ERROR( cbd->m_log,
+                      tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  <<
+                      " name attribute required." );
+        cbd->m_success = false;
+        return;
+    }
+
+    if( tag.m_handle_chars == Tag::CHARACTER_INT_ARRAY ) {
+        // currently we convert everything to floats.
+        float_buffer.resize( int_buffer.size() );
+        for(size_t i=0; i<float_buffer.size(); i++ ) {
+            float_buffer[i] = int_buffer[i];
+        }
+        int_buffer.clear();
+    }
+    if( parent.m_type == Tag::TAG_POINT_DATA ) {
+        // push point data
+        // FIXME!
+    }
+    else if ( parent.m_type == Tag::TAG_CELL_DATA ) {
+        if( float_buffer.size() != cbd->m_piece_cells_n ) {
+            LOGGER_ERROR( cbd->m_log,
+                          tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  <<
+                                                       "/Name='" << tag.m_data_array_name << "':" <<
+                                                       "Expected " << cbd->m_piece_cells_n << " values, got " << float_buffer.size() );
+            cbd->m_success = false;
+            return;
+        }
+        cbd->m_piece_field_context.push_back( Tag::TAG_CELL_DATA );
+        cbd->m_piece_cell_data_name.push_back( tag.m_data_array_name );
+        cbd->m_piece_cell_data_vals.push_back( std::vector<float>() );
+        cbd->m_piece_cell_data_vals.back().swap( float_buffer );
+    }
+}
+#endif
+
+
+template<typename T>
+void
+body_contents_into_array( callback_data*   cbd,
+                            std::vector<T>&  result,
+                            Tag&             tag )
+{
+    result.clear();
+    if( tag.m_handle_chars != Tag::CHARACTER_IGNORE ) {
+        tag.m_char_buffer.push_back( '\0' ); // zero-terminate string
+
+#ifdef DEBUG
+        int tokens = 0;
+        int nonprint = 0;
+        int zerobytes = 0;
+        int checksum = 0;
+        for(size_t i=0; i<tag.m_char_buffer.size(); i++ ) {
+            checksum = (13*checksum + tag.m_char_buffer[i])&0xffff;
+            if( tag.m_char_buffer[i] == '\0' ) {
+                zerobytes++;
+            }
+            else if( (tag.m_char_buffer[i] < 9 ) || (tag.m_char_buffer[i] > 126 ) ) {
+                nonprint++;
+            }
+        }
+ #endif
+
+        char* p = tag.m_char_buffer.data();
+        char* e = p+1;
+        switch ( tag.m_handle_chars ) {
+        case Tag::CHARACTER_IGNORE:
+            break;
+        case Tag::CHARACTER_FLOAT_ARRAY:
+            while(1) {
+                errno = 0;
+                float v = strtof( p, &e );
+                if( errno != 0 ) {
+                    LOGGER_ERROR( cbd->m_log, "handle_value_array: parse_floats: " << strerror(errno) );
+                    cbd->m_success = false;
+                    return;
+                }
+                else if( p == e ) {
+                    break;  // no more digits could be found
+                }
+                else {
+                    result.push_back( static_cast<T>( v ) );
+#ifdef DEBUG
+                    tokens++;
+#endif
+                    p = e;
+                }
+            }
+            break;
+
+        case Tag::CHARACTER_INT_ARRAY:
+            while(1) {
+                errno = 0;
+                int v = strtol( p, &e, 0 );
+                if( errno != 0 ) {
+                    LOGGER_ERROR( cbd->m_log, "handle_value_array: parse_int: " << strerror(errno) );
+                    cbd->m_success = false;
+                    return;
+                }
+                else if( p == e ) {
+                    break;  // no more digits could be found
+                }
+                else {
+                    result.push_back( static_cast<T>( v ) );
+#ifdef DEBUG
+                    tokens++;
+#endif
+                    p = e;
+                }
+            }
+            break;
+        }
+#ifdef DEBUG
+        LOGGER_DEBUG( cbd->m_log, "Parsed character data: " <<
+                      tag.m_char_buffer.size() << " characters, " <<
+                      tokens << " tokens, " <<
+                      nonprint << " non-printable chars, " <<
+                      zerobytes << " zero-bytes, checksum=" <<
+                      checksum );
+#endif
+    }
+}
+
 void
 end_element( void* user_data, const xmlChar* name )
 {
@@ -251,86 +390,6 @@ end_element( void* user_data, const xmlChar* name )
             cbd->m_success = false;
             return;
         }
-    }
-    
-    // --- if requested, parse numbers in body ---------------------------------
-    std::vector<float> float_buffer;
-    std::vector<int>   int_buffer;
-    if( tag.m_handle_chars != Tag::CHARACTER_IGNORE ) {
-        tag.m_char_buffer.push_back( '\0' ); // zero-terminate string
-        
-#ifdef DEBUG
-        int tokens = 0;
-        int nonprint = 0;
-        int zerobytes = 0;
-        int checksum = 0;
-        for(size_t i=0; i<tag.m_char_buffer.size(); i++ ) {
-            checksum = (13*checksum + tag.m_char_buffer[i])&0xffff;
-            if( tag.m_char_buffer[i] == '\0' ) {
-                zerobytes++;
-            }
-            else if( (tag.m_char_buffer[i] < 9 ) || (tag.m_char_buffer[i] > 126 ) ) {
-                nonprint++;
-            }
-        }
- #endif       
-        char* p = tag.m_char_buffer.data();
-        char* e = p+1;
-        switch ( tag.m_handle_chars ) {
-        case Tag::CHARACTER_IGNORE:
-            break;
-        case Tag::CHARACTER_FLOAT_ARRAY:
-            while(1) {
-                errno = 0;
-                float v = strtof( p, &e );
-                if( errno != 0 ) {
-                    LOGGER_ERROR( cbd->m_log, "end_element: parse_floats: " << strerror(errno) );
-                    cbd->m_success = false;
-                    return;
-                }
-                else if( p == e ) {
-                    break;  // no more digits could be found
-                }
-                else {
-                    float_buffer.push_back( v );
-#ifdef DEBUG
-                    tokens++;
-#endif
-                    p = e;
-                }
-            }
-            break;
-
-        case Tag::CHARACTER_INT_ARRAY:
-            while(1) {
-                errno = 0;
-                int v = strtol( p, &e, 0 );
-                if( errno != 0 ) {
-                    LOGGER_ERROR( cbd->m_log, "end_element: parse_int: " << strerror(errno) );
-                    cbd->m_success = false;
-                    return;
-                }
-                else if( p == e ) {
-                    break;  // no more digits could be found
-                }
-                else {
-                    int_buffer.push_back( v );
-#ifdef DEBUG
-                    tokens++;
-#endif
-                    p = e;
-                }
-            }
-            break;
-        }
-#ifdef DEBUG
-        LOGGER_DEBUG( cbd->m_log, "Parsed character data: " <<
-                      tag.m_char_buffer.size() << " characters, " <<
-                      tokens << " tokens, " <<
-                      nonprint << " non-printable chars, " <<
-                      zerobytes << " zero-bytes, checksum=" <<
-                      checksum );
-#endif
     }
     
     // --- perform action on closing of tag ------------------------------------
@@ -395,25 +454,27 @@ end_element( void* user_data, const xmlChar* name )
                 cbd->m_success = false;
                 return;
             }
-            cbd->m_piece_points.swap( float_buffer );
+            body_contents_into_array( cbd, cbd->m_piece_points, tag );
             break;
         
         // --- <Cells><DataArray> ----------------------------------------------
         case Tag::TAG_CELLS:
             if( tag.m_data_array_name == "connectivity" ) {
-                cbd->m_piece_connectivity.swap( int_buffer );
+                body_contents_into_array( cbd, cbd->m_piece_connectivity, tag );
             }
             else if( tag.m_data_array_name == "offsets" ) {
-                cbd->m_piece_offsets.swap( int_buffer );
+                body_contents_into_array( cbd, cbd->m_piece_offsets, tag );
             }
             else if( tag.m_data_array_name == "types" ) {
-                cbd->m_piece_types.swap( int_buffer );
+                body_contents_into_array( cbd, cbd->m_piece_types, tag );
             }
             break;
             
         // --- <PointData><DataArray> ------------------------------------------
-        // --- <CellData><DataArray> ----------------------------------------------
         case Tag::TAG_POINT_DATA:
+            break;
+        // --- <CellData><DataArray> ----------------------------------------------
+
         case Tag::TAG_CELL_DATA:
             // A bit unsure how to interpret Scalars/Normals/.. attributes.
             if( tag.m_data_array_name.empty() ) {
@@ -423,31 +484,25 @@ end_element( void* user_data, const xmlChar* name )
                 cbd->m_success = false;
                 return;
             }
-            if( tag.m_handle_chars == Tag::CHARACTER_INT_ARRAY ) {
-                // currently we convert everything to floats.
-                float_buffer.resize( int_buffer.size() );
-                for(size_t i=0; i<float_buffer.size(); i++ ) {
-                    float_buffer[i] = int_buffer[i];
-                }
-                int_buffer.clear();
-            }
             if( parent.m_type == Tag::TAG_POINT_DATA ) {
                 // push point data
                 // FIXME!
             }
             else if ( parent.m_type == Tag::TAG_CELL_DATA ) {
-                if( float_buffer.size() != cbd->m_piece_cells_n ) {
+                cbd->m_piece_cell_data_vals.push_back( std::vector<float>() );
+                body_contents_into_array( cbd, cbd->m_piece_cell_data_vals.back(), tag );
+
+                if( cbd->m_piece_cell_data_vals.back().size() != cbd->m_piece_cells_n ) {
+                    cbd->m_piece_cell_data_vals.pop_back();
                     LOGGER_ERROR( cbd->m_log,
                                   tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  << 
-                                                               "/Name='" << tag.m_data_array_name << "':" <<
-                                                               "Expected " << cbd->m_piece_cells_n << " values, got " << float_buffer.size() );
+                                  "/Name='" << tag.m_data_array_name << "':" <<
+                                  "Expected " << cbd->m_piece_cells_n <<
+                                   " values, got " << cbd->m_piece_cell_data_vals.size() );
                     cbd->m_success = false;
                     return;
                 }
-                cbd->m_piece_field_context.push_back( Tag::TAG_CELL_DATA );
                 cbd->m_piece_cell_data_name.push_back( tag.m_data_array_name );
-                cbd->m_piece_cell_data_vals.push_back( std::vector<float>() );
-                cbd->m_piece_cell_data_vals.back().swap( float_buffer );
             }
             break;
         default:
