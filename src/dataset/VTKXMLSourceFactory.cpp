@@ -337,29 +337,52 @@ handle_field_data( callback_data*                     cbd,
         cbd->m_success = false;
         return;
     }
-    if( tag.m_data_array_components != 1 ) {
-        LOGGER_ERROR( cbd->m_log,
-                      tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  <<
-                      " only single component is currently supported." );
-        cbd->m_success = false;
-        return;
-    }
 
-    values.push_back( std::vector<float>() );
-    values.reserve( N );
-    body_contents_into_array( cbd, values.back(), tag );
-
-    if( values.back().size() != N ) {
+    // Fetch data
+    std::vector<float> data;
+    data.reserve( N*tag.m_data_array_components );
+    body_contents_into_array( cbd, data, tag );
+    if( data.size() != N*tag.m_data_array_components ) {
         cbd->m_piece_cell_data_vals.pop_back();
         LOGGER_ERROR( cbd->m_log,
                       tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  <<
                       "/Name='" << tag.m_data_array_name << "':" <<
-                      "Expected " << cbd->m_piece_cells_n <<
-                       " values, got " << values.back().size() );
+                      "Expected " << N*tag.m_data_array_components <<
+                       " values, got " << data.size() );
         cbd->m_success = false;
         return;
     }
-    names.push_back( tag.m_data_array_name );
+
+
+    if( tag.m_data_array_components == 1 ) {
+        values.push_back( std::vector<float>() );
+        values.back().swap( data );
+        names.push_back( tag.m_data_array_name );
+        return;
+    }
+
+    const char suffices[4] = { 'X', 'Y', 'Z', 'W' };
+
+    for(int c=0; c<tag.m_data_array_components; c++ ) {
+        values.push_back( std::vector<float>( N ) );
+        for( size_t i=0; i<N; i++ ) {
+            values.back()[i] = data[ tag.m_data_array_components*i + c ];
+        }
+        std::stringstream tmp;
+        tmp << tag.m_data_array_name << '.';
+        if( tag.m_data_array_components <= 4 ) {
+            tmp << suffices[c];
+        }
+        else {
+            tmp << c;
+        }
+        names.push_back( tmp.str() );
+    }
+
+
+
+
+
 }
 
 void
