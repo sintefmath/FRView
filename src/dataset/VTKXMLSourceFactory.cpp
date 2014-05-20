@@ -95,8 +95,8 @@ struct callback_data {
     std::vector<int>                    m_piece_offsets;
     std::vector<int>                    m_piece_types;
 
-    std::vector<std::string>            m_piece_vtx_data_name;
-    std::vector< std::vector<float> >   m_piece_vtx_data_vals;
+    std::vector<std::string>            m_piece_point_data_name;
+    std::vector< std::vector<float> >   m_piece_point_data_vals;
 
     std::vector<std::string>            m_piece_cell_data_name;
     std::vector< std::vector<float> >   m_piece_cell_data_vals;
@@ -472,6 +472,12 @@ end_element( void* user_data, const xmlChar* name )
             
         // --- <PointData><DataArray> ------------------------------------------
         case Tag::TAG_POINT_DATA:
+            handle_field_data( cbd,
+                               cbd->m_piece_point_data_name,
+                               cbd->m_piece_point_data_vals,
+                               cbd->m_piece_points_n,
+                               parent,
+                               tag );
             break;
 
             // --- <CellData><DataArray> ----------------------------------------------
@@ -548,6 +554,21 @@ VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
         throw std::runtime_error( "Failed to interpret XML file" );
     }
 
+    // --- convert vertex data to cell data ------------------------------------
+    for( size_t k=0; k<cd.m_piece_point_data_vals.size(); k++ ) {
+        cd.m_piece_cell_data_name.push_back( cd.m_piece_point_data_name[k] );
+        cd.m_piece_cell_data_vals.push_back( std::vector<float>( cd.m_piece_cells_n ) );
+
+        for(size_t c=0; c<cd.m_piece_cells_n; c++ ) {
+            size_t a = c < 1 ? 0 : cd.m_piece_offsets[c-1];
+            size_t b = cd.m_piece_offsets[c];
+            float w = 1.f/(b-a);
+            for( size_t i=a; i<b; i++ ) {
+                cd.m_piece_cell_data_vals.back()[ c ] += w*cd.m_piece_point_data_vals[k][ cd.m_piece_connectivity[i] ];
+            }
+        }
+        LOGGER_DEBUG( log, "Converted '" << cd.m_piece_cell_data_name.back() << "'' from point data to cell data." );
+    }
     
     // convert various primitives to polyhedrons
     bool volume_data = false;
@@ -657,7 +678,9 @@ VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
                       << (cd.m_piece_points.size()/3) << " vertices, "
                       << indices.size() << " indices, "
                       << (polygons.size()-1) << " polygons, and "
-                      << (cells.size()-1) << " cells." );
+                      << (cells.size()-1) << " cells, "
+                      << cd.m_piece_cell_data_name.size() << '/'
+                      << cd.m_piece_cell_data_vals.size() << " fields" );
         retval.reset( new PolygonMeshSource( stem,
                                              cd.m_piece_points,
                                              indices,
@@ -665,7 +688,6 @@ VTKXMLSourceFactory::FromVTUFile( const std::string& filename )
                                              cells,
                                              cd.m_piece_cell_data_name,
                                              cd.m_piece_cell_data_vals ) );
-        
     }
     else {
         LOGGER_WARN( log, "No data found in " << filename );
