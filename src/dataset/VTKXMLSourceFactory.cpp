@@ -32,6 +32,10 @@ namespace {
 
 struct Tag
 {
+    Tag()
+        : m_data_array_components(1)
+    {}
+
     enum Type {
         TAG_UNKNOWN,
         TAG_VTKFILE,
@@ -226,54 +230,6 @@ start_element( void* user_data, const xmlChar* name, const xmlChar** attrs )
     }
 }
 
-#if 0
-void
-handle_field_data( callback_data*                     cbd,
-                   std::vector<std::string>&          names,
-                   std::vector<std::vector<float> >&  values,
-                   const size_t                       N,
-                   const Tag&                         tag )
-{
-    if( cbd->m_success == false ) {
-        return;
-    }
-
-    if( tag.m_data_array_name.empty() ) {
-        LOGGER_ERROR( cbd->m_log,
-                      tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  <<
-                      " name attribute required." );
-        cbd->m_success = false;
-        return;
-    }
-
-    if( tag.m_handle_chars == Tag::CHARACTER_INT_ARRAY ) {
-        // currently we convert everything to floats.
-        float_buffer.resize( int_buffer.size() );
-        for(size_t i=0; i<float_buffer.size(); i++ ) {
-            float_buffer[i] = int_buffer[i];
-        }
-        int_buffer.clear();
-    }
-    if( parent.m_type == Tag::TAG_POINT_DATA ) {
-        // push point data
-        // FIXME!
-    }
-    else if ( parent.m_type == Tag::TAG_CELL_DATA ) {
-        if( float_buffer.size() != cbd->m_piece_cells_n ) {
-            LOGGER_ERROR( cbd->m_log,
-                          tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  <<
-                                                       "/Name='" << tag.m_data_array_name << "':" <<
-                                                       "Expected " << cbd->m_piece_cells_n << " values, got " << float_buffer.size() );
-            cbd->m_success = false;
-            return;
-        }
-        cbd->m_piece_field_context.push_back( Tag::TAG_CELL_DATA );
-        cbd->m_piece_cell_data_name.push_back( tag.m_data_array_name );
-        cbd->m_piece_cell_data_vals.push_back( std::vector<float>() );
-        cbd->m_piece_cell_data_vals.back().swap( float_buffer );
-    }
-}
-#endif
 
 
 template<typename T>
@@ -360,6 +316,50 @@ body_contents_into_array( callback_data*   cbd,
                       checksum );
 #endif
     }
+}
+
+void
+handle_field_data( callback_data*                     cbd,
+                   std::vector<std::string>&          names,
+                   std::vector<std::vector<float> >&  values,
+                   const size_t                       N,
+                   const Tag&                         parent,
+                   Tag&                               tag )
+{
+    if( cbd->m_success == false ) {
+        return;
+    }
+
+    if( tag.m_data_array_name.empty() ) {
+        LOGGER_ERROR( cbd->m_log,
+                      tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  <<
+                      " name attribute required." );
+        cbd->m_success = false;
+        return;
+    }
+    if( tag.m_data_array_components != 1 ) {
+        LOGGER_ERROR( cbd->m_log,
+                      tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  <<
+                      " only single component is currently supported." );
+        cbd->m_success = false;
+        return;
+    }
+
+    values.push_back( std::vector<float>() );
+    values.reserve( N );
+    body_contents_into_array( cbd, values.back(), tag );
+
+    if( values.back().size() != N ) {
+        cbd->m_piece_cell_data_vals.pop_back();
+        LOGGER_ERROR( cbd->m_log,
+                      tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  <<
+                      "/Name='" << tag.m_data_array_name << "':" <<
+                      "Expected " << cbd->m_piece_cells_n <<
+                       " values, got " << values.back().size() );
+        cbd->m_success = false;
+        return;
+    }
+    names.push_back( tag.m_data_array_name );
 }
 
 void
@@ -473,38 +473,17 @@ end_element( void* user_data, const xmlChar* name )
         // --- <PointData><DataArray> ------------------------------------------
         case Tag::TAG_POINT_DATA:
             break;
-        // --- <CellData><DataArray> ----------------------------------------------
 
+            // --- <CellData><DataArray> ----------------------------------------------
         case Tag::TAG_CELL_DATA:
             // A bit unsure how to interpret Scalars/Normals/.. attributes.
-            if( tag.m_data_array_name.empty() ) {
-                LOGGER_ERROR( cbd->m_log,
-                              tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  <<
-                              " name attribute required." );
-                cbd->m_success = false;
-                return;
-            }
-            if( parent.m_type == Tag::TAG_POINT_DATA ) {
-                // push point data
-                // FIXME!
-            }
-            else if ( parent.m_type == Tag::TAG_CELL_DATA ) {
-                cbd->m_piece_cell_data_vals.push_back( std::vector<float>() );
-                body_contents_into_array( cbd, cbd->m_piece_cell_data_vals.back(), tag );
-
-                if( cbd->m_piece_cell_data_vals.back().size() != cbd->m_piece_cells_n ) {
-                    cbd->m_piece_cell_data_vals.pop_back();
-                    LOGGER_ERROR( cbd->m_log,
-                                  tag_names[ parent.m_type] << '/' << tag_names[ tag.m_type ]  << 
-                                  "/Name='" << tag.m_data_array_name << "':" <<
-                                  "Expected " << cbd->m_piece_cells_n <<
-                                   " values, got " << cbd->m_piece_cell_data_vals.size() );
-                    cbd->m_success = false;
-                    return;
-                }
-                cbd->m_piece_cell_data_name.push_back( tag.m_data_array_name );
-            }
-            break;
+            handle_field_data( cbd,
+                               cbd->m_piece_cell_data_name,
+                               cbd->m_piece_cell_data_vals,
+                               cbd->m_piece_cells_n,
+                               parent,
+                               tag );
+             break;
         default:
             break;
         }
