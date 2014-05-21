@@ -22,6 +22,7 @@
 #include "dataset/VTKXMLSourceFactory.hpp"
 #include "dataset/CornerpointGrid.hpp"
 #include "dataset/PolygonDataInterface.hpp"
+#include "dataset/FieldDataInterface.hpp"
 #include "eclipse/EclipseReader.hpp"
 #include "utils/PerfTimer.hpp"
 
@@ -275,12 +276,11 @@ ASyncReader::handleReadSolution( const Command& cmd )
     Logger log = getLogger( package + ".handleReadSolution" );
     m_model->updateElement<std::string>( progress_description_key, "Reading solution..." );
 
-    
-    boost::shared_ptr<dataset::PolyhedralDataInterface> polydata =
-            boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( cmd.m_source );
+    boost::shared_ptr<dataset::FieldDataInterface> fielddata =
+            boost::dynamic_pointer_cast<dataset::FieldDataInterface>( cmd.m_source );
 
     Response rsp;
-    if( polydata != NULL ) {
+    if( fielddata ) {
         try {
             rsp.m_type = RESPONSE_FIELD;
             rsp.m_source = cmd.m_source;
@@ -288,9 +288,9 @@ ASyncReader::handleReadSolution( const Command& cmd )
             rsp.m_field_index = cmd.m_field_index;
             rsp.m_timestep_index = cmd.m_timestep_index;
 
-            polydata->field( rsp.m_field_bridge,
-                             cmd.m_field_index,
-                             cmd.m_timestep_index );
+            fielddata->field( rsp.m_field_bridge,
+                              cmd.m_field_index,
+                              cmd.m_timestep_index );
 
             postResponse( cmd, rsp );
         }
@@ -300,33 +300,7 @@ ASyncReader::handleReadSolution( const Command& cmd )
         }
     }
     else {
-
-        boost::shared_ptr<dataset::PolygonDataInterface> polygons =
-                boost::dynamic_pointer_cast<dataset::PolygonDataInterface>( cmd.m_source );
-
-        Response rsp;
-        if( polygons != NULL ) {
-            try {
-                rsp.m_type = RESPONSE_FIELD;
-                rsp.m_source = cmd.m_source;
-                rsp.m_field_bridge.reset( new bridge::FieldBridge( ) );
-                rsp.m_field_index = cmd.m_field_index;
-                rsp.m_timestep_index = cmd.m_timestep_index;
-
-                polygons->field( rsp.m_field_bridge,
-                                 cmd.m_field_index,
-                                 cmd.m_timestep_index );
-
-                postResponse( cmd, rsp );
-            }
-            catch( std::exception& e ) {
-                rsp.m_field_bridge.reset();
-                LOGGER_ERROR( log, "Caught error: " << e.what() );
-            }
-        }
-        else {
-            LOGGER_ERROR( log, "Current data source does not support fields." );
-        }
+        LOGGER_ERROR( log, "Current data source does not support fields." );
     }
 }
 

@@ -25,6 +25,7 @@
 #include "dataset/PolyhedralDataInterface.hpp"
 #include "dataset/WellDataInterface.hpp"
 #include "dataset/CellLayoutInterface.hpp"
+#include "dataset/FieldDataInterface.hpp"
 #include "dataset/ZScaleInterface.hpp"
 #include "eclipse/Eclipse.hpp"
 
@@ -33,6 +34,7 @@ namespace dataset {
 class CornerpointGrid
         : public AbstractDataSource,
           public CellLayoutInterface,
+          public FieldDataInterface,
           public PolyhedralDataInterface,
           public ZScaleInterface,
           public WellDataInterace

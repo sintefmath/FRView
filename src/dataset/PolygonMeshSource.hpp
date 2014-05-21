@@ -21,6 +21,7 @@
 #include <tinia/model/ExposedModel.hpp>
 #include "dataset/AbstractDataSource.hpp"
 #include "dataset/PolygonDataInterface.hpp"
+#include "dataset/FieldDataInterface.hpp"
 #include "dataset/CellLayoutInterface.hpp"
 
 
@@ -31,6 +32,7 @@ namespace dataset {
 class PolygonMeshSource
         : public AbstractDataSource,
           public CellLayoutInterface,
+          public FieldDataInterface,
           public PolygonDataInterface
 {
 public:

@@ -22,21 +22,5 @@ namespace dataset {
 PolygonDataInterface::~PolygonDataInterface()
 {}
 
-const std::string
-PolygonDataInterface::timestepDescription( size_t timestep_index ) const
-{
-    std::stringstream o;
-    o << timestep_index;
-    return o.str();
-}
-
-const std::string
-PolygonDataInterface::fieldName( unsigned int name_index ) const
-{
-    std::stringstream o;
-    o << name_index;
-    return o.str();
-}
-
 
 } // of namespace dataset

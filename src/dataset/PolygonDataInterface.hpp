@@ -41,44 +41,7 @@ public:
               boost::shared_ptr<tinia::model::ExposedModel>  model,
               const std::string&                             progress_description_key,
               const std::string&                             progress_counter_key ) = 0;
-   
-    /** Extract field from datasource. */
-    virtual
-    void
-    field( boost::shared_ptr<bridge::FieldBridge>  bridge,
-           const size_t                            field_index,
-           const size_t                            timestep_index ) const = 0;
 
-    /** Number of fields in datasource. */
-    virtual
-    size_t
-    fields() const = 0;
-    
-    virtual
-    bool
-    validFieldAtTimestep( size_t field_index, size_t timestep_index ) const = 0;
-    
-    /** Number of timesteps in datasource. */
-    virtual
-    size_t
-    timesteps() const = 0;
-
-    /** Describes a timestep (elapsed seconds, date, etc).
-     *
-     * Default implementation just returns timestep_index as a string.
-     */
-    virtual
-    const std::string
-    timestepDescription( size_t timestep_index ) const;
-    
-    /** Returns a descriptive name of a field.
-     *
-     * Default implementation returns name_index as a string.
-     */
-    virtual
-    const std::string
-    fieldName( unsigned int name_index ) const;
-    
 };
 
 

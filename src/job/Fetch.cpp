@@ -22,6 +22,7 @@
 #include "dataset/CornerpointGrid.hpp"
 #include "dataset/PolyhedralDataInterface.hpp"
 #include "dataset/PolygonDataInterface.hpp"
+#include "dataset/FieldDataInterface.hpp"
 #include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
@@ -109,29 +110,18 @@ FRViewJob::issueFieldFetch()
     if( currentSourceItemValid() ) {
         boost::shared_ptr<SourceItem> si = currentSourceItem();
 
-        shared_ptr<dataset::PolyhedralDataInterface> pdi = dynamic_pointer_cast<dataset::PolyhedralDataInterface>( si->m_source );
-        if( pdi ) {
+        shared_ptr<dataset::FieldDataInterface> fielddata
+                = dynamic_pointer_cast<dataset::FieldDataInterface>( si->m_source );
+        if( fielddata && (si->m_field_current >= 0) ) {
 
             // TODO: check for mismatch with current field
 
-            if( pdi->validFieldAtTimestep( si->m_field_current,
-                                           si->m_timestep_current ) )
+            if( fielddata->validFieldAtTimestep( si->m_field_current,
+                                                 si->m_timestep_current ) )
             {
                 m_async_reader->issueFetchField( si->m_source,
                                                  si->m_field_current,
                                                  si->m_timestep_current );
-            }
-        }
-        else {
-            shared_ptr<dataset::PolygonDataInterface> polygons = dynamic_pointer_cast<dataset::PolygonDataInterface>( si->m_source );
-            if( polygons ) {
-                if( polygons->validFieldAtTimestep( si->m_field_current,
-                                                    si->m_timestep_current ) )
-                {
-                    m_async_reader->issueFetchField( si->m_source,
-                                                     si->m_field_current,
-                                                     si->m_timestep_current );
-                }
             }
         }
     }

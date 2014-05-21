@@ -27,6 +27,7 @@
 //#include <tinia/model/PolicyLock.hpp>
 
 #include "dataset/CornerpointGrid.hpp"
+#include "dataset/FieldDataInterface.hpp"
 #include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
@@ -328,9 +329,11 @@ FRViewJob::updateCurrentFieldData()
             has_field = true;
             
             if( si->m_grid_tess_subset ) {
-                boost::shared_ptr<dataset::PolyhedralDataInterface> poly_data =
-                        boost::dynamic_pointer_cast<dataset::PolyhedralDataInterface>( si->m_source );
-                if( poly_data ) {
+                
+                boost::shared_ptr<dataset::FieldDataInterface> fielddata =
+                        boost::dynamic_pointer_cast<dataset::FieldDataInterface>( si->m_source );
+                
+                if( fielddata ) {
                     has_field = true;
                     std::stringstream o;
                     o << "[ " << si->m_grid_field->minValue()
@@ -338,8 +341,10 @@ FRViewJob::updateCurrentFieldData()
                     m_model->updateElement( "field_info_range", o.str() );
                     o.str("");
                     o << "[not implemented]";
-                    m_model->updateElement( "field_info_calendar", poly_data->timestepDescription( si->m_timestep_current ) );
+                    m_model->updateElement( "field_info_calendar", fielddata->timestepDescription( si->m_timestep_current ) );
                 }
+                
+                
             }
         }
     }
