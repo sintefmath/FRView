@@ -107,6 +107,9 @@ FRViewJob::handleFetchSource()
 void
 FRViewJob::issueFieldFetch()
 {
+    Logger log = getLogger( package + ".issueFieldFetch" );
+
+
     if( currentSourceItemValid() ) {
         boost::shared_ptr<SourceItem> si = currentSourceItem();
 
@@ -122,8 +125,20 @@ FRViewJob::issueFieldFetch()
                 m_async_reader->issueFetchField( si->m_source,
                                                  si->m_field_current,
                                                  si->m_timestep_current );
+                LOGGER_DEBUG( log, "issued field fetch field=" << si->m_field_current
+                              << ", timestep=" << si->m_timestep_current
+                              << " [source=" << si->m_source->name() << "]" );
+            }
+            else {
+                LOGGER_DEBUG( log, "field not valid [source=" << si->m_source->name() << "]" );
             }
         }
+        else {
+            LOGGER_DEBUG( log, "No field data [source=" << si->m_source->name() << "]" );
+        }
+    }
+    else {
+        LOGGER_WARN( log, "current source item is invalid." );
     }
 }
 
@@ -131,6 +146,7 @@ FRViewJob::issueFieldFetch()
 void
 FRViewJob::handleFetchField()
 {
+    Logger log = getLogger( package + ".handleFetchField" );
     using render::GridField;
     using render::mesh::CellSetInterface;
     
@@ -139,6 +155,7 @@ FRViewJob::handleFetchField()
     shared_ptr<bridge::FieldBridge> bridge;
     size_t field_index, timestep_index;
     if( !m_async_reader->getField( source, field_index, timestep_index, bridge ) ) {
+        LOGGER_DEBUG( log, "no data." );
         return; // Nothing
     }
     
@@ -156,9 +173,11 @@ FRViewJob::handleFetchField()
             if( bridge ) {
                 si->m_grid_field.reset(  new render::GridField( boost::dynamic_pointer_cast<render::mesh::CellSetInterface>( si->m_grid_tess ) ) );
                 si->m_grid_field->import( bridge, field_index, timestep_index );
+                LOGGER_DEBUG( log, "Imported field [source='" << source->name() << "']" );
             }
             else {
                 si->m_grid_field.reset();   // no data
+                LOGGER_DEBUG( log, "Cleared field [source='" << source->name() << "']" );
             }
 
             si->m_wells->clear();
@@ -200,8 +219,10 @@ FRViewJob::handleFetchField()
             }
             
             updateCurrentFieldData();
+            return;
         }
     }
+    LOGGER_DEBUG( log, "unable to find matching request" );
 }
 
 
