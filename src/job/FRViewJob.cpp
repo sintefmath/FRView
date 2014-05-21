@@ -462,7 +462,7 @@ FRViewJob::updateModelMatrices()
 
     bool first = true;
     for(size_t i=0; i<m_source_items.size(); i++ ) {
-        boost::shared_ptr<SourceItem> source_item = currentSourceItem();
+        boost::shared_ptr<SourceItem> source_item = m_source_items[i];
         shared_ptr<const BoundingBoxInterface> bbox = dynamic_pointer_cast<const BoundingBoxInterface>( source_item->m_grid_tess );
         if( bbox ) {
             glm::vec3 bbmin_( bbox->minBBox()[0], bbox->minBBox()[1], bbox->minBBox()[2] );
