@@ -216,6 +216,23 @@ FRViewJob::render( const float*  projection,
             }
         }
         
+        if( m_under_the_hood.debugFrame() ) {
+            std::stringstream o;
+            o << "Render items:\n";
+            for( size_t i=0; i<items.size(); i++ ) {
+                const render::RenderItem& ri = items[i];
+                
+                o << "  item " << i << ":\n";
+                o << "    mesh      = " << ri.m_mesh << "\n";
+                o << "    field     = " << ri.m_field << "\n";
+                o << "    color map = " << ri.m_color_map << "\n";
+                o << "    field min = " << ri.m_field_min << "\n";
+                o << "    field max = " << ri.m_field_max << "\n";
+            }
+            
+            LOGGER_DEBUG( log, o.str() );
+        }
+        
         switch ( m_renderconfig.renderQuality() ) {
         case 0:
             if( (!m_screen_manager)

@@ -51,6 +51,9 @@ public:
     bool
     profilingEnabled() const { return m_profiling_enabled; }
 
+    bool
+    debugFrame() const { return m_debug_frame; }
+    
     void
     update( bool force=false );
 
@@ -65,6 +68,10 @@ protected:
     boost::shared_ptr<tinia::model::ExposedModel> m_model;
     Logic&                                      m_logic;
     bool                                        m_profiling_enabled;
+    /** Debug frame has been pressed since last frame. */
+    bool                                        m_debug_pressed;
+    /** Kept true until \ref update for next frame is invoked. */
+    bool                                        m_debug_frame;
 
     unsigned int                                m_frames;
     PerfTimer                                   m_update_timer;

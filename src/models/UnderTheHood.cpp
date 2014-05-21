@@ -26,17 +26,21 @@ namespace models {
     static const string profile_proxy_gen_key = "profile_proxy_gen";
     static const string profile_surface_gen_key = "profile_surface_gen";
     static const string profile_surface_render_key = "profile_surface_render";
-
+    static const string debug_frame_key = "debug_frame";
+    
 UnderTheHood::UnderTheHood( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic )
     : m_model( model ),
       m_logic( logic ),
       m_profiling_enabled( false ),
+      m_debug_pressed( false ),
+      m_debug_frame( false ),
       m_frames(0)
 {
     m_model->addElement<bool>( under_the_hood_title_key, false, "Under the hood" );
 
     m_model->addElement<bool>( profile_key, m_profiling_enabled, "Enable profiling" );
     m_model->addElement<bool>( profile_reset_key, false, "Reset profiling counters" );
+    m_model->addElement<bool>( debug_frame_key, false, "Debug frame" );
     m_model->addElement<string>( profile_avg_fps_key, "", "Average frame duration" );
     m_model->addElement<string>( profile_proxy_gen_key, "", "Create proxy" );
     m_model->addElement<string>( profile_surface_gen_key, "", "Create surface geo" );
@@ -45,6 +49,7 @@ UnderTheHood::UnderTheHood( boost::shared_ptr<tinia::model::ExposedModel>& model
 
     m_model->addStateListener( profile_key, this );
     m_model->addStateListener( profile_reset_key, this );
+    m_model->addStateListener( debug_frame_key, this );
 }
 
 UnderTheHood::~UnderTheHood()
@@ -77,6 +82,14 @@ UnderTheHood::stateElementModified( tinia::model::StateElement * stateElement )
             update( true );
         }
     }
+    else if( key == debug_frame_key ) {
+        bool value;
+        stateElement->getValue( value );
+        if( value ) {
+            m_model->updateElement( debug_frame_key, false );
+            m_debug_pressed = true;
+        }
+    }
 }
 
 tinia::model::gui::Element*
@@ -92,7 +105,7 @@ UnderTheHood::guiFactory() const
     grp->setChild( vlayout );
 
     vlayout->addChild( new tinia::model::gui::CheckBox( profile_key ) );
-    Grid* grid = new Grid( 5, 2 );
+    Grid* grid = new Grid( 6, 2 );
     vlayout->addChild( grid );
     grid->setChild( 0, 0, new Button( profile_reset_key ) );
     grid->setChild( 1, 0, new Label( profile_avg_fps_key, false ) );
@@ -104,12 +117,17 @@ UnderTheHood::guiFactory() const
     grid->setChild( 4, 0, new Label( profile_surface_render_key, false ) );
     grid->setChild( 4, 1, new Label( profile_surface_render_key, true ) );
 
+    vlayout->addChild( new Button( debug_frame_key ) );
+
     return root;
 }
 
 void
 UnderTheHood::update( bool force )
 {
+    m_debug_frame = m_debug_pressed;
+    m_debug_pressed = false;
+    
     if( !force && !m_profiling_enabled ) {
         return;
     }
