@@ -73,7 +73,7 @@ ASyncReader::issueFetchField(boost::shared_ptr<dataset::AbstractDataSource> sour
     cmd.m_source = source;
     cmd.m_field_index = field_index;
     cmd.m_timestep_index = timestep_index;
-    postCommand( cmd );
+    postCommand( cmd, false );
     return true;
 }
 
@@ -339,6 +339,11 @@ ASyncReader::postCommand( Command& cmd , bool wipe)
     if( wipe ) {
         for(auto it=m_cmd_queue.begin(); it!=m_cmd_queue.end(); ++it ) {
             if( it->m_type == cmd.m_type ) {
+                if( (cmd.m_type == COMMAND_FETCH_FIELD && cmd.m_source != it->m_source ) ) {
+                    // just kill field fetches when they are for different sources
+                    continue;
+                }
+
                 LOGGER_DEBUG( log, "Wiped old command" );
                 *it = cmd;
                 return;
