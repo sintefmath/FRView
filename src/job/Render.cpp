@@ -109,6 +109,8 @@ FRViewJob::render( const float*  projection,
             bool log_map = false;
             double min = 0.0;
             double max = 0.0;
+
+
             
             if( source_item->m_grid_field ) {
                 min = source_item->m_grid_field->minValue();
@@ -145,6 +147,7 @@ FRViewJob::render( const float*  projection,
                 items.back().m_well = source_item->m_wells;
             }
             
+            bool emit_fault_surface = false;
             if( source_item->m_faults_surface
                     && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_FAULTS ) )
             {
@@ -163,8 +166,10 @@ FRViewJob::render( const float*  projection,
                 items.back().m_face_color[1] = fc.g;
                 items.back().m_face_color[2] = fc.b;
                 items.back().m_face_color[3] = ap.faultsFillAlpha();
+                emit_fault_surface = true;
             }
 
+            bool emit_subset_surface = false;
             if( source_item->m_subset_surface
                     && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_SUBSET ) )
             {
@@ -188,8 +193,11 @@ FRViewJob::render( const float*  projection,
                 items.back().m_face_color[1] = fc.g;
                 items.back().m_face_color[2] = fc.b;
                 items.back().m_face_color[3] = ap.subsetFillAlpha();
+
+                emit_subset_surface = true;
             }
 
+            bool emit_boundary_surface = false;
             if( source_item->m_boundary_surface
                     && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_BOUNDARY ) )
             {
@@ -213,24 +221,38 @@ FRViewJob::render( const float*  projection,
                 items.back().m_face_color[1] = fc.g;
                 items.back().m_face_color[2] = fc.b;
                 items.back().m_face_color[3] = ap.boundaryFillAlpha();
+                emit_boundary_surface = true;
             }
+
+            if( m_under_the_hood.debugFrame() ) {
+                std::stringstream o;
+                o << "Source item " << i << " (name=" << source_item->m_source->name() << "):\n";
+                o << "    mesh             = " << source_item->m_grid_tess << "\n";
+                o << "    field            = " << source_item->m_grid_field << "\n";
+                o << "    color map        = " << source_item->m_color_map << "\n";
+                o << "    color map type   = " << (ap.colorMapType() == models::AppearanceData::COLORMAP_LOGARITMIC ? "logaritmic" : "linear" ) << "\n";
+                o << "    color map fixed  = " << (ap.colorMapFixed()?"yes":"no") << "\n";
+                o << "    render wells     = " << (m_renderconfig.renderWells()?"yes":"no") << "\n";
+                o << "    fault surface    = " << (emit_fault_surface?"yes":"no") << "\n";
+                o << "    subset surface   = " << (emit_subset_surface?"yes":"no") << "\n";
+                o << "    boundary surface = " << (emit_boundary_surface?"yes":"no");// << "\n";
+                LOGGER_DEBUG( log, o.str() );
+            }
+
         }
         
         if( m_under_the_hood.debugFrame() ) {
-            std::stringstream o;
-            o << "Render items:\n";
             for( size_t i=0; i<items.size(); i++ ) {
                 const render::RenderItem& ri = items[i];
-                
-                o << "  item " << i << ":\n";
+                std::stringstream o;
+                o << "Render item " << i << ":\n";
                 o << "    mesh      = " << ri.m_mesh << "\n";
                 o << "    field     = " << ri.m_field << "\n";
                 o << "    color map = " << ri.m_color_map << "\n";
                 o << "    field min = " << ri.m_field_min << "\n";
-                o << "    field max = " << ri.m_field_max << "\n";
+                o << "    field max = " << ri.m_field_max;// << "\n";
+                LOGGER_DEBUG( log, o.str() );
             }
-            
-            LOGGER_DEBUG( log, o.str() );
         }
         
         switch ( m_renderconfig.renderQuality() ) {
@@ -276,8 +298,10 @@ FRViewJob::render( const float*  projection,
             }
             break;
         }
+        if( m_under_the_hood.debugFrame() ) {
+            LOGGER_DEBUG( log, "Render manager type : " << (typeid(*m_screen_manager.get())).name() );
+        }
 
-        
         m_screen_manager->render( fbo,
                                   width,
                                   height,
