@@ -114,31 +114,18 @@ ASyncReader::getField( boost::shared_ptr<const dataset::AbstractDataSource>&  so
                        size_t&                                                timestep_index,
                        boost::shared_ptr< bridge::FieldBridge >&              field_bridge )
 {
-    // We kill of all but the latest request of correct type
-    bool found_any = false;
-    std::list<Response> keep;
     std::unique_lock<std::mutex> lock( m_rsp_queue_lock );
-    for(auto it = m_rsp_queue.begin(); it!=m_rsp_queue.end(); ++it ) {
+    for( auto it = m_rsp_queue.begin(); it != m_rsp_queue.end(); ++it ) {
         if( it->m_type == RESPONSE_FIELD ) {
-
             source         = it->m_source;
             field_index    = it->m_field_index;
             timestep_index = it->m_timestep_index;
             field_bridge   = it->m_field_bridge;
-
-            found_any = true;
-        }
-        else {
-            keep.push_back( *it );
+            m_rsp_queue.erase( it );
+            return true;
         }
     }
-    if( found_any ) {
-        m_rsp_queue.swap( keep );
-        return true;
-    }
-    else {
-        return false;
-    }
+    return false;
 }
 
 
