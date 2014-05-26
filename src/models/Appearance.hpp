@@ -95,6 +95,7 @@ public:
 
 
 protected:
+    bool            m_visible;
     ColorMapType    m_colormap_type;
     bool            m_colormap_fixed;
     double          m_colormap_fixed_min;

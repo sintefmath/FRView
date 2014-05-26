@@ -22,6 +22,7 @@
 
 namespace {
     const std::string appearance_title_key      = "apperance_title";
+    const std::string source_visible_key        = "source_visible";
     const std::string colormap_label_key        = "colormap_label";
     const std::string colormap_type_key         = "colormap_type";
     const std::string field_range_enable_key    = "field_range_enable";
@@ -79,17 +80,19 @@ namespace models {
 AppearanceData::VisibilityMask
 AppearanceData::visibilityMask() const
 {
-    int mask =
-            (m_subset_fill_alpha      > 0.f  ? VISIBILITY_MASK_SUBSET : VISIBILITY_MASK_NONE ) |
-            (m_subset_outline_alpha   > 0.f  ? VISIBILITY_MASK_SUBSET : VISIBILITY_MASK_NONE ) |
-            (m_boundary_fill_alpha    > 0.f  ? VISIBILITY_MASK_BOUNDARY : VISIBILITY_MASK_NONE ) |
-            (m_boundary_outline_alpha > 0.f  ? VISIBILITY_MASK_BOUNDARY : VISIBILITY_MASK_NONE ) |
-            ((m_faults_fill_alpha     > 0.f) && (m_subset_fill_alpha < 1.f) ? VISIBILITY_MASK_FAULTS_INSIDE : VISIBILITY_MASK_NONE ) |
-            ((m_faults_outline_alpha  > 0.f) && (m_subset_fill_alpha < 1.f) ? VISIBILITY_MASK_FAULTS_INSIDE : VISIBILITY_MASK_NONE ) |
-            (m_faults_fill_alpha      > 0.f  ? VISIBILITY_MASK_FAULTS_OUTSIDE : VISIBILITY_MASK_NONE ) |
-            (m_faults_outline_alpha   > 0.f  ? VISIBILITY_MASK_FAULTS_OUTSIDE : VISIBILITY_MASK_NONE );
-
-    return static_cast<VisibilityMask>( mask );
+    if( m_visible ) {
+        int mask =
+                (m_subset_fill_alpha      > 0.f  ? VISIBILITY_MASK_SUBSET : VISIBILITY_MASK_NONE ) |
+                (m_subset_outline_alpha   > 0.f  ? VISIBILITY_MASK_SUBSET : VISIBILITY_MASK_NONE ) |
+                (m_boundary_fill_alpha    > 0.f  ? VISIBILITY_MASK_BOUNDARY : VISIBILITY_MASK_NONE ) |
+                (m_boundary_outline_alpha > 0.f  ? VISIBILITY_MASK_BOUNDARY : VISIBILITY_MASK_NONE ) |
+                ((m_faults_fill_alpha     > 0.f) && (m_subset_fill_alpha < 1.f) ? VISIBILITY_MASK_FAULTS_INSIDE : VISIBILITY_MASK_NONE ) |
+                ((m_faults_outline_alpha  > 0.f) && (m_subset_fill_alpha < 1.f) ? VISIBILITY_MASK_FAULTS_INSIDE : VISIBILITY_MASK_NONE ) |
+                (m_faults_fill_alpha      > 0.f  ? VISIBILITY_MASK_FAULTS_OUTSIDE : VISIBILITY_MASK_NONE ) |
+                (m_faults_outline_alpha   > 0.f  ? VISIBILITY_MASK_FAULTS_OUTSIDE : VISIBILITY_MASK_NONE );
+        return static_cast<VisibilityMask>( mask );
+    }
+    return VISIBILITY_MASK_NONE;
 }
 
 glm::vec3
@@ -124,6 +127,9 @@ Appearance::Appearance( boost::shared_ptr<tinia::model::ExposedModel>& model, Lo
       m_logic( logic )
 {
     m_model->addElement<bool>( appearance_title_key, true, "Appearance" );
+
+    m_model->addElement<bool>( source_visible_key, true, "Visible" );
+    m_model->addStateListener( source_visible_key, this );
 
     m_model->addElement<bool>( colormap_label_key, true, "Color map" );
     m_model->addElementWithRestriction<std::string>( colormap_type_key,
@@ -220,7 +226,11 @@ Appearance::stateElementModified( tinia::model::StateElement * stateElement )
     const std::string& key = stateElement->getKey();
     AppearanceData& ap = *m_source_item->m_appearance_data;
     
-    if( key == field_range_enable_key ) {
+    if( key == source_visible_key ) {
+        stateElement->getValue( ap.m_visible );
+        m_source_item->m_do_update_subset = true;
+    }
+    else if( key == field_range_enable_key ) {
         stateElement->getValue( ap.m_colormap_fixed );
         if( ap.m_colormap_fixed ) {
             // fixing just set, default to full range.
@@ -340,16 +350,19 @@ Appearance::guiFactory() const
     //colormap_popup->setEnabledKey( "has_field" );
     
     
-    Grid* surf_details_grid = new Grid( 4, 4 );
+    Grid* surf_details_grid = new Grid( 2, 4 );
     surf_details_grid->setChild( 0, 1, new HorizontalSpace );
     surf_details_grid->setChild( 0, 3, new HorizontalExpandingSpace );
-    surf_details_grid->setChild( 1, 0, new Label( "tessellation_label" ) );
-    surf_details_grid->setChild( 1, 2, new CheckBox( "tess_flip_orientation" ) );
-    surf_details_grid->setChild( 2, 0, (new Label( "colormap_label" ))->setVisibilityKey( "has_field" ) );
-    surf_details_grid->setChild( 2, 2, (colormap_popup)->setVisibilityKey( "has_field" ) );
+    surf_details_grid->setChild( 1, 0, (new Label( "colormap_label" ))->setVisibilityKey( "has_field" ) );
+    surf_details_grid->setChild( 1, 2, (colormap_popup)->setVisibilityKey( "has_field" ) );
+    
+    VerticalLayout* options_layout = new VerticalLayout;
+    options_layout->addChild( new CheckBox( tess_flip_orientation_key ) );
+    options_layout->addChild( new CheckBox( source_visible_key ) );
+    options_layout->addChild( surf_details_grid );
     
     ElementGroup* surf_details_group = new ElementGroup( "surface_tab" );
-    surf_details_group->setChild( surf_details_grid );
+    surf_details_group->setChild( options_layout );
     
     VerticalLayout* layout = new VerticalLayout;
     layout->addChild( surf_details_group );
@@ -411,6 +424,7 @@ Appearance::update(boost::shared_ptr<SourceItem> source_item , size_t index)
     if( !source_item->m_appearance_data ) {
         // If first time, set defaults
         m_source_item->m_appearance_data.reset( new AppearanceData );
+        m_source_item->m_appearance_data->m_visible = true;
         m_source_item->m_appearance_data->m_colormap_type = AppearanceData::COLORMAP_LINEAR;
         m_source_item->m_appearance_data->m_colormap_fixed = false;
         m_source_item->m_appearance_data->m_colormap_fixed_min = 0.f;
@@ -433,6 +447,7 @@ Appearance::update(boost::shared_ptr<SourceItem> source_item , size_t index)
 
     // Propagate from source item to GUI
     const AppearanceData& ap = *m_source_item->m_appearance_data;
+    m_model->updateElement<bool>( source_visible_key, ap.m_visible );
     m_model->updateElement<std::string>( colormap_type_key, colormap_types[ ap.m_colormap_type ] );
     m_model->updateElement<bool>( field_range_enable_key, ap.m_colormap_fixed );
     m_model->updateElement<double>( field_range_min_key, ap.m_colormap_fixed_min );
