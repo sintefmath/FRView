@@ -83,7 +83,7 @@ SET ( txt2cpp_source
 "\n"
 "    return 0\;\n"
 "}\n"
-""\; )
+"" )
 
 FILE(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/buildtools" )
 FILE(WRITE "${CMAKE_BINARY_DIR}/buildtools/txt2cpp.cpp" ${txt2cpp_source})
