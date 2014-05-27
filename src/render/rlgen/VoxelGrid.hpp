@@ -36,7 +36,7 @@ namespace render {
 class GridVoxelization : public boost::noncopyable
 {
 public:
-    GridVoxelization();
+    GridVoxelization( GLsizei resolution );
 
     /** Get the 3D texture containing the voxel set. */
     GLTexture&
@@ -53,6 +53,10 @@ public:
     void
     dimension( GLsizei* dim ) const;
 
+    /** Check if grid has a given resolution. */
+    bool
+    hasDimension( GLsizei resolution );
+    
 protected:
     GLsizei     m_resolution;
     GLTexture   m_voxels_tex;

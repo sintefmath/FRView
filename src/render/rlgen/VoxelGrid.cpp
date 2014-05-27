@@ -25,8 +25,8 @@ namespace {
 namespace render {
     namespace rlgen {
 
-GridVoxelization::GridVoxelization()
-    : m_resolution(32)
+GridVoxelization::GridVoxelization( GLsizei resolution )
+    : m_resolution( resolution )
 {
     glBindTexture( GL_TEXTURE_3D, m_voxels_tex.get() );
     
@@ -42,6 +42,12 @@ GridVoxelization::GridVoxelization()
     glBindTexture( GL_TEXTURE_3D, 0 );
 }
 
+
+bool
+GridVoxelization::hasDimension( GLsizei resolution )
+{
+    return resolution == m_resolution;
+}
 
 void
 GridVoxelization::dimension( GLsizei* dim ) const

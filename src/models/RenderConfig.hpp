@@ -64,6 +64,9 @@ public:
     tinia::model::gui::Element*
     guiFactory() const;
 
+    int
+    proxyResolution() const { return m_proxy_resolution; }
+    
     bool
     renderGrid() const { return m_render_grid; }
 
