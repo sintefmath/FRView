@@ -94,6 +94,13 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
             m_under_the_hood.proxyGenerateTimer().beginQuery();
         }
 
+
+        GLsizei voxel_dim[3];
+        m_voxel_grid->dimension( voxel_dim );
+        glm::vec3 min_size( 1.f/(voxel_dim[0]-2.f),
+                            1.f/(voxel_dim[1]-2.f),
+                            1.f/(voxel_dim[2]-2.f) );
+        
         // find sets of world-space bbox'es of active cells
         std::list<boost::shared_ptr<SourceItem> > splats;
         for( size_t i=0; i<m_source_items.size(); i++ ) {
@@ -102,7 +109,8 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
                                         dynamic_pointer_cast<const VertexPositionInterface>( source_item->m_grid_tess ),
                                         dynamic_pointer_cast<const CellSetInterface>( source_item->m_grid_tess ),
                                         source_item->m_grid_tess_subset,
-                                        glm::value_ptr( m_local_to_world ) );
+                                        *(float(*)[16])glm::value_ptr( m_local_to_world ),
+                                        *(float(*)[3])glm::value_ptr( min_size ) );
             
             splats.push_back( source_item );
         }

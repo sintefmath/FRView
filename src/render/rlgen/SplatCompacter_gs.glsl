@@ -30,6 +30,7 @@ layout(binding=0)   uniform usamplerBuffer  cell_subset;
 layout(binding=1)   uniform samplerBuffer   vertices;
 layout(binding=2)   uniform usamplerBuffer  cell_corner;
                     uniform mat4            local_to_world;
+                    uniform vec3            min_size;       /// Minimum size of splat
 
 bool
 selected( uint cell )
@@ -79,6 +80,13 @@ void main()
         vec3 vmax4567 = max( vmax45, vmax67 );
         vec3 vmax = max( vmax0123, vmax4567 );
 
+        // Make sure that each splat is at least the size of one voxel, so we
+        // don't get holes along thin geometries.
+        vec3 avg = 0.5*(vmin+vmax);
+        vec3 hlen = 0.5*max( min_size, vmax-vmin );
+        vmin = avg - hlen;
+        vmax = avg + hlen;
+        
         // Emit cell
         bbmin = clamp( vmin, vec3(0.0), vec3(1.0) );
         bbmax = clamp( vmax, vec3(0.0), vec3(1.0) );

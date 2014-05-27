@@ -50,6 +50,7 @@ SplatCompacter::SplatCompacter()
 
     m_compacter.link();
     m_local_to_world_loc = m_compacter.uniformLocation( "local_to_world" );
+    m_min_size_loc       = m_compacter.uniformLocation( "min_size" );
 }
 
 SplatCompacter::~SplatCompacter()
@@ -57,11 +58,12 @@ SplatCompacter::~SplatCompacter()
 }
 
 void
-SplatCompacter::process( boost::shared_ptr<Splats>                        splats,
+SplatCompacter::process(boost::shared_ptr<Splats>                        splats,
                          boost::shared_ptr<const mesh::VertexPositionInterface> vertices,
                          boost::shared_ptr<const mesh::CellSetInterface>  cells,
                          boost::shared_ptr<const subset::Representation>  subset,
-                         const GLfloat*                                   world_from_local )
+                         const GLfloat (&world_from_local)[16],
+                         const GLfloat (&min_size)[3] )
 {
     if( !splats || !vertices || !cells || !subset ) {
         Logger log = getLogger( package + ".process" );
@@ -80,6 +82,7 @@ SplatCompacter::process( boost::shared_ptr<Splats>                        splats
 
     glUseProgram( m_compacter.get() );
     glUniformMatrix4fv( m_local_to_world_loc, 1, GL_FALSE, world_from_local );
+    glUniform3fv( m_min_size_loc, 1, min_size );
 
 
     glEnable( GL_RASTERIZER_DISCARD );
