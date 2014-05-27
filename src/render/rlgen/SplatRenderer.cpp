@@ -84,7 +84,7 @@ SplatRenderer::apply( boost::shared_ptr<GridVoxelization>               target,
         if( (0 < i) && (i+1<dim[2]) ) {
             typedef std::list<boost::shared_ptr<SourceItem> >::const_iterator iterator;
             
-            glUniform2f( m_loc_slice, (i-1.5f)/(dim[2]-2.f), (i+0.5f)/(dim[2]-2.f) );
+            glUniform1f( m_loc_slice, (i-0.5f)/(dim[2]-2.f) );
             for( iterator it=items.begin(); it!=items.end(); ++it ) {
                 if( !(*it)->m_appearance_data ) {
                     continue;
