@@ -112,6 +112,9 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
         std::list<boost::shared_ptr<SourceItem> > splats;
         for( size_t i=0; i<m_source_items.size(); i++ ) {
             boost::shared_ptr<SourceItem> source_item = m_source_items[i];
+            if( source_item->m_visibility_mask == models::AppearanceData::VISIBILITY_MASK_NONE ) {
+                continue;
+            }
             m_splat_compacter->process( source_item->m_splats,
                                         dynamic_pointer_cast<const VertexPositionInterface>( source_item->m_grid_tess ),
                                         dynamic_pointer_cast<const CellSetInterface>( source_item->m_grid_tess ),
