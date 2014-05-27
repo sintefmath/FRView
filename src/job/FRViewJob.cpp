@@ -72,7 +72,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_subset_selector( m_model, *this ),
       m_appearance( m_model, *this ),
       m_under_the_hood( m_model, *this ),
-      m_renderconfig( m_model ),
+      m_renderconfig( m_model, *this ),
       m_theme( 0 ),
       m_grid_stats( m_model, *this ),
       m_has_context( false ),

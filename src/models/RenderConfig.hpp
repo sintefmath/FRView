@@ -18,6 +18,7 @@
 #pragma once
 #include <memory>
 #include <glm/glm.hpp>
+#include "models/Logic.hpp"
 #include <tinia/model/GUILayout.hpp>
 #include <tinia/model/StateListener.hpp>
 #include <tinia/model/ExposedModel.hpp>
@@ -39,7 +40,8 @@ public:
         DiffuseSpecular = 2
     } ShadingModel;
     
-    RenderConfig( boost::shared_ptr<tinia::model::ExposedModel>& model );
+    RenderConfig( boost::shared_ptr<tinia::model::ExposedModel>& model,
+                  Logic& logic );
 
     ~RenderConfig();
 
@@ -95,8 +97,10 @@ public:
 
 protected:
     boost::shared_ptr<tinia::model::ExposedModel>   m_model;
+    Logic&                                          m_logic;
     Revision                                        m_revision;
     bool                                        m_reload;
+    int                                             m_proxy_resolution;
     int                                         m_render_quality;
     ShadingModel                                m_shading_model;
     Theme                                       m_theme;

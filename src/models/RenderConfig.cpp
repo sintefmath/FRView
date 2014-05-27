@@ -21,6 +21,9 @@ namespace {
     const char* shading_model_strings[] = { "Solid",
                                             "Diffuse",
                                             "Diffuse and Specular" };
+
+    const std::string proxy_label_key         = "Proxy geometry";
+    const std::string proxy_resolution_key    = "Resolution";
 }
 
 
@@ -44,10 +47,12 @@ static const std::string render_quality_string_key      = "render_quality_string
 
 
 
-RenderConfig::RenderConfig(boost::shared_ptr<tinia::model::ExposedModel>& model)
+RenderConfig::RenderConfig(boost::shared_ptr<tinia::model::ExposedModel>& model, Logic &logic)
     : m_model( model ),
+      m_logic( logic ),
       m_revision( 1 ),
       //m_reload( reload ),
+      m_proxy_resolution( 32 ),
       m_render_quality( 2 ),
       m_shading_model( Diffuse ),
       m_render_grid( false ),
@@ -56,6 +61,11 @@ RenderConfig::RenderConfig(boost::shared_ptr<tinia::model::ExposedModel>& model)
       m_clip_plane_visible( true )
 {
     setDarkTheme();
+    m_model->addElement<bool>( proxy_label_key, true, "Proxy geometry" );
+    m_model->addConstrainedElement( proxy_resolution_key,
+                                    m_proxy_resolution, 4, 256, "Resolution" );
+    m_model->addStateListener( proxy_resolution_key, this );
+    
     m_model->addElement<bool>( renderconfig_title_key, true, "Rendering" );
 
     m_model->addConstrainedElement<int>( line_thickness_key,
@@ -168,6 +178,10 @@ RenderConfig::stateElementModified( tinia::model::StateElement * stateElement )
             break;
         }
     }
+    else if( key == proxy_resolution_key ) {
+        stateElement->getValue( m_proxy_resolution );
+        m_logic.doLogic();
+    }
     else if( key == render_grid_key ) {
         stateElement->getValue( m_render_grid );
     }
@@ -237,6 +251,18 @@ RenderConfig::guiFactory() const
     root->addChild( line_thickness_group );
     line_thickness_group->setChild( new HorizontalSlider( line_thickness_key, true ) );
 
+    ElementGroup* proxy_group = new ElementGroup( proxy_label_key );
+    root->addChild( proxy_group );
+    Grid* proxy_grid = new Grid( 1, 2 );
+    proxy_group->setChild( proxy_grid );
+    proxy_grid->setChild( 0, 0, new Label( proxy_resolution_key ) );
+    HorizontalLayout* res_wrap = new HorizontalLayout;
+    proxy_grid->setChild( 0, 1, res_wrap );
+    res_wrap->setPadContents( false );
+    res_wrap->addChild( new HorizontalSpace );
+    res_wrap->addChild( new SpinBox( proxy_resolution_key ) );
+    res_wrap->addChild( new HorizontalExpandingSpace );
+    
 
     return root;
 }
