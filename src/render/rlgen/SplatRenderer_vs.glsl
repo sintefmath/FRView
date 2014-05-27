@@ -33,6 +33,6 @@ void main()
     gi.bbmax = vec3(2.f,2.f,1.f)*bbmax - vec3(1.f,1.f,0.f);
 //    gi.bbmin = vec3(2.f,1.f,1.f)*bbmin - vec3(1.f,1.f,0.f);
 //    gi.bbmax = vec3(2.f,1.f,1.f)*bbmax - vec3(1.f,1.f,0.f);
-    gi.cell  = cell+1; // 0 is reserved for empty space
+    gi.cell  = cell;
 
 }

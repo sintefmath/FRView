@@ -42,15 +42,18 @@ public:
     ~SplatCompacter();
     
     void
-    process( boost::shared_ptr<Splats>                               splats,
+    process(boost::shared_ptr<Splats>                               splats,
              boost::shared_ptr<const mesh::VertexPositionInterface>  vertices,
              boost::shared_ptr<const mesh::CellSetInterface>         cells,
              boost::shared_ptr<const subset::Representation>         subset,
-             const GLfloat*                                          world_from_local );
+             const GLfloat (&world_from_local)[16],
+             const GLfloat (&min_size)[3]
+             );
     
 protected:
     GLProgram   m_compacter;
     GLint       m_local_to_world_loc;
+    GLint       m_min_size_loc;
 };
 
 

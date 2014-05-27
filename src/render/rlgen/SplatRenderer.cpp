@@ -15,6 +15,8 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <glm/gtc/type_ptr.hpp>
+#include "models/Appearance.hpp"
 #include "render/rlgen/SplatRenderer.hpp"
 #include "render/rlgen/VoxelGrid.hpp"
 #include "render/rlgen/Splats.hpp"
@@ -58,11 +60,6 @@ SplatRenderer::apply( boost::shared_ptr<GridVoxelization>               target,
 {
     Logger log = getLogger( package + ".apply" );
 
-    
-    bool log_map = false; // will be part of SourceItem when we have per-source appearance.
-    
-    GLfloat surface_color[3] = { 0.5, 0.5, 0.5 };
-    
     GLsizei dim[3];
     target->dimension( dim );
 
@@ -87,9 +84,12 @@ SplatRenderer::apply( boost::shared_ptr<GridVoxelization>               target,
         if( (0 < i) && (i+1<dim[2]) ) {
             typedef std::list<boost::shared_ptr<SourceItem> >::const_iterator iterator;
             
-            glUniform2f( m_loc_slice, (i-1.f)/(dim[2]-2.f), (i+0.f)/(dim[2]-2.f) );
+            glUniform1f( m_loc_slice, (i-0.5f)/(dim[2]-2.f) );
             for( iterator it=items.begin(); it!=items.end(); ++it ) {
-
+                if( !(*it)->m_appearance_data ) {
+                    continue;
+                }
+                
                 // if source has a field associated
                 if( (*it)->m_grid_field && (*it)->m_color_map ) {
                     glUniform1i( m_loc_use_field, GL_TRUE );
@@ -99,7 +99,7 @@ SplatRenderer::apply( boost::shared_ptr<GridVoxelization>               target,
                     glActiveTexture( GL_TEXTURE1 );
                     glBindTexture( GL_TEXTURE_1D, (*it)->m_color_map->get() );
 
-                    if( log_map ) {
+                    if( (*it)->m_appearance_data->colorMapType() == models::AppearanceData::COLORMAP_LOGARITMIC ) {
                         glUniform1i( m_loc_log_map, GL_TRUE );
                         // fixme: min and map should come from appearance
                         glUniform2f( m_loc_field_remap,
@@ -115,9 +115,11 @@ SplatRenderer::apply( boost::shared_ptr<GridVoxelization>               target,
                 }
                 // otherwise, use surface color
                 else {
+                    glm::vec3 color = (*it)->m_appearance_data->subsetColor();
+                    
                     // fixme: surface color should come from appearance
                     glUniform1i( m_loc_use_field, GL_FALSE );
-                    glUniform3fv( m_loc_surface_color, 1, surface_color );
+                    glUniform3fv( m_loc_surface_color, 1, glm::value_ptr( color ) );
                 }
                 glBindVertexArray( (*it)->m_splats->asAttributes().get() );
                 glDrawArrays( GL_POINTS, 0, (*it)->m_splats->count() );

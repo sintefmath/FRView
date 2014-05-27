@@ -43,6 +43,11 @@
 #include "render/rlgen/SplatRenderer.hpp"
 #include "render/rlgen/Splats.hpp"
 
+namespace {
+    const std::string package = "FRViewJob";
+
+}
+
 namespace resources {
     extern const std::string gles_solid_vs;
     extern const std::string gles_solid_fs;
@@ -53,6 +58,8 @@ namespace resources {
 const tinia::renderlist::DataBase*
 FRViewJob::getRenderList( const std::string& session, const std::string& key )
 {
+    Logger log = getLogger( package + ".getRenderList" );
+    
     using boost::dynamic_pointer_cast;
     using render::mesh::CellSetInterface;
     using render::mesh::VertexPositionInterface;
@@ -73,8 +80,8 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
         if( !m_splat_compacter ) {
             m_splat_compacter.reset( new render::rlgen::SplatCompacter() );
         }
-        if( !m_voxel_grid ) {
-            m_voxel_grid.reset( new render::rlgen::GridVoxelization() );
+        if( !m_voxel_grid || !m_voxel_grid->hasDimension( m_renderconfig.proxyResolution() ) ) {
+            m_voxel_grid.reset( new render::rlgen::GridVoxelization(m_renderconfig.proxyResolution()) );
         }
         if( !m_voxel_surface ) {
             m_voxel_surface.reset( new render::rlgen::VoxelSurface() );
@@ -94,15 +101,26 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
             m_under_the_hood.proxyGenerateTimer().beginQuery();
         }
 
+
+        GLsizei voxel_dim[3];
+        m_voxel_grid->dimension( voxel_dim );
+        glm::vec3 min_size( 1.f/(voxel_dim[0]-2.f),
+                            1.f/(voxel_dim[1]-2.f),
+                            1.f/(voxel_dim[2]-2.f) );
+        
         // find sets of world-space bbox'es of active cells
         std::list<boost::shared_ptr<SourceItem> > splats;
         for( size_t i=0; i<m_source_items.size(); i++ ) {
             boost::shared_ptr<SourceItem> source_item = m_source_items[i];
+            if( source_item->m_visibility_mask == models::AppearanceData::VISIBILITY_MASK_NONE ) {
+                continue;
+            }
             m_splat_compacter->process( source_item->m_splats,
                                         dynamic_pointer_cast<const VertexPositionInterface>( source_item->m_grid_tess ),
                                         dynamic_pointer_cast<const CellSetInterface>( source_item->m_grid_tess ),
                                         source_item->m_grid_tess_subset,
-                                        glm::value_ptr( m_local_to_world ) );
+                                        *(float(*)[16])glm::value_ptr( m_local_to_world ),
+                                        *(float(*)[3])glm::value_ptr( min_size ) );
             
             splats.push_back( source_item );
         }
@@ -118,6 +136,8 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
         }
         
         updateRenderList();
+        //LOGGER_DEBUG( log, "Recreated render list" );
+        
     }
 
     return &m_renderlist_db;

@@ -31,7 +31,7 @@ out FI {
 
 layout(binding=0)   uniform samplerBuffer   field;
 layout(binding=1)   uniform sampler1D       color_map;
-                    uniform vec2            slice;
+                    uniform float           slice;
                     uniform vec2            field_remap;
                     uniform bool            use_field;
                     uniform bool            log_map;
@@ -40,7 +40,7 @@ layout(binding=1)   uniform sampler1D       color_map;
 void
 main()
 {
-    if( (slice.x <= gi[0].bbmax.z ) && (gi[0].bbmin.z <= slice.y)  ) {
+    if( (gi[0].bbmin.z <= slice ) && (slice <= gi[0].bbmax.z) ) {
 
         if( use_field ) {
             // colorize using a field

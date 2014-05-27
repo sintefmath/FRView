@@ -72,7 +72,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_subset_selector( m_model, *this ),
       m_appearance( m_model, *this ),
       m_under_the_hood( m_model, *this ),
-      m_renderconfig( m_model ),
+      m_renderconfig( m_model, *this ),
       m_theme( 0 ),
       m_grid_stats( m_model, *this ),
       m_has_context( false ),
@@ -647,7 +647,6 @@ bool FRViewJob::setupPipeline()
         m_half_plane_selector.reset( new render::subset::BuilderSelectInsideHalfplane );
         m_grid_cube_renderer.reset( new render::GridCubeRenderer );
         m_coordsys_renderer.reset( new render::CoordSysRenderer );
-        m_voxel_grid.reset( new render::rlgen::GridVoxelization );
         m_voxel_surface.reset( new render::rlgen::VoxelSurface );
 
         // --- create color map texture --------------------------------------------
@@ -697,7 +696,14 @@ FRViewJob::doLogic()
             m_renderlist_update_revision = true;
         }
     }
-
+    
+    if( m_voxel_grid && !m_voxel_grid->hasDimension( m_renderconfig.proxyResolution() ) ) {
+        for( size_t i=0; i<m_source_items.size(); i++ ) {
+            m_source_items[i]->m_do_update_renderlist = true;
+        }
+        m_renderlist_update_revision = true;
+    }
+    
     for( size_t i=0; i<m_source_items.size(); i++ ) {
         SourceItem& si = *m_source_items[i];
         if( si.m_appearance_data == NULL ) {
