@@ -60,14 +60,12 @@ using boost::dynamic_pointer_cast;
 
 namespace {
     const std::string package = "FRViewJob";
-    const std::string new_key = "new";
 }
 
 
 FRViewJob::FRViewJob( const std::list<string>& files )
     : tinia::jobcontroller::OpenGLJob(),
       m_current_item( ~0 ),
-      m_file( m_model, *this ),
       m_source_selector( m_model, *this ),
       m_subset_selector( m_model, *this ),
       m_appearance( m_model, *this ),
@@ -85,8 +83,6 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 {
     
     // Triggers release of all sources.
-    m_model->addElement<bool>( new_key, false, "New" );
-    m_model->addStateListener( new_key, this );
     
     
     m_render_clip_plane = false;
@@ -135,6 +131,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     VerticalLayout* root = new VerticalLayout;
     HorizontalLayout* left_right_wrapper = new HorizontalLayout;
     VerticalLayout* main  = new VerticalLayout;
+    main->setPadContents( false );
 
     m_model->addElement<string>( "source_element_group", "n/a", "Source" );
 
@@ -144,27 +141,6 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
     // --- main ----------------------------------------------------------------
     {
-        // --- tab_buttons -----------------------------------------------------
-        {   HorizontalLayout* tab_buttons = new HorizontalLayout;
-
-            Button* new_button = new Button( new_key );
-            tab_buttons->addChild( new_button );
-
-            PopupButton* file_popup = new PopupButton( m_file.titleKey(), false );
-            file_popup->setChild( m_file.guiFactory() );
-            tab_buttons->addChild( file_popup );
-
-            PopupButton* appearance_popup = new PopupButton( m_renderconfig.titleKey(), false );
-            appearance_popup->setChild( m_renderconfig.guiFactory() );
-            tab_buttons->addChild( appearance_popup );
-
-            PopupButton* under_the_hood_popup = new PopupButton( m_under_the_hood.titleKey(), false );
-            under_the_hood_popup->setChild( m_under_the_hood.guiFactory() );
-            tab_buttons->addChild( under_the_hood_popup );
-            tab_buttons->addChild( new HorizontalExpandingSpace );
-
-            main->addChild( tab_buttons );
-        }
         // --- Canvas --------------------------------------------------------------
         {   m_model->addElement("viewer", viewer );
             m_model->addElement<string>( "boundingbox", "-0.1 -0.1 -0.1 1.1 1.1 1.1" );
@@ -204,10 +180,19 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_model->addElement<bool>( "details_label", true, "Details" );
     m_model->addStateListener( "asyncreader_ticket", this);
 
+    TabLayout* outer_tabs = new TabLayout;
+    left_right_wrapper->addChild( outer_tabs );
+
+
     // --- source --------------------------------------------------------------
-    {   VerticalLayout* source = new VerticalLayout;
+    {   Tab* source_tab = new Tab( "source_element_group" );
+        outer_tabs->addChild( source_tab );
+
+        VerticalLayout* source = new VerticalLayout;
+        source_tab->setChild( source );
 
         source->addChild( m_source_selector.guiFactory() );
+        source->addChild( new VerticalSpace );
 
         // --- source tabs -----------------------------------------------------
         {   TabLayout* tabs = new TabLayout;
@@ -278,12 +263,22 @@ FRViewJob::FRViewJob( const std::list<string>& files )
             source->addChild( tabs );
         }
 
-        source->addChild( new VerticalExpandingSpace );
 
-        ElementGroup* source_element_group = new ElementGroup( "source_element_group" );
-        source_element_group->setChild( source );
-        left_right_wrapper->addChild( source_element_group );
+        source->addChild( new VerticalExpandingSpace );
     }
+
+    // --- renderconfig tab ----------------------------------------------------
+    {   Tab* rc_tab = new Tab( m_renderconfig.titleKey() );
+        outer_tabs->addChild( rc_tab );
+        rc_tab->setChild( m_renderconfig.guiFactory() );
+    }
+
+    // --- under the hood tab --------------------------------------------------
+    {  Tab* uth_tab = new Tab( m_under_the_hood.titleKey() );
+        outer_tabs->addChild( uth_tab );
+        uth_tab->setChild( m_under_the_hood.guiFactory() );
+    }
+
 
     std::vector<tinia::model::StateSchemaElement> elements;
     m_model->getFullStateSchema(elements);
@@ -367,7 +362,7 @@ FRViewJob::loadFile( const std::string& filename,
                      int refine_k,
                      bool triangulate )
 {
-    m_file.setFileName( filename );
+    m_source_selector.file().setFileName( filename );
 
     m_async_reader->issueOpenSource( filename,
                                       refine_i,
@@ -390,19 +385,10 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
 
     const string& key = stateElement->getKey();
 
-    // --- 'New'-button has been pressed; release all sources ------------------
-    if( key == new_key ) {
-        bool value;
-        stateElement->getValue<bool>( value );
-        if( value ) {
-            m_model->updateElement( key, false );
-            deleteAllSources();
-        }
-    }
-    
 
 
-    else if( key == "asyncreader_ticket" ) { // Async job is finished
+
+    if( key == "asyncreader_ticket" ) { // Async job is finished
         m_check_async_reader = true;
     }
     

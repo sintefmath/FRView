@@ -97,12 +97,13 @@ UnderTheHood::guiFactory() const
 {
     using namespace tinia::model::gui;
 
-    VerticalLayout* root = new VerticalLayout;
+/*    VerticalLayout* root = new VerticalLayout;
 
     ElementGroup* grp = new ElementGroup( under_the_hood_title_key );
     root->addChild( grp );
+*/
     VerticalLayout* vlayout = new VerticalLayout;
-    grp->setChild( vlayout );
+    //grp->setChild( vlayout );
 
     vlayout->addChild( new tinia::model::gui::CheckBox( profile_key ) );
     Grid* grid = new Grid( 6, 2 );
@@ -118,8 +119,9 @@ UnderTheHood::guiFactory() const
     grid->setChild( 4, 1, new Label( profile_surface_render_key, true ) );
 
     vlayout->addChild( new Button( debug_frame_key ) );
+    vlayout->addChild( new VerticalExpandingSpace );
 
-    return root;
+    return vlayout;
 }
 
 void

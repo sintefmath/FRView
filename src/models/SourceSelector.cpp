@@ -24,6 +24,7 @@ namespace {
     const string source_selector_key = "source_selector";
     const string source_clone_key = "source_selector_clone";
     const string source_delete_key = "source_selector_delete";
+    const string new_key = "new";
 
     const char* source_selector_none[1] = { "None" };
 
@@ -36,6 +37,7 @@ namespace models {
 SourceSelector::SourceSelector(boost::shared_ptr<tinia::model::ExposedModel>& model , Logic &logic)
     : m_model( model ),
       m_logic( logic ),
+      m_file( model, logic ),
       m_revision( 1 )
 {
     m_model->addElementWithRestriction<std::string>( source_selector_key,
@@ -49,6 +51,9 @@ SourceSelector::SourceSelector(boost::shared_ptr<tinia::model::ExposedModel>& mo
 
     m_model->addElement<bool>( source_delete_key, false, "Delete" );
     m_model->addStateListener( source_delete_key, this );
+
+    m_model->addElement<bool>( new_key, false, "Delete all" );
+    m_model->addStateListener( new_key, this );
 }
 
 void
@@ -128,6 +133,15 @@ SourceSelector::stateElementModified( tinia::model::StateElement * stateElement 
         }
     }
 
+    else if( key == new_key ) {
+        bool value;
+        stateElement->getValue<bool>( value );
+        if( value ) {
+            m_model->updateElement( key, false );
+            m_logic.deleteAllSources();
+        }
+    }
+
 }
 
 tinia::model::gui::Element*
@@ -136,12 +150,24 @@ SourceSelector::guiFactory() const
     using namespace tinia::model::gui;
 
     VerticalLayout* vl = new VerticalLayout;
+    vl->setPadContents( false );
     vl->addChild( new ComboBox( source_selector_key ) );
 
+    PopupButton* file_popup = new PopupButton( m_file.titleKey(), false );
+    file_popup->setChild( m_file.guiFactory() );
+/*    tab_buttons->addChild( file_popup );
+    */
+
     HorizontalLayout* hl = new HorizontalLayout;
+    hl->setPadContents( false );
+
+    hl->addChild( file_popup );
+    //hl->addChild( new HorizontalSpace );
     hl->addChild( new Button( source_clone_key ) );
-    hl->addChild( new HorizontalSpace );
+    //hl->addChild( new HorizontalSpace );
     hl->addChild( new Button( source_delete_key ) );
+    //hl->addChild( new HorizontalSpace );
+    hl->addChild( new Button( new_key ) );
     vl->addChild( hl );
 
     return vl;

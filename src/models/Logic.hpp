@@ -38,7 +38,11 @@ public:
     virtual
     void
     deleteSource() = 0;
-    
+
+    virtual
+    void
+    deleteAllSources() = 0;
+
     virtual
     void
     loadFile( const std::string& filename,

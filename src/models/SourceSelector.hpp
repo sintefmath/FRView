@@ -22,6 +22,7 @@
 #include <tinia/model/StateListener.hpp>
 #include <tinia/model/ExposedModel.hpp>
 #include "models/Logic.hpp"
+#include "models/File.hpp"
 
 namespace models {
 
@@ -45,9 +46,16 @@ public:
     void
     updateSources( std::vector<std::string>& sources );
     
+    File&
+    file() { return m_file; }
+
+    const File&
+    file() const { return m_file; }
+
 protected:
     boost::shared_ptr<tinia::model::ExposedModel>   m_model;
     Logic&                                          m_logic;
+    models::File                                    m_file;
     std::vector<std::string>                        m_sources;
     Revision                                        m_revision;
 

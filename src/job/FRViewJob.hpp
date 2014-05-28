@@ -150,7 +150,6 @@ private:
     size_t                                          m_current_item;
 
 
-    models::File                                    m_file;
     models::SourceSelector                          m_source_selector;
     models::SubsetSelector                          m_subset_selector;
     models::Appearance                              m_appearance;

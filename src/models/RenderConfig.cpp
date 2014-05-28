@@ -263,6 +263,7 @@ RenderConfig::guiFactory() const
     res_wrap->addChild( new SpinBox( proxy_resolution_key ) );
     res_wrap->addChild( new HorizontalExpandingSpace );
     
+    root->addChild( new VerticalExpandingSpace );
 
     return root;
 }
