@@ -147,7 +147,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
             m_model->addElement<int>( "renderlist", 0 );
             Canvas* canvas = new Canvas("viewer", "renderlist", "boundingbox" );
             canvas->boundingBoxKey( "boundingbox" );
-            canvas->setViewerType( std::string( "MouseClickResponder" ) );
+            //canvas->setViewerType( std::string( "MouseClickResponder" ) );
 
             main->addChild( canvas );
         }

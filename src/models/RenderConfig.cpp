@@ -22,7 +22,7 @@ namespace {
                                             "Diffuse",
                                             "Diffuse and Specular" };
 
-    const std::string proxy_label_key         = "Proxy geometry";
+    const std::string proxy_label_key         = "ProxyGeometry";
     const std::string proxy_resolution_key    = "Resolution";
 }
 
@@ -61,7 +61,7 @@ RenderConfig::RenderConfig(boost::shared_ptr<tinia::model::ExposedModel>& model,
       m_clip_plane_visible( true )
 {
     setDarkTheme();
-    m_model->addElement<bool>( proxy_label_key, true, "Proxy geometry" );
+    m_model->addElement<bool>( proxy_label_key, true, "ProxyGeometry" );
     m_model->addConstrainedElement( proxy_resolution_key,
                                     m_proxy_resolution, 4, 256, "Resolution" );
     m_model->addStateListener( proxy_resolution_key, this );
