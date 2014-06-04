@@ -107,6 +107,7 @@ FRViewJob::addSource( boost::shared_ptr< dataset::AbstractDataSource > source,
     }
     m_source_selector.updateSources( sources );
     m_renderlist_update_revision = true;
+    doLogic();
 }
 
 void

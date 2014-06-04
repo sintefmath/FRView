@@ -113,14 +113,19 @@ UnderTheHood::guiFactory() const
     grid->setChild( 1, 1, new Label( profile_avg_fps_key, true ) );
     grid->setChild( 2, 0, new Label( profile_proxy_gen_key, false ) );
     grid->setChild( 2, 1, new Label( profile_proxy_gen_key, true ) );
-    grid->setChild( 3, 0, new Label( profile_surface_gen_key, false ) );
-    grid->setChild( 3, 1, new Label( profile_surface_gen_key, true ) );
-    grid->setChild( 4, 0, new Label( profile_surface_render_key, false ) );
-    grid->setChild( 4, 1, new Label( profile_surface_render_key, true ) );
+    grid->setChild( 3, 0, new Label( "renderlist", false ) );
+    grid->setChild( 3, 1, new Label( "renderlist", true ) );
+    grid->setChild( 4, 0, new Label( profile_surface_gen_key, false ) );
+    grid->setChild( 4, 1, new Label( profile_surface_gen_key, true ) );
+    grid->setChild( 5, 0, new Label( profile_surface_render_key, false ) );
+    grid->setChild( 5, 1, new Label( profile_surface_render_key, true ) );
 
     vlayout->addChild( new Button( debug_frame_key ) );
+
     vlayout->addChild( new VerticalExpandingSpace );
 
+    
+    
     return vlayout;
 }
 

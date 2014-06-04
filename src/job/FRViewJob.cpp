@@ -144,7 +144,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
         // --- Canvas --------------------------------------------------------------
         {   m_model->addElement("viewer", viewer );
             m_model->addElement<string>( "boundingbox", "-0.1 -0.1 -0.1 1.1 1.1 1.1" );
-            m_model->addElement<int>( "renderlist", 0 );
+            m_model->addElement<int>( "renderlist", 0, "RL timestamp" );
             Canvas* canvas = new Canvas("viewer", "renderlist", "boundingbox" );
             canvas->boundingBoxKey( "boundingbox" );
             //canvas->setViewerType( std::string( "MouseClickResponder" ) );
@@ -716,12 +716,13 @@ FRViewJob::doLogic()
     
     // If we clients have asked for renderlists at least once, we inform them
     // that they should query for a new one. 
-    if( m_renderlist_initialized &&  m_renderlist_update_revision ) {
+    if( /*m_renderlist_initialized &&*/  m_renderlist_update_revision ) {
         m_renderlist_update_revision = false;
 
-        int val;
-        m_model->getElementValue( "renderlist", val );
-        m_model->updateElement( "renderlist", val+1 );
+        //int val;
+        //m_model->getElementValue( "renderlist", val );
+        //m_model->updateElement( "renderlist", val+1 );
+        m_model->updateElement<int>( "renderlist", m_renderlist_db.bump() );
     }
 }
 
