@@ -244,7 +244,7 @@ FRViewJob::updateRenderList( )
     surf_buf->set( m_voxel_surface->surfaceInHostMem().data(), m_voxel_surface->surfaceInHostMem().size() );
 
     rl::Draw* surf_draw = m_renderlist_db.castedItemByName<rl::Draw*>( "surface_draw" );
-    surf_draw->setNonIndexed( rl::PRIMITIVE_TRIANGLES, 0, m_voxel_surface->surfaceInHostMem().size()/4 );
+    surf_draw->setNonIndexed( rl::PRIMITIVE_TRIANGLES, 0, m_voxel_surface->surfaceInHostMem().size()/6 );
 
     m_renderlist_db.drawOrderClear()
             ->drawOrderAdd( "identity_pos" )
