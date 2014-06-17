@@ -108,12 +108,12 @@ PolyhedralMeshSource::geometry( Tessellation&                                  g
     Logger log = getLogger( "dataset.PolyhedralMeshSource.tessellation" );
     
     typedef float                               SrcReal;
-    typedef typename Tessellation::Real         Real;
-    typedef typename Tessellation::Index        Index;
-    typedef typename Tessellation::Real4        Real4;
-    typedef typename Tessellation::Orientation  Orientation;
-    typedef typename Tessellation::Segment      Segment;
-    typedef typename Tessellation::Interface    Interface;
+    typedef Tessellation::Real         Real;
+    typedef Tessellation::Index        Index;
+    typedef Tessellation::Real4        Real4;
+    typedef Tessellation::Orientation  Orientation;
+    typedef Tessellation::Segment      Segment;
+    typedef Tessellation::Interface    Interface;
     static const Orientation ORIENTATION_I = Tessellation::ORIENTATION_I;
     static const Orientation ORIENTATION_J = Tessellation::ORIENTATION_J;
     static const Orientation ORIENTATION_K = Tessellation::ORIENTATION_K;
@@ -186,7 +186,7 @@ PolyhedralMeshSource::geometry( Tessellation&                                  g
 
         // remove duplicate cell vertex indices        
         std::sort( cell_corners.begin(), cell_corners.end() );
-        typename std::vector<Index>::iterator it = std::unique( cell_corners.begin(), cell_corners.end() );
+        std::vector<Index>::iterator it = std::unique( cell_corners.begin(), cell_corners.end() );
         cell_corners.resize( std::distance( cell_corners.begin(), it ) );
         
         geometry_bridge.setCell( c, c,

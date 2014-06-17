@@ -893,10 +893,10 @@ CornerpointGrid::getSolutionIndex( const std::string& name )
 }
 
 
-typename CornerpointGrid::ReportStep&
+CornerpointGrid::ReportStep&
 CornerpointGrid::reportStepBySeqNum( unsigned int seqnum )
 {
-    for(typename std::vector<ReportStep>::iterator it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
+    for(std::vector<ReportStep>::iterator it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
         if( it->m_seqnum == seqnum ) {
             return *it;
         }
@@ -905,7 +905,7 @@ CornerpointGrid::reportStepBySeqNum( unsigned int seqnum )
     ReportStep& step = m_report_steps.back();
     step.m_seqnum = seqnum;
     step.m_solutions.resize( m_solution_names.size() );
-    for(typename std::vector<Solution>::iterator it=step.m_solutions.begin(); it!=step.m_solutions.end(); ++it ) {
+    for(std::vector<Solution>::iterator it=step.m_solutions.begin(); it!=step.m_solutions.end(); ++it ) {
         it->m_reader = READER_NONE;
     }
 
@@ -914,7 +914,7 @@ CornerpointGrid::reportStepBySeqNum( unsigned int seqnum )
                m_report_steps.end(),
                CornerpointGrid::compareReportStep);
 
-    for(typename std::vector<ReportStep>::iterator it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
+    for(std::vector<ReportStep>::iterator it=m_report_steps.begin(); it!=m_report_steps.end(); ++it ) {
         if( it->m_seqnum == seqnum ) {
             return *it;
         }
@@ -1005,7 +1005,7 @@ CornerpointGrid::nz() const
 
 
 
-const std::vector<typename CornerpointGrid::Well>&
+const std::vector<CornerpointGrid::Well>&
 CornerpointGrid::wells( const unsigned int step )
 {
     if( step >= m_report_steps.size() ) {

@@ -21,6 +21,7 @@
 #ifdef __SSE4_1__
 #include <smmintrin.h>
 #endif
+#include <algorithm>
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 #include "utils/Logger.hpp"
@@ -145,7 +146,7 @@ PolygonMeshBridge::process()
         }
     }
     std::sort( cell_corners.begin(), cell_corners.end() );
-    typename std::vector< boost::tuple<Index,Index> >::iterator it = std::unique( cell_corners.begin(), cell_corners.end() );
+    std::vector< boost::tuple<Index,Index> >::iterator it = std::unique( cell_corners.begin(), cell_corners.end() );
     cell_corners.resize( std::distance( cell_corners.begin(), it ) );
 
     m_cell_corners.resize( cell_corners.size() );
