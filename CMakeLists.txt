@@ -1,5 +1,6 @@
 PROJECT( FRView )
 CMAKE_MINIMUM_REQUIRED( VERSION 2.6 )
+SET( version_number "0.7.0" )
 
 OPTION( EXTEND_CMAKE_MODULE_PATH "Extend the CMAKE_MODULE_PATH variable with user directories?"  ON )
 OPTION( DESKTOP_JOB "Build desktop job" ON )
@@ -22,19 +23,6 @@ IF( EXTEND_CMAKE_MODULE_PATH )
 ENDIF( EXTEND_CMAKE_MODULE_PATH )
 
 INCLUDE( WrapResources )
-
-# Versioning
-SET( svn_revision $ENV{SVN_REVISION} )
-IF ( NOT DEFINED svn_revision )
-    SET( svn_revision 0 )
-ENDIF( NOT  DEFINED svn_revision )
-
-SET( build_number $ENV{BUILD_NUMBER} )
-IF ( NOT DEFINED build_number )
-    SET( build_number 0 )
-ENDIF( NOT  DEFINED build_number )
-
-SET( version_number "0.${svn_revision}.${build_number}" )
 
 
 # Debian package
