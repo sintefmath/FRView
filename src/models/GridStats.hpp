@@ -23,10 +23,12 @@
 #include "models/Logic.hpp"
 
 namespace dataset {
-    template<typename REAL> class Project;
+    class AbstractDataSource;
 }
 namespace render {
-    class GridTess;
+    namespace mesh {
+        class AbstractMeshGPUModel;
+    }
 } // of namespace render
 
 namespace models {
@@ -52,8 +54,8 @@ public:
     update( );
 
     void
-    update( boost::shared_ptr<dataset::Project<float> > project,
-            boost::shared_ptr<render::GridTess> tessellation );
+    update( boost::shared_ptr<dataset::AbstractDataSource > project,
+            boost::shared_ptr<render::mesh::AbstractMeshGPUModel> tessellation );
 
 protected:
     boost::shared_ptr<tinia::model::ExposedModel> m_model;

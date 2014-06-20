@@ -37,7 +37,7 @@ File::File( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic )
     : m_model( model ),
       m_logic( logic )
 {
-    m_model->addElement<bool>( file_tab_key, false, "File" );
+    m_model->addElement<bool>( file_tab_key, false, "Add source" );
 //    m_model->addElement<bool>( file_tab_visible_key, false );
     m_model->addElement<string>( file_name_key, "" );
     m_model->addElement<bool>( file_load_key, false, "Load" );

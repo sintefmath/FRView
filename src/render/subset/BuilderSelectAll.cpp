@@ -15,7 +15,7 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "render/GridTess.hpp"
+#include "render/mesh/CellSetInterface.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/subset/BuilderSelectAll.hpp"
 
@@ -32,11 +32,11 @@ BuilderSelectAll::BuilderSelectAll()
 }
 
 void
-BuilderSelectAll::apply(boost::shared_ptr<Representation> tess_subset,
-                   boost::shared_ptr<const GridTess> tess)
+BuilderSelectAll::apply( boost::shared_ptr<Representation> cell_subset,
+                         boost::shared_ptr<const mesh::CellSetInterface> cell_set)
 {
     glUseProgram( m_program );
-    tess_subset->populateBuffer( tess );
+    cell_subset->populateBuffer( cell_set );
     glUseProgram( 0 );
 }
 

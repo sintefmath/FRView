@@ -29,6 +29,22 @@ public:
 
     virtual
     void
+    setSource( size_t index ) = 0;
+
+    virtual
+    void
+    cloneSource() = 0;
+
+    virtual
+    void
+    deleteSource() = 0;
+
+    virtual
+    void
+    deleteAllSources() = 0;
+
+    virtual
+    void
     loadFile( const std::string& filename,
               int refine_i,
               int refine_j,

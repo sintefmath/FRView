@@ -22,8 +22,11 @@
 #include <string>
 
 namespace render {
-    class GridTess;
     class GridField;
+    namespace mesh {
+        class AbstractMeshGPUModel;
+        class CellSetInterface;
+    }
     namespace subset {
         class Representation;
 

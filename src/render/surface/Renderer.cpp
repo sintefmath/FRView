@@ -17,12 +17,19 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "render/GridTess.hpp"
+#include "render/mesh/AbstractMeshGPUModel.hpp"
+#include "render/mesh/VertexPositionInterface.hpp"
+#include "render/mesh/NormalVectorInterface.hpp"
+#include "render/mesh/PolygonSetInterface.hpp"
 #include "render/GridField.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/Renderer.hpp"
 #include "utils/Logger.hpp"
 #include "utils/GLSLTools.hpp"
+
+namespace {
+    const std::string package = "render.surface.Renderer";
+}
 
 namespace render {
     namespace surface {
@@ -31,10 +38,9 @@ namespace render {
             extern const std::string Renderer_gs;
             extern const std::string Renderer_fs;
         }
-        static const std::string package = "render.surface.Renderer";
 
     
-Renderer::Renderer( const std::string& fragment_source )
+Renderer::Renderer( const std::string& defines, const std::string& fragment_source )
     : m_main( package + ".main" )
 {
     Logger log = getLogger( package + ".constructor" );
@@ -42,10 +48,13 @@ Renderer::Renderer( const std::string& fragment_source )
     // move DO_PAINT into uniform
     
     GLint vs = utils::compileShader( log, glsl::Renderer_vs, GL_VERTEX_SHADER );
-    GLint gs = utils::compileShader( log, "#define DO_PAINT\n" +
+    GLint gs = utils::compileShader( log,
+                                     "#define DO_PAINT\n" +
+                                     defines +
                                      glsl::Renderer_gs, GL_GEOMETRY_SHADER );
     GLint fs = utils::compileShader( log,
                                      "#define DO_PAINT\n" +
+                                     defines +
                                      glsl::Renderer_fs +
                                      fragment_source, GL_FRAGMENT_SHADER );
 
@@ -64,17 +73,20 @@ Renderer::Renderer( const std::string& fragment_source )
 
     
 void
-Renderer::draw( const GLfloat*                                        modelview,
-                const GLfloat*                                        projection,
-                const GLsizei                                         width,
-                const GLsizei                                         height,
-                const boost::shared_ptr<const GridTess>               tess,
-                const boost::shared_ptr<const GridField>              field,
-                const std::vector<RenderItem>&  render_items )
+Renderer::draw( const GLfloat*                            modelview,
+                const GLfloat*                            projection,
+                const GLsizei                             width,
+                const GLsizei                             height,
+                const std::vector<RenderItem>&            render_items )
 {
+    using boost::shared_ptr;
+    using boost::dynamic_pointer_cast;
+    using mesh::VertexPositionInterface;
+    using mesh::NormalVectorInterface;
 
+    Logger log = getLogger( package + ".draw" );
     
-    
+     
     glm::mat4 M(modelview[0], modelview[1], modelview[ 2], modelview[3],
                 modelview[4], modelview[5], modelview[ 6], modelview[7],
                 modelview[8], modelview[9], modelview[10], modelview[11],
@@ -99,38 +111,58 @@ Renderer::draw( const GLfloat*                                        modelview,
     glUniform2f( m_loc_screen_size, width, height );
 
     // bind normal vector texture
-    glActiveTexture( GL_TEXTURE1 );
-    glBindTexture( GL_TEXTURE_BUFFER, tess->normalVectorsAsBufferTexture() );
 
-    // bind field values, if available
-    glActiveTexture( GL_TEXTURE2 );
-    if( field.get() != NULL ) {
-        glBindTexture( GL_TEXTURE_BUFFER, field->texture() );
-    }
-    else {
-        glBindTexture( GL_TEXTURE_BUFFER, 0 );
-    }
 
     // Bind vertex position VAO
-    glBindVertexArray( tess->vertexPositonsAsVertexArrayObject() );
    
     for( size_t i = 0; i<render_items.size(); i++) {
         const RenderItem& item = render_items[i];
         if( item.m_renderer != RenderItem::RENDERER_SURFACE ) {
             continue;
         }
+        if( item.m_surf->triangleCount() < 1 ) {
+            continue;
+        }
+        shared_ptr<const VertexPositionInterface> vertices = dynamic_pointer_cast<const VertexPositionInterface>( item.m_mesh );
+        if( !vertices ) {
+            continue;
+        }
+        shared_ptr<const NormalVectorInterface>   normals  = dynamic_pointer_cast<const NormalVectorInterface>(item.m_mesh );
+        if( !normals ) {
+            continue;
+        }        
 
-        if( item.m_edge_color[3] > 0.f ) {
-            glDisable( GL_POLYGON_OFFSET_FILL );
+        glActiveTexture( GL_TEXTURE1 );
+        glBindTexture( GL_TEXTURE_BUFFER, normals->normalVectorsAsBufferTexture() );
+
+        glBindVertexArray( vertices->vertexPositonsAsVertexArrayObject() );
+        
+        // set up field if enabled
+        glActiveTexture( GL_TEXTURE2 );
+        if( item.m_field ) {
+            glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), 1 );
+            glBindTexture( GL_TEXTURE_BUFFER, item.m_field->texture() );
+
+            if( item.m_color_map ) {
+                glActiveTexture( GL_TEXTURE3 );
+                glBindTexture( GL_TEXTURE_1D, item.m_color_map->get() );
+            }
         }
         else {
-            glPolygonOffset( 1.f, 1.f );
-            glEnable( GL_POLYGON_OFFSET_FILL );
+            glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), 0 );
+            glBindTexture( GL_TEXTURE_BUFFER, 0 );
         }
+        
+        //if( item.m_edge_color[3] > 0.f ) {
+        //    glDisable( GL_POLYGON_OFFSET_FILL );
+        //}
+        //else {
+        //    glPolygonOffset( 1.f, 1.f );
+        //    glEnable( GL_POLYGON_OFFSET_FILL );
+        //
         glActiveTexture( GL_TEXTURE0 );
 
         glUniform1i( glGetUniformLocation( m_main.get(), "flat_normals"), GL_FALSE );
-        glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), item.m_field );
         glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), item.m_field_log_map );
 //        glUniform1i( glGetUniformLocation( m_main.get(), "solid_pass"), solid_pass ? GL_TRUE : GL_FALSE );
         glUniform1f( glGetUniformLocation( m_main.get(), "line_width"), 0.5f*item.m_line_thickness );
@@ -141,8 +173,8 @@ Renderer::draw( const GLfloat*                                        modelview,
         if( item.m_field_log_map ) {
             glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), GL_TRUE );
             glUniform2f( glGetUniformLocation( m_main.get(), "field_remap"),
-                         logf( item.m_field_min ),
-                         1.f/(logf( item.m_field_max) - logf( item.m_field_min ) ) );
+                         1.f/ item.m_field_min,
+                         1.f/logf( item.m_field_max/item.m_field_min ) );
         }
         else {
             glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), GL_FALSE );
@@ -153,6 +185,22 @@ Renderer::draw( const GLfloat*                                        modelview,
         glBindTexture( GL_TEXTURE_BUFFER, item.m_surf->triangleCellTexture() );
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, item.m_surf->triangleCornerpointIndexBuffer() );
         glDrawElements( GL_TRIANGLES, 3*item.m_surf->triangleCount(), GL_UNSIGNED_INT, NULL );
+        
+#if 0
+        boost::shared_ptr<const mesh::PolygonSetInterface> polygon_set = 
+                boost::dynamic_pointer_cast<const mesh::PolygonSetInterface>( mesh );
+        glUseProgram( 0 );
+        glMatrixMode( GL_PROJECTION );
+        glLoadMatrixf( glm::value_ptr( P ) );
+        glMatrixMode( GL_MODELVIEW );
+        glLoadMatrixf( glm::value_ptr( M ) );
+
+        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, polygon_set->polygonVertexIndexBuffer() );
+//        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, item.m_surf->triangleCornerpointIndexBuffer() );
+
+        glDrawElements( GL_TRIANGLES, 1024, GL_UNSIGNED_INT, NULL );
+        glUseProgram( m_main.get() );
+#endif
     }
     glDisable( GL_POLYGON_OFFSET_FILL );
 

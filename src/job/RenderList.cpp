@@ -33,10 +33,20 @@
 #include <tinia/renderlist/SetRasterState.hpp>
 
 #include "job/FRViewJob.hpp"
-#include "render/GridTess.hpp"
 #include "render/ClipPlane.hpp"
-#include "render/rlgen/GridVoxelization.hpp"
+#include "render/mesh/AbstractMeshGPUModel.hpp"
+#include "render/mesh/CellSetInterface.hpp"
+#include "render/mesh/VertexPositionInterface.hpp"
+#include "render/rlgen/VoxelGrid.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
+#include "render/rlgen/SplatCompacter.hpp"
+#include "render/rlgen/SplatRenderer.hpp"
+#include "render/rlgen/Splats.hpp"
+
+namespace {
+    const std::string package = "FRViewJob";
+
+}
 
 namespace resources {
     extern const std::string gles_solid_vs;
@@ -48,6 +58,12 @@ namespace resources {
 const tinia::renderlist::DataBase*
 FRViewJob::getRenderList( const std::string& session, const std::string& key )
 {
+    Logger log = getLogger( package + ".getRenderList" );
+    
+    using boost::dynamic_pointer_cast;
+    using render::mesh::CellSetInterface;
+    using render::mesh::VertexPositionInterface;
+    
     if( !m_renderlist_initialized ) {
         initRenderList();
         m_renderlist_initialized = true;
@@ -57,25 +73,73 @@ FRViewJob::getRenderList( const std::string& session, const std::string& key )
     fetchData();
     updateModelMatrices();
     doCompute();
+    
+    if( m_has_context ) {
 
-    if( m_project && m_has_pipeline ) {
-        if( m_renderlist_state == RENDERLIST_CHANGED_CLIENTS_NOTIFIED ) {
-            m_renderlist_state = RENDERLIST_SENT;
-
-            if( m_under_the_hood.profilingEnabled() ) {
-                m_under_the_hood.proxyGenerateTimer().beginQuery();
-            }
-
-            m_grid_voxelizer->build( m_grid_tess,
-                                     m_grid_tess_subset,
-                                     glm::value_ptr( m_local_to_world ) );
-            m_voxel_surface->build( m_grid_voxelizer, m_grid_field );
-            if( m_under_the_hood.profilingEnabled() ) {
-                m_under_the_hood.proxyGenerateTimer().endQuery();
-            }
-            updateRenderList();
+        // --- make sure we have the objects we need ---------------------------
+        if( !m_splat_compacter ) {
+            m_splat_compacter.reset( new render::rlgen::SplatCompacter() );
         }
+        if( !m_voxel_grid || !m_voxel_grid->hasDimension( m_renderconfig.proxyResolution() ) ) {
+            m_voxel_grid.reset( new render::rlgen::GridVoxelization(m_renderconfig.proxyResolution()) );
+        }
+        if( !m_voxel_surface ) {
+            m_voxel_surface.reset( new render::rlgen::VoxelSurface() );
+        }
+        if( !m_splat_renderer ) {
+            m_splat_renderer.reset( new render::rlgen::SplatRenderer() );
+        }
+        
+        for( size_t i=0; i<m_source_items.size(); i++ ) {
+            if( !m_source_items[i]->m_splats ) {
+                m_source_items[i]->m_splats.reset( new render::rlgen::Splats() );
+            }
+        }
+
+        // --- create renderlist geometry -------------------------------------- 
+        if( m_under_the_hood.profilingEnabled() ) {
+            m_under_the_hood.proxyGenerateTimer().beginQuery();
+        }
+
+
+        GLsizei voxel_dim[3];
+        m_voxel_grid->dimension( voxel_dim );
+        glm::vec3 min_size( 1.f/(voxel_dim[0]-2.f),
+                            1.f/(voxel_dim[1]-2.f),
+                            1.f/(voxel_dim[2]-2.f) );
+        
+        // find sets of world-space bbox'es of active cells
+        std::list<boost::shared_ptr<SourceItem> > splats;
+        for( size_t i=0; i<m_source_items.size(); i++ ) {
+            boost::shared_ptr<SourceItem> source_item = m_source_items[i];
+            if( source_item->m_visibility_mask == models::AppearanceData::VISIBILITY_MASK_NONE ) {
+                continue;
+            }
+            m_splat_compacter->process( source_item->m_splats,
+                                        dynamic_pointer_cast<const VertexPositionInterface>( source_item->m_grid_tess ),
+                                        dynamic_pointer_cast<const CellSetInterface>( source_item->m_grid_tess ),
+                                        source_item->m_grid_tess_subset,
+                                        *(float(*)[16])glm::value_ptr( m_local_to_world ),
+                                        *(float(*)[3])glm::value_ptr( min_size ) );
+            
+            splats.push_back( source_item );
+        }
+
+        // populate voxel grid
+        m_splat_renderer->apply( m_voxel_grid, splats );
+
+        // extract iso-surface
+        m_voxel_surface->build( m_voxel_grid );
+        
+        if( m_under_the_hood.profilingEnabled() ) {
+            m_under_the_hood.proxyGenerateTimer().endQuery();
+        }
+        
+        updateRenderList();
+        //LOGGER_DEBUG( log, "Recreated render list" );
+        
     }
+
     return &m_renderlist_db;
 }
 
@@ -154,7 +218,8 @@ FRViewJob::initRenderList()
     m_renderlist_db.createBuffer( "surface_pos" );
     m_renderlist_db.createAction<rl::SetInputs>( "surface_input" )
             ->setShader( "surface" )
-            ->setInput( "position", "surface_pos", 4 );
+            ->setInput( "in_pos", "surface_pos", 3, 0, 6 )
+            ->setInput( "in_col", "surface_pos", 3, 3, 6 );
     m_renderlist_db.createAction<rl::Draw>( "surface_draw" );
 
 
@@ -165,7 +230,7 @@ FRViewJob::updateRenderList( )
 {
     namespace rl = tinia::renderlist;
 
-    models::Appearance::Theme theme = m_appearance.theme();
+    models::RenderConfig::Theme theme = m_renderconfig.theme();
     if( m_theme != theme ) {
 
     }
@@ -179,7 +244,7 @@ FRViewJob::updateRenderList( )
     surf_buf->set( m_voxel_surface->surfaceInHostMem().data(), m_voxel_surface->surfaceInHostMem().size() );
 
     rl::Draw* surf_draw = m_renderlist_db.castedItemByName<rl::Draw*>( "surface_draw" );
-    surf_draw->setNonIndexed( rl::PRIMITIVE_TRIANGLES, 0, m_voxel_surface->surfaceInHostMem().size()/4 );
+    surf_draw->setNonIndexed( rl::PRIMITIVE_TRIANGLES, 0, m_voxel_surface->surfaceInHostMem().size()/6 );
 
     m_renderlist_db.drawOrderClear()
             ->drawOrderAdd( "identity_pos" )
@@ -195,10 +260,13 @@ FRViewJob::updateRenderList( )
             ->drawOrderAdd( "solid_white" )
             ->drawOrderAdd( "wire_cube_draw" );
 
-    if( m_render_clip_plane ) {
+    if( m_render_clip_plane && currentSourceItemValid() ) {
+        boost::shared_ptr<SourceItem> source_item = currentSourceItem();
+        
         // vertex positions of line loop
         std::vector<float> vertices;
-        m_clip_plane->getLineLoop( vertices );
+        source_item->m_clip_plane->getLineLoop( vertices );
+
         m_renderlist_db.castedItemByName<rl::Buffer*>( "clip_plane_pos" )
                 ->set( vertices.data(), vertices.size() );
         // update draw command

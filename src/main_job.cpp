@@ -45,7 +45,7 @@ main( int argc, char** argv )
     FRViewJob job( files );
     tinia::qtcontroller::QTController controller;
     controller.setJob( &job );
-    controller.addScript( resources::cameramanipulator );
+    //controller.addScript( resources::cameramanipulator );
     controller.run( argc, argv );
     return 0;
 }

@@ -21,18 +21,19 @@
 #include <GL/glew.h>
 #include <string>
 #include "render/ManagedGL.hpp"
-#include "render/GridTess.hpp"
-#include "render/GridFieldBridge.hpp"
+#include "bridge/FieldBridge.hpp"
 
 namespace render {
-    class GridTess;
+    namespace mesh {
+        class CellSetInterface;
+    }
 
 /** Represent a single property at a single report step for all cells in a grid. */
 class GridField
 {
     friend class GridFieldBridge;
 public:
-    GridField( boost::shared_ptr<GridTess> grid );
+    GridField( boost::shared_ptr<mesh::CellSetInterface> grid );
 
     /** Get texture buffer sampling the field (indexed by local cell indices). */
     GLuint
@@ -54,16 +55,20 @@ public:
     hasData() const { return m_has_data; }
 
     void
-    import( GridFieldBridge& bridge );
+    import( boost::shared_ptr<const bridge::FieldBridge> bridge,
+            int                                          field_index,
+            int                                          timestep_index );
 
 protected:
-    boost::shared_ptr<GridTess>   m_grid;
-    bool                        m_has_data;
-    GLBuffer                    m_buffer;
-    GLTexture                   m_texture;
-    GLsizei                     m_count;
-    float                       m_min_value;
-    float                       m_max_value;
+    boost::shared_ptr<mesh::CellSetInterface>   m_cell_set;
+    bool                                        m_has_data;
+    int                                         m_field_index;
+    int                                         m_timestep_index;
+    GLBuffer                                    m_buffer;
+    GLTexture                                   m_texture;
+    GLsizei                                     m_count;
+    float                                       m_min_value;
+    float                                       m_max_value;
 };
 
 } // of namespace render

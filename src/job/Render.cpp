@@ -18,9 +18,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "dataset/Project.hpp"
+#include "dataset/CornerpointGrid.hpp"
 #include "job/FRViewJob.hpp"
-#include "render/GridTess.hpp"
 #include "utils/Logger.hpp"
 #include "render/GridCubeRenderer.hpp"
 #include "render/ClipPlane.hpp"
@@ -28,11 +27,12 @@
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/CoordSysRenderer.hpp"
-#include "render/rlgen/GridVoxelization.hpp"          // move to renderlist
+#include "render/rlgen/VoxelGrid.hpp"
 #include "render/rlgen/VoxelSurface.hpp"  // move to renderlist
-#include "render/screen/TransparencyNone.hpp"
-#include "render/screen/TransparencyAdditive.hpp"
-#include "render/screen/TransparencyWeightedAverage.hpp"
+#include "render/manager/OnlySolid.hpp"
+#include "render/manager/TransparencyAdditive.hpp"
+#include "render/manager/TransparencyWeightedAverage.hpp"
+#include "render/manager/OrderIndependentTransparency.hpp"
 #include "render/RenderItem.hpp"
 
 void
@@ -49,23 +49,12 @@ FRViewJob::render( const float*  projection,
 //    bool do_render_grid = true;
 //    bool render_wells = true;
 //    bool render_clipplane = true;
-    bool log_map = false;
-    double min, max;
-    std::string field_map;
-    try {
-        m_model->getElementValue( "field_range_min", min );
-        m_model->getElementValue( "field_range_max", max );
-        m_model->getElementValue( "colormap_type", field_map );
-    }
-    catch( std::runtime_error& e ) {
-        LOGGER_ERROR( log, "Error fetchin state from exposed model: " << e.what() );
-    }
 
     // create object space to model space matrix
-    glm::mat4 p = glm::mat4( projection[0],  projection[1],  projection[2],  projection[3],
-                             projection[4],  projection[5],  projection[6],  projection[7],
-                             projection[8],  projection[9],  projection[10], projection[11],
-                             projection[12], projection[13], projection[14], projection[15] );
+//    glm::mat4 p = glm::mat4( projection[0],  projection[1],  projection[2],  projection[3],
+//                             projection[4],  projection[5],  projection[6],  projection[7],
+//                             projection[8],  projection[9],  projection[10], projection[11],
+//                             projection[12], projection[13], projection[14], projection[15] );
 
     glm::mat4 mv = glm::mat4( modelview[0], modelview[1],  modelview[2],  modelview[3],
                               modelview[4], modelview[5],  modelview[6],  modelview[7],
@@ -77,7 +66,7 @@ FRViewJob::render( const float*  projection,
     glBindFramebuffer( GL_FRAMEBUFFER, fbo );
     glViewport( 0, 0, width, height );
 
-    const glm::vec4& bg = m_appearance.backgroundColor();
+    const glm::vec4& bg = m_renderconfig.backgroundColor();
     glClearColor( bg.r, bg.g, bg.b, bg.a );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable( GL_DEPTH_TEST );
@@ -94,136 +83,235 @@ FRViewJob::render( const float*  projection,
     try {
 
 
-        if( m_appearance.renderGrid() ) {
+        if( m_renderconfig.renderGrid() ) {
             m_grid_cube_renderer->setUnitCubeToObjectTransform( glm::value_ptr( m_local_from_world ) );
             m_grid_cube_renderer->render( projection, modelview );
         }
 
-        if( field_map.length() >= 3 && field_map.substr(0, 3) == "Log" ) {
-            log_map = true;
-        }
-
-        if( m_render_clip_plane && m_appearance.clipPlaneVisible() ) {
-            glBindFramebuffer( GL_FRAMEBUFFER, fbo );
-            glUseProgram( 0 );
-            glColor4fv( glm::value_ptr( m_appearance.clipPlaneColor() ) );
-            m_clip_plane->render( projection, modelview );
-        }
-
-
+        
         glBindFramebuffer( GL_FRAMEBUFFER, fbo );
         std::vector<render::RenderItem> items;
+
+        if( currentSourceItemValid() && m_render_clip_plane && m_renderconfig.clipPlaneVisible()) {
+            if( m_render_clip_plane && m_renderconfig.clipPlaneVisible() ) {
+                glBindFramebuffer( GL_FRAMEBUFFER, fbo );
+                glUseProgram( 0 );
+                glColor4fv( glm::value_ptr( m_renderconfig.clipPlaneColor() ) );
+                currentSourceItem()->m_clip_plane->render( projection, modelview );
+            }
+        }
+
+        glm::vec3 line_color = glm::vec3(0.0, 0.0, 0.0 );
         
-        if( m_appearance.renderWells() ) {
-            items.resize( items.size() + 1 );
-            items.back().m_renderer = render::RenderItem::RENDERER_WELL;
-            items.back().m_well = m_wells;
-        }
-
-        
-        
-        if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_FAULTS )  {
-            const glm::vec4& fc = m_appearance.faultsFillColor();
-            const glm::vec4& oc = m_appearance.faultsOutlineColor();
-            items.resize( items.size() + 1 );
-            items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
-            items.back().m_surf = m_faults_surface;
-            items.back().m_field = false;
-            items.back().m_line_thickness = m_appearance.lineThickness();
-            items.back().m_edge_color[0] = oc.r;
-            items.back().m_edge_color[1] = oc.g;
-            items.back().m_edge_color[2] = oc.b;
-            items.back().m_edge_color[3] = oc.a;
-            items.back().m_face_color[0] = fc.r;
-            items.back().m_face_color[1] = fc.g;
-            items.back().m_face_color[2] = fc.b;
-            items.back().m_face_color[3] = fc.a;
-        }
-        if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_SUBSET ) {
-            const glm::vec4& fc = m_appearance.subsetFillColor();
-            const glm::vec4& oc = m_appearance.subsetOutlineColor();
-            items.resize( items.size() + 1 );
-            items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
-            items.back().m_surf = m_subset_surface;
-            items.back().m_field = m_has_color_field;
-            items.back().m_field_log_map = log_map;
-            items.back().m_field_min = min;
-            items.back().m_field_max = max;
-            items.back().m_line_thickness =m_appearance.lineThickness();
-            items.back().m_edge_color[0] = oc.r;
-            items.back().m_edge_color[1] = oc.g;
-            items.back().m_edge_color[2] = oc.b;
-            items.back().m_edge_color[3] = oc.a;
-            items.back().m_face_color[0] = fc.r;
-            items.back().m_face_color[1] = fc.g;
-            items.back().m_face_color[2] = fc.b;
-            items.back().m_face_color[3] = fc.a;
-        }
-        if( m_visibility_mask & models::Appearance::VISIBILITY_MASK_BOUNDARY ) {
-            const glm::vec4& fc = m_appearance.boundaryFillColor();
-            const glm::vec4& oc = m_appearance.boundaryOutlineColor();
-            items.resize( items.size() + 1 );
-            items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
-            items.back().m_surf = m_boundary_surface;
-            items.back().m_field = m_has_color_field;
-            items.back().m_field_log_map = log_map;
-            items.back().m_field_min = min;
-            items.back().m_field_max = max;
-            items.back().m_line_thickness = m_appearance.lineThickness();
-            items.back().m_edge_color[0] = oc.r;
-            items.back().m_edge_color[1] = oc.g;
-            items.back().m_edge_color[2] = oc.b;
-            items.back().m_edge_color[3] = oc.a;
-            items.back().m_face_color[0] = fc.r;
-            items.back().m_face_color[1] = fc.g;
-            items.back().m_face_color[2] = fc.b;
-            items.back().m_face_color[3] = fc.a;
-        }
+        for(size_t i=0; i<m_source_items.size(); i++ ) {
+            boost::shared_ptr<SourceItem> source_item = m_source_items[i];
+            
+            bool log_map = false;
+            double min = 0.0;
+            double max = 0.0;
 
 
+            
+            if( source_item->m_grid_field ) {
+                min = source_item->m_grid_field->minValue();
+                max = source_item->m_grid_field->maxValue();
 
-        switch ( m_appearance.renderQuality() ) {
-        case 0:
-            if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyNone)) )
+                if( !source_item->m_color_map ) {
+                    // FIXME: Sometimes this happens, haven't tracked down
+                    // exactly why yet.
+                    if( m_color_maps ) {
+                        source_item->m_color_map = m_color_maps;
+                    }
+                    else {
+                        LOGGER_ERROR( log, "There is no color map!" );
+                    }
+                }
+            }
+
+            if( source_item->m_appearance_data == NULL ) {
+                LOGGER_ERROR( log, "Source item " << i << " has no appearance data" );
+                continue;
+            }
+
+            const models::AppearanceData& ap = *source_item->m_appearance_data;
+                
+            log_map = ap.colorMapType() == models::AppearanceData::COLORMAP_LOGARITMIC;
+            if( ap.colorMapFixed() ) {
+                min = ap.colorMapFixedMin();
+                max = ap.colorMapFixedMax();
+            }
+            
+            if( m_renderconfig.renderWells() ) {
+                items.resize( items.size() + 1 );
+                items.back().m_renderer = render::RenderItem::RENDERER_WELL;
+                items.back().m_well = source_item->m_wells;
+            }
+            
+            bool emit_fault_surface = false;
+            if( source_item->m_faults_surface
+                    && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_FAULTS ) )
             {
-                m_screen_manager.reset( new render::screen::TransparencyNone );
+                const glm::vec3 fc = ap.faultsColor();
+
+                items.resize( items.size() + 1 );
+                items.back().m_mesh = source_item->m_grid_tess;
+                items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
+                items.back().m_surf = source_item->m_faults_surface;
+                items.back().m_line_thickness = m_renderconfig.lineThickness();
+                items.back().m_edge_color[0] = line_color.r;
+                items.back().m_edge_color[1] = line_color.g;
+                items.back().m_edge_color[2] = line_color.b;
+                items.back().m_edge_color[3] = ap.faultsOutlineAlpha();
+                items.back().m_face_color[0] = fc.r;
+                items.back().m_face_color[1] = fc.g;
+                items.back().m_face_color[2] = fc.b;
+                items.back().m_face_color[3] = ap.faultsFillAlpha();
+                emit_fault_surface = true;
+            }
+
+            bool emit_subset_surface = false;
+            if( source_item->m_subset_surface
+                    && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_SUBSET ) )
+            {
+                const glm::vec3 fc = ap.subsetColor();
+
+                items.resize( items.size() + 1 );
+                items.back().m_mesh = source_item->m_grid_tess;
+                items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
+                items.back().m_surf = source_item->m_subset_surface;
+                items.back().m_field = source_item->m_grid_field;
+                items.back().m_field_log_map = log_map;
+                items.back().m_color_map = source_item->m_color_map;
+                items.back().m_field_min = min;
+                items.back().m_field_max = max;
+                items.back().m_line_thickness =m_renderconfig.lineThickness();
+                items.back().m_edge_color[0] = line_color.r;
+                items.back().m_edge_color[1] = line_color.g;
+                items.back().m_edge_color[2] = line_color.b;
+                items.back().m_edge_color[3] = ap.subsetOutlineAlpha();
+                items.back().m_face_color[0] = fc.r;
+                items.back().m_face_color[1] = fc.g;
+                items.back().m_face_color[2] = fc.b;
+                items.back().m_face_color[3] = ap.subsetFillAlpha();
+
+                emit_subset_surface = true;
+            }
+
+            bool emit_boundary_surface = false;
+            if( source_item->m_boundary_surface
+                    && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_BOUNDARY ) )
+            {
+                const glm::vec3 fc = ap.boundaryColor();
+
+                items.resize( items.size() + 1 );
+                items.back().m_mesh = source_item->m_grid_tess;
+                items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
+                items.back().m_surf = source_item->m_boundary_surface;
+                items.back().m_field = source_item->m_grid_field;
+                items.back().m_color_map = source_item->m_color_map;
+                items.back().m_field_log_map = log_map;
+                items.back().m_field_min = min;
+                items.back().m_field_max = max;
+                items.back().m_line_thickness = m_renderconfig.lineThickness();
+                items.back().m_edge_color[0] = line_color.r;
+                items.back().m_edge_color[1] = line_color.g;
+                items.back().m_edge_color[2] = line_color.b;
+                items.back().m_edge_color[3] = ap.boundaryOutlineAlpha();
+                items.back().m_face_color[0] = fc.r;
+                items.back().m_face_color[1] = fc.g;
+                items.back().m_face_color[2] = fc.b;
+                items.back().m_face_color[3] = ap.boundaryFillAlpha();
+                emit_boundary_surface = true;
+            }
+
+            if( m_under_the_hood.debugFrame() ) {
+                std::stringstream o;
+                o << "Source item " << i << " (name=" << source_item->m_source->name() << "):\n";
+                o << "    mesh             = " << source_item->m_grid_tess << "\n";
+                o << "    field            = " << source_item->m_grid_field << "\n";
+                o << "    color map        = " << source_item->m_color_map << "\n";
+                o << "    color map type   = " << (ap.colorMapType() == models::AppearanceData::COLORMAP_LOGARITMIC ? "logaritmic" : "linear" ) << "\n";
+                o << "    color map fixed  = " << (ap.colorMapFixed()?"yes":"no") << "\n";
+                o << "    render wells     = " << (m_renderconfig.renderWells()?"yes":"no") << "\n";
+                o << "    fault surface    = " << (emit_fault_surface?"yes":"no") << "\n";
+                o << "    subset surface   = " << (emit_subset_surface?"yes":"no") << "\n";
+                o << "    boundary surface = " << (emit_boundary_surface?"yes":"no");// << "\n";
+                LOGGER_DEBUG( log, o.str() );
+            }
+
+        }
+        
+        if( m_under_the_hood.debugFrame() ) {
+            for( size_t i=0; i<items.size(); i++ ) {
+                const render::RenderItem& ri = items[i];
+                std::stringstream o;
+                o << "Render item " << i << ":\n";
+                o << "    mesh      = " << ri.m_mesh << "\n";
+                o << "    field     = " << ri.m_field << "\n";
+                o << "    color map = " << ri.m_color_map << "\n";
+                o << "    field min = " << ri.m_field_min << "\n";
+                o << "    field max = " << ri.m_field_max;// << "\n";
+                LOGGER_DEBUG( log, o.str() );
+            }
+        }
+        
+        switch ( m_renderconfig.renderQuality() ) {
+        case 0:
+            if( (!m_screen_manager)
+                    || (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyNone))
+                    || m_screen_manager->expired( m_renderconfig ) )
+            {
+                m_screen_manager.reset( new render::manager::TransparencyNone( m_renderconfig,
+                                                                               width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;
         case 1:
-            if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyAdditive)) )
+            if( (!m_screen_manager)
+                    || (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyAdditive))
+                    || m_screen_manager->expired( m_renderconfig ) )
             {
-                m_screen_manager.reset( new render::screen::TransparencyAdditive( width, height ) );
+                m_screen_manager.reset( new render::manager::TransparencyAdditive( m_renderconfig,
+                                                                                   width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;
         case 2:
+            if( (!m_screen_manager)
+                    || (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyWeightedAverage))
+                    || m_screen_manager->expired( m_renderconfig ) )
+            {
+                m_screen_manager.reset( new render::manager::TransparencyWeightedAverage( m_renderconfig,
+                                                                                          width, height ) );
+                LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
+            }
+            break;
         case 3:
         default:
-            if( (!m_screen_manager) ||
-                    (typeid(*m_screen_manager.get()) != typeid(render::screen::TransparencyWeightedAverage)) )
+            if( (!m_screen_manager)
+                    || (typeid(*m_screen_manager.get()) != typeid(render::manager::OrderIndependentTransparency))
+                    || m_screen_manager->expired( m_renderconfig ) )
             {
-                m_screen_manager.reset( new render::screen::TransparencyWeightedAverage( width, height ) );
+                m_screen_manager.reset( new render::manager::OrderIndependentTransparency( m_renderconfig,
+                                                                                           width, height ) );
                 LOGGER_DEBUG( log, "Created " << typeid(*m_screen_manager.get()).name() );
             }
             break;
         }
+        if( m_under_the_hood.debugFrame() ) {
+            LOGGER_DEBUG( log, "Render manager type : " << (typeid(*m_screen_manager.get())).name() );
+        }
+
         m_screen_manager->render( fbo,
                                   width,
                                   height,
                                   glm::value_ptr( m_local_to_world ),
                                   glm::value_ptr( mv ),
                                   projection,
-                                  m_grid_tess,
-                                  m_grid_field,
                                   items);
         
-
         glViewport( 0, 0, 0.1*width, 0.1*height );
         m_coordsys_renderer->render( glm::value_ptr( mv ), 0.1*width, 0.1*height);
-
     }
     catch( std::runtime_error& e ) {
         LOGGER_ERROR( log, "While rendering: " << e.what() );

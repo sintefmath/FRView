@@ -20,8 +20,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "dataset/PolyhedralMeshSource.hpp"
-#include "render/GridTessBridge.hpp"
-#include "render/GridFieldBridge.hpp"
+#include "bridge/PolyhedralMeshBridge.hpp"
+#include "bridge/FieldBridge.hpp"
 
 namespace {
 
@@ -82,31 +82,49 @@ struct HalfPolygon
 
 namespace dataset {
 
-template<typename Tessellation>
+PolyhedralMeshSource::PolyhedralMeshSource( const std::string&                  name,
+                                            std::vector<float>&                 vertices,
+                                            std::vector<int>&                   indices,
+                                            std::vector<int>&                   polygons,
+                                            std::vector<int>&                   cells,
+                                            std::vector<std::string>&           cell_field_name,
+                                            std::vector< std::vector<float> >&  cell_field_data )
+    : m_name( name )
+{
+    m_vertices.swap( vertices );
+    m_indices.swap( indices );
+    m_polygons.swap( polygons );
+    m_cells.swap( cells );
+    m_cell_field_name.swap( cell_field_name );
+    m_cell_field_data.swap( cell_field_data );
+}
+
 void
-PolyhedralMeshSource::tessellation( Tessellation& tessellation,
-                                    boost::shared_ptr<tinia::model::ExposedModel> model )
+PolyhedralMeshSource::geometry( Tessellation&                                  geometry_bridge,
+                                boost::shared_ptr<tinia::model::ExposedModel>  model,
+                                const std::string&                             progress_description_key,
+                                const std::string&                             progress_counter_key )
 {
     Logger log = getLogger( "dataset.PolyhedralMeshSource.tessellation" );
     
     typedef float                               SrcReal;
-    typedef typename Tessellation::Real         Real;
-    typedef typename Tessellation::Index        Index;
-    typedef typename Tessellation::Real4        Real4;
-    typedef typename Tessellation::Orientation  Orientation;
-    typedef typename Tessellation::Segment      Segment;
-    typedef typename Tessellation::Interface    Interface;
+    typedef Tessellation::Real         Real;
+    typedef Tessellation::Index        Index;
+    typedef Tessellation::Real4        Real4;
+    typedef Tessellation::Orientation  Orientation;
+    typedef Tessellation::Segment      Segment;
+    typedef Tessellation::Interface    Interface;
     static const Orientation ORIENTATION_I = Tessellation::ORIENTATION_I;
     static const Orientation ORIENTATION_J = Tessellation::ORIENTATION_J;
     static const Orientation ORIENTATION_K = Tessellation::ORIENTATION_K;
     static const Index IllegalIndex = (~(Index)0u);
 
-    model->updateElement<std::string>( "asyncreader_what", "Tetra!" );
-    model->updateElement<int>( "asyncreader_progress", 0 );
+    model->updateElement<std::string>( progress_description_key, "Tetra!" );
+    model->updateElement<int>( progress_counter_key, 0 );
 
     // copy vertices
     for(size_t i=0; i<m_vertices.size(); i+=3 ) {
-        tessellation.addVertex( Real4( m_vertices[i+0],
+        geometry_bridge.addVertex( Real4( m_vertices[i+0],
                                        m_vertices[i+1],
                                        m_vertices[i+2] ) );
     }
@@ -125,7 +143,7 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
     
     // Populate cell_corners and indices
     
-    tessellation.setCellCount( m_cells.size()-1 );
+    geometry_bridge.setCellCount( m_cells.size()-1 );
     for(Index c=0; (c+1)<m_cells.size(); c++ ) {
         Index p_o = m_cells[c];
         Index p_n = m_cells[c+1]-p_o;
@@ -168,10 +186,10 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
 
         // remove duplicate cell vertex indices        
         std::sort( cell_corners.begin(), cell_corners.end() );
-        typename std::vector<Index>::iterator it = std::unique( cell_corners.begin(), cell_corners.end() );
+        std::vector<Index>::iterator it = std::unique( cell_corners.begin(), cell_corners.end() );
         cell_corners.resize( std::distance( cell_corners.begin(), it ) );
         
-        tessellation.setCell( c, c,
+        geometry_bridge.setCell( c, c,
                               cell_corners[0],
                               cell_corners[1 % cell_corners.size() ],
                               cell_corners[2 % cell_corners.size() ],
@@ -197,6 +215,8 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
     std::sort( half_polygons.begin(), half_polygons.end() );
 
     // step 2: find matching half-polygons
+    int orientation_mismatch_warnings=0;
+    
     
     size_t iface_i = 0;
     size_t iface_b = 0;
@@ -214,7 +234,7 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
         glm::vec3 c = glm::make_vec3( m_vertices.data() + 3*half_polygons[j].m_indices[2] );
         glm::vec3 n = glm::normalize( glm::cross( b-a, c-a ) );
 
-        Index n_ix = tessellation.addNormal( Real4( n.x, n.y, n.z ) );
+        Index n_ix = geometry_bridge.addNormal( Real4( n.x, n.y, n.z ) );
         
         Orientation orientation = ORIENTATION_I;
         if( glm::abs(n.y) > glm::abs(n.x) ) {
@@ -249,22 +269,74 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
                 interface = Interface( IllegalIndex, half_polygons[j].m_cell, orientation );
             }
             iface_b++;
-            tessellation.addPolygon( interface, segments.data(), segments.size() );
+            geometry_bridge.addPolygon( interface, segments.data(), segments.size() );
         }
         else if( i == j+2 ) {
             // interior face
+
+            
             if( half_polygons[j].m_side == half_polygons[j+1].m_side ) {
-                LOGGER_WARN( log, "Inconsistent mesh face." );
-                continue;
+                orientation_mismatch_warnings++;
+
+                // faces are mis-matched, warn and choose arbitrarily.
+
+                if( orientation_mismatch_warnings <= 100 ) {
+                    std::stringstream dbg;
+                    
+                    dbg << " (offending face = { ";
+                    for(int q=0; q<half_polygons[j+0].m_n; q++ ) {
+                        if( q != 0 ) {
+                            dbg << ", ";
+                        }
+                        dbg << half_polygons[j+0].m_indices[q];
+                    }
+                    dbg << "})";
+                    for(int l=0; l<2; l++ ) {
+                        Index c =  half_polygons[j+l].m_cell;
+                        dbg << "\n\tcell " << c << " = ";
+                        Index p_o = m_cells[c];
+                        Index p_n = m_cells[c+1]-p_o;
+                        dbg << "{ ";
+                        for(Index p=0; p<p_n; p++ ) {
+                            Index i_o = m_polygons[p_o+p];
+                            Index i_n = m_polygons[p_o+p+1]-i_o;
+                            if( p!=0 ) {
+                                dbg << ", ";
+                            }
+                            dbg << "{ ";
+                            for(Index i=0; i<i_n; i++ ) {
+                                if( i!=0 ) {
+                                    dbg << ", ";
+                                }
+                                dbg << m_indices[i_o+i];
+                            }
+                            dbg << "}";
+                        }
+                        dbg << "}";
+                    }
+                    if( orientation_mismatch_warnings == 100 ) {
+                        dbg << "\n\t... and so on, suppressing further warnings of this type.";
+                    }
+                    
+                    
+                    LOGGER_WARN( log, "Inconsistently oriented mesh face between cells "
+                                 << half_polygons[j].m_cell << " and "
+                                 << half_polygons[j+1].m_cell << dbg.str() );
+                    
+                }
+                
+                interface = Interface( half_polygons[j].m_cell, half_polygons[j+1].m_cell, orientation );
+                //j=i;
+                //continue;
             }
-            if( half_polygons[j].m_side == false ) {
+            else if( half_polygons[j].m_side == false ) {
                 interface = Interface( half_polygons[j].m_cell, half_polygons[j+1].m_cell, orientation );
             }
             else {
                 interface = Interface( half_polygons[j+1].m_cell, half_polygons[j].m_cell, orientation );
             }
             iface_i++;
-            tessellation.addPolygon( interface, segments.data(), segments.size() );
+            geometry_bridge.addPolygon( interface, segments.data(), segments.size() );
         }
         else {
             // non-manifold face
@@ -280,31 +352,60 @@ PolyhedralMeshSource::tessellation( Tessellation& tessellation,
 
 }
 
-template void PolyhedralMeshSource::tessellation< render::GridTessBridge >( render::GridTessBridge& tessellation,
-boost::shared_ptr<tinia::model::ExposedModel> model );
 
-
-template<typename Field>
-void
-PolyhedralMeshSource::field( Field& field, const size_t index ) const
+bool
+PolyhedralMeshSource::validFieldAtTimestep( size_t field_index, size_t timestep_index ) const
 {
-    if( field.count() != m_cell_field_data[ index ].size() ) {
-        throw std::runtime_error( "element count mismatch" );
+    if( timestep_index == 0 ) {
+        if( field_index < m_cell_field_data.size() ) {
+            return true;
+        }
     }
-    if( m_cell_field_data[ index ].empty() ) {
+    return false;
+}
+
+void
+PolyhedralMeshSource::field( boost::shared_ptr<Field>  bridge,
+       const size_t              field_index,
+       const size_t              timestep_index ) const
+{
+    bridge->init( m_cell_field_data[ field_index ].size() );
+    
+    if( m_cell_field_data[ field_index ].empty() ) {
         // nothing to do
         return;
     }
-    field.minimum() = m_cell_field_data[ index ][0];
-    field.maximum() = m_cell_field_data[ index ][0];
-    for( size_t i=0; i<m_cell_field_data[ index ].size(); i++ ) {
-        typename Field::REAL v = m_cell_field_data[ index ][i];
-        field.minimum() = std::min( field.minimum(), v );
-        field.maximum() = std::max( field.minimum(), v );
-        field.values()[i] = v;
+    
+    float* ptr = bridge->values();
+    float minimum = m_cell_field_data[ field_index ][0];
+    float maximum = m_cell_field_data[ field_index ][0];
+    for( size_t i=0; i<m_cell_field_data[ field_index ].size(); i++ ) {
+        float v = m_cell_field_data[ field_index ][i];
+        minimum = std::min( minimum, v );
+        maximum = std::max( maximum, v );
+        ptr[i] = v;
+    }
+    bridge->setMinimum( minimum );
+    bridge->setMaximum( maximum );
+}
+
+
+int
+PolyhedralMeshSource::indexDim() const
+{
+    return 1;
+}
+
+int
+PolyhedralMeshSource::maxIndex( int dimension ) const
+{
+    if( dimension == 0 ) {
+        return std::max(1,(int)m_cells.size())-1;
+    }
+    else {
+        return 0;
     }
 }
 
-template void PolyhedralMeshSource::field<render::GridFieldBridge>( render::GridFieldBridge&, const size_t ) const;
 
 } // of namespace input

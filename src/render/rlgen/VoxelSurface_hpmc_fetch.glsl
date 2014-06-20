@@ -16,11 +16,11 @@
  */
 
 #ifndef VOXEL_SAMPLER_DEFINED
-uniform usampler3D voxels;
+uniform sampler3D voxels;
 #endif
 
 float
 HPMC_fetch( vec3 p )
 {
-    return float(texture( voxels, p ).r > 0u );
+    return float(texture( voxels, p ).a > 0u );
 }

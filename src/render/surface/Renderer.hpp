@@ -24,7 +24,9 @@
 #include "render/ManagedGL.hpp"
 
 namespace render {
-    class GridTess;
+    namespace mesh {
+        class AbstractMeshGPUModel;
+    }
     class GridField;
     namespace surface {
 
@@ -32,16 +34,17 @@ namespace render {
 class Renderer
 {
 public:
-    Renderer( const std::string& fragment_source );
+    Renderer( const std::string& defines, const std::string& fragment_source );
     
     void
-    draw( const GLfloat*                                        modelview,
-          const GLfloat*                                        projection,
-          const GLsizei                                         width,
-          const GLsizei                                         height,
-          const boost::shared_ptr<const GridTess>               tess,
-          const boost::shared_ptr<const GridField>              field,
-          const std::vector<RenderItem>&  render_items );
+    draw( const GLfloat*                            modelview,
+          const GLfloat*                            projection,
+          const GLsizei                             width,
+          const GLsizei                             height,
+          //const boost::shared_ptr<const mesh::AbstractMeshGPUModel>   mesh,
+          //const boost::shared_ptr<const GridField>  field,
+          //GLTexture&                                color_map,
+          const std::vector<RenderItem>&            render_items );
 
     GLProgram&
     program() { return m_main; }

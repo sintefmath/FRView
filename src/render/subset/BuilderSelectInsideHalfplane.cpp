@@ -15,9 +15,16 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "render/GridTess.hpp"
+#include <string>
+#include "utils/Logger.hpp"
+#include "render/mesh/CellSetInterface.hpp"
+#include "render/mesh/VertexPositionInterface.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/subset/BuilderSelectInsideHalfplane.hpp"
+
+namespace {
+    const std::string package = "render.subset.BuilderSelectInsideHalfplane";
+}
 
 namespace render {
     namespace subset {
@@ -36,17 +43,25 @@ BuilderSelectInsideHalfplane::BuilderSelectInsideHalfplane()
 }
 
 void
-BuilderSelectInsideHalfplane::apply(boost::shared_ptr<Representation> tess_subset,
-                          boost::shared_ptr<const GridTess> tess,
-                          const float *equation )
+BuilderSelectInsideHalfplane::apply( boost::shared_ptr<Representation>                cell_subset,
+                                     boost::shared_ptr<const mesh::CellSetInterface>  cell_set,
+                                     const float*                                     equation )
 {
+    boost::shared_ptr<const mesh::VertexPositionInterface> vertices =
+            boost::dynamic_pointer_cast<const mesh::VertexPositionInterface>( cell_set );
+    if( !vertices ) {
+        Logger log = getLogger( package + ".apply" );
+        LOGGER_ERROR( log, "cell set does not implement VertexPositionInterface." );
+        return;
+    }
+    
     glUseProgram( m_program );
     glUniform4fv( m_loc_halfplane_eq, 1, equation );
     glActiveTexture( GL_TEXTURE0 );
-    glBindTexture( GL_TEXTURE_BUFFER, tess->vertexPositionsAsBufferTexture() );
+    glBindTexture( GL_TEXTURE_BUFFER, vertices->vertexPositionsAsBufferTexture() );
     glActiveTexture( GL_TEXTURE1 );
-    glBindTexture( GL_TEXTURE_BUFFER, tess->cellCornerTexture() );
-    tess_subset->populateBuffer( tess );
+    glBindTexture( GL_TEXTURE_BUFFER, cell_set->cellCornerTexture() );
+    cell_subset->populateBuffer( cell_set );
     glUseProgram( 0 );
     glActiveTexture( GL_TEXTURE1 );
     glBindTexture( GL_TEXTURE_BUFFER, 0 );

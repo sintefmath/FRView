@@ -22,7 +22,7 @@
 #include "render/ManagedGL.hpp"
 
 namespace render {
-    class GridTess;
+    //class GridTess;
     namespace subset {
         class Representation;
     }
@@ -44,7 +44,7 @@ public:
 
     /** Returns the buffer name to triangle cornerpoint index buffer. */
     GLuint
-    triangleCornerpointIndexBuffer() const { return m_cornerpoint_index_buffer.get(); }
+    triangleCornerpointIndexBuffer() const { return m_vertex_ix_buf.get(); }
 
     /** Returns the number of triangles in surface. */
     GLsizei
@@ -75,16 +75,15 @@ public:
      * \param tri_cell_index     Transform feedback binding point index.
      * \param tri_indices_index  Transform feedback binding point index.
      */
+#if 0
     void
     populateTriangleBuffer( const GridTess*        tess,
                             GLuint                 tri_cell_index    = 0u,
                             GLuint                 tri_indices_index = 1u );
-
+#endif
+    
     void
-    populatePolygonBuffer( const GridTess*        tess,
-                           GLsizei                N,
-                            GLuint                 tri_cell_index    = 0u,
-                            GLuint                 tri_indices_index = 1u );
+    populatePolygonBuffer( GLsizei                N);
 
     /** Sets the triangle count for this surface.
      *
@@ -105,9 +104,33 @@ public:
 protected:
     GLsizei             m_count;                    ///< The actual number of triangles in buffers.
     GLsizei             m_alloc;                    ///< The number of triangles that the buffer may hold.
-    GLBuffer            m_cell_buffer;              ///< Buffer with cell id + normal vector ix (uvec4).
-    GLTexture           m_cell_texture;             ///< Buffer texture for m_cell_buffer.
-    GLBuffer            m_cornerpoint_index_buffer; ///< Corner indices for triangles (uvec3).
+    /** Per triangle cell index and normal vector indices (one uvec4 per triangle).
+     *
+     * Component encoding:
+     * - Component X:
+     *     - Bits 0..29:  Cell index.
+     *     - Bit 30:      Two-sided lighting, flip normals towards eye. Used for
+     *                    surfaces that do not enclose volumes.
+     *     - Bit 31:      Flip orientation and reverse normal.
+     * - Component Y:
+     *     - Bits 0..27:  Normal vector index.
+     *     - Bits 28..29: Unused and ignored
+     *     - Bit 31:      Draw an edge from corner 0 to corner 1 of triangle.
+     * - Component Z:
+     *     - Similar to component Y, but bit 31 encodes edge drawing crom corner
+     *       1 to corner 2.
+     * - Component W:
+     *     - Similar to component Y, but bit 31 encodes edge drawing crom corner
+     *       2 to corner 0.
+     */
+    GLBuffer            m_cell_buffer;
+
+    /** Buffer texture view of \ref m_cell_buffer. */
+    GLTexture           m_cell_texture;
+
+    /** Vertex indices for triangles (one uvec3 per triangle). */
+    GLBuffer            m_vertex_ix_buf;
+
     GLQuery             m_indices_count_qry;        ///< Query object used to count primitives written.
     GLTransformFeedback m_indices_xfb;
 };

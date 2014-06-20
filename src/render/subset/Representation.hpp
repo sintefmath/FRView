@@ -23,9 +23,10 @@
 #include "render/ManagedGL.hpp"
 
 namespace render {
-  
+    namespace mesh {
+        class CellSetInterface;
+    }
 
-class GridTess;
     namespace subset {
 
 /** GPU representation of a subset of the cells in a \ref GridTess.
@@ -62,7 +63,8 @@ public:
      * To be invoked by \ref CellSelector derivatives.
      */
     void
-    populateBuffer( boost::shared_ptr<const GridTess> tess, GLuint transform_feedback_index = 0u );
+    populateBuffer( boost::shared_ptr<const render::mesh::CellSetInterface> cell_set,
+                    GLuint transform_feedback_index = 0u );
 
 private:
     GLsizei             m_cells_total;              ///< Number of cells in GridTess.

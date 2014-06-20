@@ -19,166 +19,237 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "dataset/Project.hpp"
+#include "dataset/CornerpointGrid.hpp"
+#include "dataset/PolyhedralDataInterface.hpp"
+#include "dataset/PolygonDataInterface.hpp"
+#include "dataset/FieldDataInterface.hpp"
 #include "job/FRViewJob.hpp"
 #include "utils/Logger.hpp"
 #include "ASyncReader.hpp"
 #include "eclipse/EclipseReader.hpp"
-#include "render/GridTess.hpp"
+#include "render/mesh/PolygonMeshGPUModel.hpp"
+#include "render/mesh/PolyhedralMeshGPUModel.hpp"
 #include "render/GridField.hpp"
-#include "render/GridTessBridge.hpp"
+#include "bridge/PolygonMeshBridge.hpp"
+#include "bridge/PolyhedralMeshBridge.hpp"
 #include "render/TextRenderer.hpp"
 #include "render/wells/Renderer.hpp"
 #include "render/wells/Representation.hpp"
+#include "render/GridField.hpp"
+#include "render/ClipPlane.hpp"
+#include "render/GridCubeRenderer.hpp"
+#include "render/TextRenderer.hpp"
+#include "render/wells/Representation.hpp"
+#include "render/wells/Renderer.hpp"
+#include "render/CoordSysRenderer.hpp"
+#include "render/surface/GridTessSurf.hpp"
+#include "render/surface/GridTessSurfBuilder.hpp"
+#include "render/subset/Representation.hpp"
+#include "models/SubsetSelector.hpp"
+
+using boost::shared_ptr;
+using boost::dynamic_pointer_cast;
+
+using dataset::AbstractDataSource;
+using bridge::AbstractMeshBridge;
+using bridge::PolygonMeshBridge;
+using bridge::PolyhedralMeshBridge;
+using render::mesh::PolygonMeshGPUModel;
+using render::mesh::PolyhedralMeshGPUModel;
+
+namespace {
+const std::string package = "FRViewJob";
+}
+
+
+
+void
+FRViewJob::handleFetchSource()
+{
+    Logger log = getLogger( package + ".handleFetchSource" );
+    // Try to get source
+    shared_ptr< AbstractDataSource > source;
+    std::string source_file;
+    shared_ptr< AbstractMeshBridge > mesh_bridge;
+    if( !m_async_reader->getSource( source, source_file, mesh_bridge ) ) {
+        return; // Nothing.
+    }
+
+
+    shared_ptr<PolyhedralMeshBridge> polyhedral_bridge =
+            dynamic_pointer_cast<PolyhedralMeshBridge>( mesh_bridge );
+
+    shared_ptr<PolygonMeshBridge> polygon_bridge =
+            dynamic_pointer_cast<PolygonMeshBridge>( mesh_bridge );
+
+    
+    if( polyhedral_bridge ) {
+        LOGGER_DEBUG( log, "Adding polyhedral mesh (source " << m_source_items.size() << ")." );
+        
+        shared_ptr<PolyhedralMeshGPUModel> gpu_polyhedronmesh( new PolyhedralMeshGPUModel );
+        gpu_polyhedronmesh->update( *polyhedral_bridge );
+
+        addSource( source, source_file, gpu_polyhedronmesh );
+    }
+
+    else if( polygon_bridge ) {
+        LOGGER_DEBUG( log, "Adding polygon mesh (source " << m_source_items.size() << ")." );
+
+        shared_ptr<PolygonMeshGPUModel> gpu_polygonmesh( new PolygonMeshGPUModel );
+        gpu_polygonmesh->update( polygon_bridge );
+
+        addSource( source, source_file, gpu_polygonmesh );
+    }
+    
+
+}
+
+void
+FRViewJob::issueFieldFetch()
+{
+    Logger log = getLogger( package + ".issueFieldFetch" );
+
+
+    if( currentSourceItemValid() ) {
+        boost::shared_ptr<SourceItem> si = currentSourceItem();
+
+        shared_ptr<dataset::FieldDataInterface> fielddata
+                = dynamic_pointer_cast<dataset::FieldDataInterface>( si->m_source );
+        if( fielddata && (si->m_field_current >= 0) ) {
+
+            // TODO: check for mismatch with current field
+
+            if( fielddata->validFieldAtTimestep( si->m_field_current,
+                                                 si->m_timestep_current ) )
+            {
+                m_async_reader->issueFetchField( si->m_source,
+                                                 si->m_field_current,
+                                                 si->m_timestep_current );
+                LOGGER_DEBUG( log, "issued field fetch field=" << si->m_field_current
+                              << ", timestep=" << si->m_timestep_current
+                              << " [source=" << si->m_source->name() << "]" );
+            }
+            else {
+                LOGGER_DEBUG( log, "field not valid [source=" << si->m_source->name() << "]" );
+            }
+        }
+        else {
+            LOGGER_DEBUG( log, "No field data [source=" << si->m_source->name() << "]" );
+        }
+    }
+    else {
+        LOGGER_WARN( log, "current source item is invalid." );
+    }
+}
+
+
+void
+FRViewJob::handleFetchField()
+{
+    Logger log = getLogger( package + ".handleFetchField" );
+    using render::GridField;
+    using render::mesh::CellSetInterface;
+    
+
+    shared_ptr<const dataset::AbstractDataSource> source;
+    shared_ptr<bridge::FieldBridge> bridge;
+    size_t field_index, timestep_index;
+    if( !m_async_reader->getField( source, field_index, timestep_index, bridge ) ) {
+        LOGGER_DEBUG( log, "no data." );
+        return; // Nothing
+    }
+    
+    for( size_t i=0; i<m_source_items.size(); i++ ) {
+        
+        // --- find matching source item ---------------------------------------
+        if( (m_source_items[i]->m_source == source)
+                && (m_source_items[i]->m_field_current == (int)field_index )
+                && (m_source_items[i]->m_timestep_current == (int)timestep_index ) )
+        {
+            boost::shared_ptr<SourceItem> si = m_source_items[i];
+
+            si->m_do_update_renderlist = true;
+
+            if( bridge ) {
+                si->m_grid_field.reset(  new render::GridField( boost::dynamic_pointer_cast<render::mesh::CellSetInterface>( si->m_grid_tess ) ) );
+                si->m_grid_field->import( bridge, field_index, timestep_index );
+                LOGGER_DEBUG( log, "Imported field [source='" << source->name() << "']" );
+            }
+            else {
+                si->m_grid_field.reset();   // no data
+                LOGGER_DEBUG( log, "Cleared field [source='" << source->name() << "']" );
+            }
+
+            si->m_wells->clear();
+            if( m_renderconfig.renderWells() ) {
+                shared_ptr<dataset::WellDataInterace> well_source =
+                        dynamic_pointer_cast<dataset::WellDataInterace>( si->m_source );
+                if( well_source ) {
+                    std::vector<float> colors;
+                    std::vector<float> positions;
+                    for( unsigned int w=0; w<well_source->wellCount(); w++ ) {
+                        if( !well_source->wellDefined( si->m_timestep_current, w ) ) {
+                            continue;
+                        }
+                        si->m_wells->addWellHead( well_source->wellName(w),
+                                                  well_source->wellHeadPosition( si->m_timestep_current, w ) );
+                        
+                        positions.clear();
+                        colors.clear();
+                        const unsigned int bN = well_source->wellBranchCount( si->m_timestep_current, w );
+                        for( unsigned int b=0; b<bN; b++ ) {
+                            const std::vector<float>& p = well_source->wellBranchPositions( si->m_timestep_current, w, b );
+                            if( p.empty() ) {
+                                continue;
+                            }
+                            for( size_t i=0; i<p.size(); i+=3 ) {
+                                positions.push_back( p[i+0] );
+                                positions.push_back( p[i+1] );
+                                positions.push_back( p[i+2] );
+                                colors.push_back( ((i & 0x1) == 0) ? 1.f : 0.5f );
+                                colors.push_back( ((i & 0x2) == 0) ? 1.f : 0.5f );
+                                colors.push_back( ((i & 0x4) == 0) ? 1.f : 0.5f );
+                            }
+                            si->m_wells->addSegments( positions, colors );
+                        }
+                    }
+                }
+
+                m_subset_selector.sourceFieldHasChanged( m_source_items[i] );
+            }
+            
+            updateCurrentFieldData();
+            return;
+        }
+    }
+    LOGGER_DEBUG( log, "unable to find matching request" );
+}
 
 
 void
 FRViewJob::fetchData()
 {
-    Logger log = getLogger( "CPViewJob.doCompute" );
-
-    // import geometry
-    if( m_load_geometry ) {
-
-        boost::shared_ptr< dataset::Project<float> > project;
-        boost::shared_ptr< render::GridTessBridge > tess_bridge;
-        if( m_async_reader->getProject( project, tess_bridge ) ) {
-            if( !m_has_pipeline ) {
-                if(!setupPipeline()) {
-                    return;
-                }
-            }
-            m_load_geometry = false;
-            m_project = project;
-            m_grid_tess->update( *tess_bridge );
-
-            // update state variables
-            m_load_geometry = false;
-            m_do_update_subset = true;
-            m_load_color_field = true;
-            m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
-
-            // --- update model variables --------------------------------------
-            m_model->updateElement<bool>("has_project", true );
-
-            // --- solution list
-            std::list<std::string> solutions;
-            if( m_project->solutions() == 0 ) {
-                solutions.push_back( "[none]" );
-            }
-            else {
-                for(unsigned int i=0; i<m_project->solutions(); i++ ) {
-                    solutions.push_back( m_project->solutionName(i) );
-                }
-            }
-            m_model->updateRestrictions( "field_solution", solutions.front(), solutions );
-            m_model->updateRestrictions( "field_select_solution", solutions.front(), solutions );
-
-            // --- report steps
-            int reportstep_max = std::max( 1u, m_project->reportSteps() )-1u;
-            m_model->updateConstraints<int>("field_report_step", 0,0,  reportstep_max );
-            m_model->updateConstraints<int>( "field_select_report_step", 0, 0, reportstep_max );
-
-            const unsigned int nx = m_project->nx();
-            const unsigned int ny = m_project->ny();
-            const unsigned int nz = m_project->nz();
-            int nx_max = std::max( 1u, nx ) - 1u;
-            int ny_max = std::max( 1u, ny ) - 1u;
-            int nz_max = std::max( 1u, nz ) - 1u;
-            m_model->updateConstraints<int>( "index_range_select_min_i", 0, 0, nx_max );
-            m_model->updateConstraints<int>( "index_range_select_max_i", nx_max, 0, nx_max );
-            m_model->updateConstraints<int>( "index_range_select_min_j", 0, 0, ny_max );
-            m_model->updateConstraints<int>( "index_range_select_max_j", ny_max, 0, ny_max );
-            m_model->updateConstraints<int>( "index_range_select_min_k", 0, 0, nz_max );
-            m_model->updateConstraints<int>( "index_range_select_max_k", nz_max, 0, nz_max );
-
-            m_grid_stats.update( m_project, m_grid_tess );
-
-
-            m_do_update_subset = true;
-
-            if( m_renderlist_state == RENDERLIST_SENT ) {
-                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-            }
-            //m_do_update_renderlist = true;
-            //m_renderlist_rethink = true;
-        }
+    Logger log = getLogger( package + ".fetchData" );
+    if( !m_has_context ) {
+        return;
     }
-
-
-    if( m_has_pipeline && m_load_color_field && m_project ) {
-        m_has_color_field = false;
-
-        boost::shared_ptr<render::GridFieldBridge> bridge;
-        if( m_async_reader->getSolution( bridge ) ) {
-
-            if( bridge ) {
-                m_grid_field->import( *bridge );
-                m_has_color_field = true;
-            }
-            else {
-                m_has_color_field = false;
-            }
-            m_load_color_field = false;
-            m_visibility_mask = models::Appearance::VISIBILITY_MASK_NONE;
-
-            m_wells->clear();
-            if( m_appearance.renderWells() ) {
-                std::vector<float> colors;
-                std::vector<float> positions;
-                for( unsigned int w=0; w<m_project->wellCount(); w++ ) {
-                    if( !m_project->wellDefined( m_report_step_index, w ) ) {
-                        continue;
-                    }
-                    m_wells->addWellHead( m_project->wellName(w),
-                                          m_project->wellHeadPosition( m_report_step_index, w ) );
-
-                    positions.clear();
-                    colors.clear();
-                    const unsigned int bN = m_project->wellBranchCount( m_report_step_index, w );
-                    for( unsigned int b=0; b<bN; b++ ) {
-                        const std::vector<float>& p = m_project->wellBranchPositions( m_report_step_index, w, b );
-                        if( p.empty() ) {
-                            continue;
-                        }
-                        for( size_t i=0; i<p.size(); i+=3 ) {
-                            positions.push_back( p[i+0] );
-                            positions.push_back( p[i+1] );
-                            positions.push_back( p[i+2] );
-                            colors.push_back( ((i & 0x1) == 0) ? 1.f : 0.5f );
-                            colors.push_back( ((i & 0x2) == 0) ? 1.f : 0.5f );
-                            colors.push_back( ((i & 0x4) == 0) ? 1.f : 0.5f );
-                        }
-                        m_wells->addSegments( positions, colors );
-                    }
-                }
-            }
-
-            // -- update policy elements
-            bool fix;
-            m_model->getElementValue( "field_range_enable", fix );
-            if( !fix ) {
-                m_model->updateElement<double>( "field_range_min", m_grid_field->minValue() );
-                m_model->updateElement<double>( "field_range_max", m_grid_field->maxValue() );
-            }
-            if( m_has_color_field && m_project ) {
-                std::stringstream o;
-                o << "[ " << m_grid_field->minValue() << ", " << m_grid_field->maxValue() << " ]";
-                m_model->updateElement( "field_info_range", o.str() );
-                o.str("");
-                o << "[not implemented]";
-                m_model->updateElement( "field_info_calendar", m_project->reportStepDate( m_report_step_index ) );
-                m_model->updateElement( "has_field", true );
-            }
-            else {
-                m_model->updateElement( "field_info_range", "[not available]" );
-                m_model->updateElement( "field_info_calendar", "[not available]" );
-                m_model->updateElement( "has_field", false );
-            }
-            if( m_renderlist_state == RENDERLIST_SENT ) {
-                m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-            }
-//            m_renderlist_rethink = true;
+    
+    if( m_check_async_reader ) {    // replace with while 
+        
+        ASyncReader::ResponseType response = m_async_reader->checkForResponse();
+        switch( response ) {
+        case ASyncReader::RESPONSE_NONE:
+            m_check_async_reader = false;
+            break;
+        case ASyncReader::RESPONSE_SOURCE:
+            
+            handleFetchSource();
+            break;
+        case ASyncReader::RESPONSE_FIELD:
+            handleFetchField();
+            break;
         }
     }
 }
+
+

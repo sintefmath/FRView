@@ -22,7 +22,10 @@
 #include "render/ManagedGL.hpp"
 
 namespace render {
-    class GridTess;
+    class PolyhedralRepresentation;
+    namespace mesh {
+        class PolyhedralMeshGPUModel;
+    }
     namespace subset {
         class Representation;
     }
@@ -41,7 +44,7 @@ public:
                    boost::shared_ptr<GridTessSurf>            surf_subset_boundary,
                    boost::shared_ptr<GridTessSurf>            surf_faults,
                    boost::shared_ptr<const subset::Representation>    subset,
-                   boost::shared_ptr<const GridTess>          tess,
+                   boost::shared_ptr<const mesh::AbstractMeshGPUModel>  mesh,
                    bool                     flip_faces );
 
 protected:
@@ -51,8 +54,10 @@ protected:
         SURFACE_FAULT,
         SURFACE_N
     };
-    GLProgram           m_meta_prog;
-    GLint               m_meta_loc_flip;
+    GLProgram           m_meta1_prog;
+    GLint               m_meta1_loc_flip;
+    GLProgram           m_meta2_prog;
+    GLint               m_meta2_loc_flip;
     GLsizei             m_triangulate_count;
     GLProgram           m_triangulate_prog;
     GLTransformFeedback m_meta_xfb;                 ///< Transform feedback object with SURFACE_N streams

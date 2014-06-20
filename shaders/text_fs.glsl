@@ -30,5 +30,7 @@ void main(void)
     if( i == 0.f ) {
         discard;
     }
-    frag_color = vec4( i );
+    else {
+        frag_color = i*vec4( 0.7, 0.8, 1.f, 1.f );
+    }
 }

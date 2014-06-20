@@ -21,7 +21,6 @@
 #include <vector>
 #include <tinia/model/ExposedModel.hpp>
 #include "eclipse/EclipseReader.hpp"
-#include "render/GridTess.hpp"
 
 namespace cornerpoint {
 

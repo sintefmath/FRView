@@ -16,7 +16,6 @@
  */
 
 #include "utils/Logger.hpp"
-#include "render/GridTess.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 
@@ -28,7 +27,7 @@ GridTessSurf::GridTessSurf()
       m_alloc( 0u ),
       m_cell_buffer( "GridTessSurf.m_cell_buffer" ),
       m_cell_texture( "GridTessSurf.m_cell_texture" ),
-      m_cornerpoint_index_buffer( "GridTessSurf.m_cornerpoint_index_buffer" ),
+      m_vertex_ix_buf( "GridTessSurf.m_cornerpoint_index_buffer" ),
       m_indices_count_qry( "GridTessSurf.m_indices_count_qry" ),
       m_indices_xfb( "GridTessSurf.m_indices_xfb" )
 {
@@ -40,7 +39,7 @@ GridTessSurf::GridTessSurf()
 
     glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, m_indices_xfb.get() );
     glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, m_cell_buffer.get() );
-    glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 1, m_cornerpoint_index_buffer.get() );
+    glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 1, m_vertex_ix_buf.get() );
     glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, 0 );
 }
 
@@ -63,7 +62,7 @@ GridTessSurf::setTriangleCount( const GLsizei count )
                       NULL,
                       GL_DYNAMIC_COPY );
         glBindBuffer( GL_TEXTURE_BUFFER, 0 );
-        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_cornerpoint_index_buffer.get() );
+        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_vertex_ix_buf.get() );
         glBufferData( GL_ELEMENT_ARRAY_BUFFER,
                       sizeof(GLuint)*3*m_alloc,
                       NULL,
@@ -74,10 +73,9 @@ GridTessSurf::setTriangleCount( const GLsizei count )
 }
 
 void
-GridTessSurf::populatePolygonBuffer( const GridTess*        tess,
-                                     GLsizei                N,
+GridTessSurf::populatePolygonBuffer(GLsizei                N /*,
                                      GLuint                 tri_cell_index,
-                                     GLuint                 tri_indices_index )
+                                     GLuint                 tri_indices_index*/ )
 {
     Logger log = getLogger( "GridTessSurf.populateTriangleBuffer" );
 
@@ -119,6 +117,7 @@ GridTessSurf::populatePolygonBuffer( const GridTess*        tess,
 
 }
 
+#if 0
 void
 GridTessSurf::populateTriangleBuffer( const GridTess*  tess,
                                       GLuint           tri_cell_index,
@@ -165,6 +164,7 @@ GridTessSurf::populateTriangleBuffer( const GridTess*  tess,
     glBindTexture( GL_TEXTURE_BUFFER, 0 );
 */
 }
+#endif
 
     } // of namespace surface
 } // of namespace render

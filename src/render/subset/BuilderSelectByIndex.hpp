@@ -49,8 +49,8 @@ public:
      * \param max_k        Maximum k of index range (inclusive).
      */
     void
-    apply( boost::shared_ptr<Representation> tess_subset,
-           boost::shared_ptr<const GridTess> tess,
+    apply( boost::shared_ptr<Representation>                cell_subset,
+           boost::shared_ptr<const mesh::CellSetInterface>  cell_set,
            unsigned int n_i,
            unsigned int n_j,
            unsigned int n_k,

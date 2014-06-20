@@ -15,9 +15,11 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "dataset/Project.hpp"
+#include "dataset/CornerpointGrid.hpp"
 #include "models/GridStats.hpp"
-#include "render/GridTess.hpp"
+#include "render/mesh/AbstractMeshGPUModel.hpp"
+#include "render/mesh/CellSetInterface.hpp"
+#include "render/mesh/PolyhedralMeshGPUModel.hpp"
 
 namespace models {
     using std::string;
@@ -32,6 +34,7 @@ static const string grid_active_cells_key = "_grid_active_cells";
 static const string grid_faces_key = "_grid_faces";
 static const string grid_triangles_key = "_grid_triangles";
 static const string grid_max_poly_key = "_grid_max_poly";
+
 
 GridStats::GridStats( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic )
     : m_model( model ),
@@ -60,67 +63,92 @@ GridStats::~GridStats()
 void
 GridStats::update( )
 {
-    boost::shared_ptr<dataset::Project<float> > project;
-    boost::shared_ptr<render::GridTess> tessellation;
-    update( project, tessellation );
+    boost::shared_ptr<dataset::CornerpointGrid > project;
+    boost::shared_ptr<render::mesh::AbstractMeshGPUModel>  gpu_mesh;
+    update( project, gpu_mesh );
 }
 
 void
-GridStats::update( boost::shared_ptr<dataset::Project<float> > project,
-                   boost::shared_ptr<render::GridTess> tessellation )
+GridStats::update(boost::shared_ptr<dataset::AbstractDataSource> project,
+                   boost::shared_ptr<render::mesh::AbstractMeshGPUModel> gpu_mesh )
 {
-    int nx = 0;
-    int ny = 0;
-    int nz = 0;
     int na = 0;
+    int nn = 0;
     int pc = 0;
     int tc = 0;
     int mv = 0;
-    if( project.get() != NULL ) {
-        nx = project->nx();
-        ny = project->ny();
-        nz = project->nz();
-    }
-    if( tessellation.get() != NULL ) {
-        na = tessellation->cellCount();
-        pc = tessellation->polygonCount();
-        tc = tessellation->polygonTriangulatedCount();
-        mv = tessellation->polygonMaxPolygonSize();
-    }
 
     std::stringstream o;
-    o << "[ " << nx
-      << " x " << ny
-      << " x " << nz
-      << " ]";
+    if( project ) {
+        boost::shared_ptr<dataset::CellLayoutInterface> cell_layout =
+                boost::dynamic_pointer_cast<dataset::CellLayoutInterface>( project );
+        if( cell_layout ) {
+            int n = cell_layout->maxIndex(0) - cell_layout->minIndex(0);
+            nn = n;
+            o << "[ " << n;
+            if( cell_layout->indexDim() > 1 ) {
+                int n = cell_layout->maxIndex(1) - cell_layout->minIndex(1);
+                nn = nn*n;
+                o << " x " << n;
+                if( cell_layout->indexDim() > 2 ) {
+                    int n = cell_layout->maxIndex(2) - cell_layout->minIndex(2);
+                    nn = nn*n;
+                    o << " x " << n;
+                    if( cell_layout->indexDim() > 3 ) {
+                        int n = cell_layout->maxIndex(3) - cell_layout->minIndex(3);
+                        nn = nn*n;
+                        o << " x " << n;
+                    }
+                }
+            }
+            o << " ]";
+        }
+    }
     m_model->updateElement( grid_dim_key, o.str() );
 
     o.str("");
-    o << (nx*ny*nz);
+    o << (nn);
     m_model->updateElement( grid_total_cells_key, o.str() );
-
-    o.str("");
-    o << na << " (";
-    if( (na == 0) || (nx==0)|| (ny==0)|| (nz==0) ) {
-        o << "n/a";
+    
+    boost::shared_ptr<render::mesh::CellSetInterface> cell_set = 
+            boost::dynamic_pointer_cast<render::mesh::CellSetInterface>( gpu_mesh );
+    
+    if( cell_set ) {
+        na = cell_set->cellCount();
+        o.str("");
+        o << na;
+        if( nn != 0 ) {
+            o << " (" << ((100*na)/nn ) << " %)";
+        }
+        m_model->updateElement( grid_active_cells_key, o.str() );
     }
     else {
-        o << ((100u*na)/(nx*ny*nz) );
+        m_model->updateElement( grid_active_cells_key, "n/a" );
     }
-    o << "%)";
-    m_model->updateElement( grid_active_cells_key, o.str() );
-
-    o.str("");
-    o << pc << " polygons";
-    m_model->updateElement( grid_faces_key, o.str() );
-
-    o.str("");
-    o << tc << " triangles";
-    m_model->updateElement( grid_triangles_key, o.str() );
-
-    o.str("");
-    o << mv  << " corners";
-    m_model->updateElement( grid_max_poly_key, o.str() );
+    
+    boost::shared_ptr<render::mesh::PolyhedralMeshGPUModel> polyhedral_mesh = 
+            boost::dynamic_pointer_cast<render::mesh::PolyhedralMeshGPUModel>( gpu_mesh );
+    if( polyhedral_mesh ) {
+        pc = polyhedral_mesh->polygonCount();
+        tc = polyhedral_mesh->polygonTriangulatedCount();
+        mv = polyhedral_mesh->polygonMaxPolygonSize();
+        o.str("");
+        o << pc << " polygons";
+        m_model->updateElement( grid_faces_key, o.str() );
+    
+        o.str("");
+        o << tc << " triangles";
+        m_model->updateElement( grid_triangles_key, o.str() );
+    
+        o.str("");
+        o << mv  << " corners";
+        m_model->updateElement( grid_max_poly_key, o.str() );
+    }
+    else {
+        m_model->updateElement( grid_faces_key, "n/a" );
+        m_model->updateElement( grid_triangles_key, "n/a" );
+        m_model->updateElement( grid_max_poly_key, "n/a" );
+    }
 }
 
 void

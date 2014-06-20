@@ -18,7 +18,7 @@
 #include <iostream>
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
-#include "GridVoxelization.hpp"
+#include "render/rlgen/VoxelGrid.hpp"
 #include "render/GridField.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
 
@@ -44,7 +44,7 @@ VoxelSurface::VoxelSurface()
     m_surface_alloc = 5000;
     glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_surface_buf );
     glBufferData( GL_TRANSFORM_FEEDBACK_BUFFER,
-                  sizeof(GLfloat)*4*m_surface_alloc,
+                  sizeof(GLfloat)*6*m_surface_alloc,
                   NULL,
                   GL_STREAM_READ );
     glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, 0 );
@@ -62,8 +62,7 @@ VoxelSurface::~VoxelSurface()
 }
 
 void
-VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
-                     boost::shared_ptr<const GridField> field )
+VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels )
 {
     
     Logger log = getLogger( "VoxelSurface.build" );
@@ -165,10 +164,11 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
         free( traversal_code );
         glAttachShader( m_extraction_program, vs );
         glDeleteShader( vs );
-        const char* varyings[1] = {
-            "position"
+        const char* varyings[2] = {
+            "out_pos",
+            "out_col"
         };
-        glTransformFeedbackVaryings( m_extraction_program, 1, varyings, GL_INTERLEAVED_ATTRIBS );
+        glTransformFeedbackVaryings( m_extraction_program, 2, varyings, GL_INTERLEAVED_ATTRIBS );
         utils::linkProgram( log, m_extraction_program );
         glUseProgram( m_extraction_program );
         m_extraction_loc_scale = glGetUniformLocation( m_extraction_program, "scale" );
@@ -182,7 +182,7 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
 
     // Bind voxel texture to sampler 1
     glActiveTexture( GL_TEXTURE1 );
-    glBindTexture( GL_TEXTURE_3D, voxels->voxelTexture() );
+    glBindTexture( GL_TEXTURE_3D, voxels->voxelTexture().get() );
     HPMCbuildHistopyramid( m_hpmc_hp, 0.5f );
 
     GLsizei N = HPMCacquireNumberOfVertices( m_hpmc_hp );
@@ -195,7 +195,7 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
         m_surface_alloc = 1.1f*N;
         glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_surface_buf );
         glBufferData( GL_TRANSFORM_FEEDBACK_BUFFER,
-                      sizeof(GLfloat)*4*m_surface_alloc,
+                      sizeof(GLfloat)*6*m_surface_alloc,
                       NULL,
                       GL_STREAM_READ );
         glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, 0 );
@@ -207,20 +207,7 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
 
 
     glActiveTexture( GL_TEXTURE3 );
-    glBindTexture( GL_TEXTURE_3D, voxels->voxelTexture() );
-    glActiveTexture( GL_TEXTURE4 );
-    if( field->hasData() ) {
-        glUniform1i( glGetUniformLocation( m_extraction_program, "use_field"), GL_TRUE );
-        glUniform2f( glGetUniformLocation( m_extraction_program, "field_remap"),
-                     field->minValue(),
-                     1.f/(field->maxValue()-field->minValue()) );
-        glBindTexture( GL_TEXTURE_BUFFER, field->texture() );
-    }
-    else {
-        glUniform1i( glGetUniformLocation( m_extraction_program, "use_field"), GL_FALSE );
-        glBindTexture( GL_TEXTURE_BUFFER, 0 );
-
-    }
+    glBindTexture( GL_TEXTURE_3D, voxels->voxelTexture().get() );
 
     // The unit cube is scaled to the interior of voxels (to make sure that the
     // geometry is capped). We need to scale the extracted geometry such that
@@ -240,11 +227,11 @@ VoxelSurface::build( boost::shared_ptr<const GridVoxelization> voxels,
     glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, 0 );
     glDisable( GL_RASTERIZER_DISCARD );
 
-    m_surface_host.resize( 4*N );
+    m_surface_host.resize( 6*N );
     glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_surface_buf );
     glGetBufferSubData( GL_TRANSFORM_FEEDBACK_BUFFER,
                         0,
-                        sizeof(GLfloat)*4*N,
+                        sizeof(GLfloat)*6*N,
                         m_surface_host.data() );
     glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, 0 );
 

@@ -15,7 +15,7 @@
  * along with the FRView.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "render/GridTess.hpp"
+#include "render/mesh/CellSetInterface.hpp"
 #include "render/GridField.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/subset/BuilderSelectByFieldValue.hpp"
@@ -33,16 +33,16 @@ BuilderSelectByFieldValue::BuilderSelectByFieldValue()
 }
 
 void
-BuilderSelectByFieldValue::apply( boost::shared_ptr<Representation> tess_subset,
-                     boost::shared_ptr<const GridTess> tess,
-                     boost::shared_ptr<const GridField> field,
-                     const float minval,
-                     const float maxval)
+BuilderSelectByFieldValue::apply(  boost::shared_ptr<Representation>                cell_subset,
+                                   boost::shared_ptr<const mesh::CellSetInterface>  cell_set,
+                                   boost::shared_ptr<const GridField>               field,
+                                   const float                                      minval,
+                                   const float                                      maxval )
 {
     glUseProgram( m_program );
     glUniform2f( m_loc_min_max, minval, maxval );
     glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_BUFFER, field->texture() );
-    tess_subset->populateBuffer( tess );
+    cell_subset->populateBuffer( cell_set );
     glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_BUFFER, 0 );
     glUseProgram( 0 );
 }

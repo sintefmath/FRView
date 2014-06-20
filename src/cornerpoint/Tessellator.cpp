@@ -31,7 +31,7 @@
 #ifdef CHECK_INVARIANTS
 #include "CellSanityChecker.hpp"
 #endif
-#include "render/GridTessBridge.hpp"
+#include "bridge/PolyhedralMeshBridge.hpp"
 
 namespace cornerpoint {
     using std::vector;
@@ -1805,6 +1805,6 @@ Tessellator<Tessellation>::intersectWallLines( vector<Intersection>&    wall_lin
 
 
 
-template class Tessellator< render::GridTessBridge >;
+template class Tessellator< bridge::PolyhedralMeshBridge >;
 
 } // of namespace cornerpoint

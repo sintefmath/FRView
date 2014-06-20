@@ -16,6 +16,9 @@
  */
 
 #pragma once
+#include <limits>
+#include <vector>
+#include <string>
 #include <GL/glew.h>
 #include "utils/Logger.hpp"
 
@@ -41,6 +44,30 @@ public:
     GLuint
     get() const { return m_gl_name; }
 
+
+    /** Dump contents of GPU-side buffer into a CPU-side buffer.
+     *
+     * \param dst     CPU-side buffer into where to store the data.
+     * \param count   Maximum number of elements to copy.
+     * \param target  OpenGL buffer target to use.
+     * \return        Number of elements copied.
+     */
+    template<typename T>
+    size_t
+    contents( std::vector<T>& dst,
+              size_t count = std::numeric_limits<size_t>::max(),
+              GLenum target = GL_PIXEL_PACK_BUFFER )
+    {
+        glBindBuffer( target, m_gl_name );
+        GLint64 bytes;        
+        glGetBufferParameteri64v( target, GL_BUFFER_SIZE, &bytes );
+        size_t N = std::min( count, static_cast<size_t>(bytes/sizeof(T)) );
+        dst.resize( N );
+        glGetBufferSubData(	target, 0, sizeof(T)*N, dst.data() );
+        return N;
+    }
+    
+    
 protected:
     GLuint  m_gl_name;
 };
@@ -113,6 +140,26 @@ public:
         create();
     }
 
+    /** Set the shader source of a given shader stage.
+     *
+     * Throws runtime_error on failure.
+     */
+    void
+    addShaderStage(const std::string& source, GLenum type );
+    
+    /** Link shader program.
+     *
+     * Throws runtime_error on failure.
+     */
+    void
+    link();
+    
+    void
+    use() { glUseProgram( m_gl_name ); }
+
+    GLint
+    uniformLocation(const std::string& uniform );
+    
     GLuint
     get() const {
         return m_gl_name;
@@ -120,14 +167,7 @@ public:
 
 protected:
     void
-    create()
-    {
-        m_gl_name = glCreateProgram();
-        if( !m_name.empty() ) {
-            Logger log = getLogger( "GLProgram" );
-            LOGGER_DEBUG( log, "prg " << m_gl_name << ": " << m_name );
-        }
-    }
+    create();
 
     const std::string   m_name;
     GLuint              m_gl_name;
@@ -178,6 +218,9 @@ public:
 
     GLuint
     get() const { return m_gl_name; }
+
+    void
+    bind() { glBindFramebuffer( GL_FRAMEBUFFER, m_gl_name ); }
     
 protected:
     GLuint  m_gl_name;

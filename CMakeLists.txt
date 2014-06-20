@@ -42,8 +42,12 @@ set( CMAKE_CXX_FLAGS "-std=c++0x -Wall ${CMAKE_CXX_FLAGS}" )
 
 FIND_PACKAGE( Tinia 0.2.5 REQUIRED COMPONENTS Server Desktop )
 FIND_PACKAGE( OpenGL REQUIRED)
-FIND_LIBRARY( GLEW  NAMES GLEW glew32 PATHS ${LIB_PATHS} )
+FIND_PACKAGE( GLEW )
+
+# We require at least version 0.9.4, since we use radians and not degrees.
 FIND_PACKAGE( GLM REQUIRED )
+ADD_DEFINITIONS( -DGLM_FORCE_RADIANS )
+
 # For VTK reading
 FIND_PACKAGE( LibXml2 REQUIRED)
 FIND_LIBRARY( LOG4CXX_LOG4CXX_LIBRARY log4cxx
@@ -140,24 +144,28 @@ ENDMACRO( WRAP_SHADERS )
 
 
 FILE( GLOB frview_core_SRC "src/models/*.cpp"
+                           "src/bridge/*.cpp"
                            "src/render/*.cpp"
+                           "src/render/mesh/*.cpp"
                            "src/render/wells/*.cpp"
                            "src/render/rlgen/*.cpp"
                            "src/render/subset/*.cpp"
                            "src/render/surface/*.cpp"
-                           "src/render/screen/*.cpp"
+                           "src/render/manager/*.cpp"
                            "src/cornerpoint/*.cpp"
                            "src/eclipse/*.cpp"
                            "src/job/*.cpp"
                            "src/utils/*.cpp"
                            "src/dataset/*.cpp" )
 FILE( GLOB frview_core_HDR "src/models/*.hpp"
+                           "src/bridge/*.hpp"
                            "src/render/*.hpp"
+                           "src/render/mesh/*.hpp"
                            "src/render/wells/*.hpp"
                            "src/render/rlgen/*.hpp"
                            "src/render/subset/*.hpp"
                            "src/render/surface/*.hpp"
-                           "src/render/screen/*.hpp"
+                           "src/render/manager/*.hpp"
                            "src/cornerpoint/*.hpp"
                            "src/eclipse/*.hpp"
                            "src/job/*.hpp"
@@ -170,7 +178,7 @@ WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "render::wells::glsl" "src/render/
 WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "render::rlgen::glsl" "src/render/rlgen/*.glsl" )
 WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "render::subset::glsl" "src/render/subset/*.glsl" )
 WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "render::surface::glsl" "src/render/surface/*.glsl" )
-WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "render::screen::glsl" "src/render/screen/*.glsl" )
+WRAP_SHADERS( SHADER_LIBS frview_core_SHADERS "render::manager::glsl" "src/render/manager/*.glsl" )
 
 SOURCE_GROUP( "GLSL" FILES ${frview_core_SHADERS} )
 SET_SOURCE_FILES_PROPERTIES( ${frview_core_SHADERS} PROPERTIES HEADER_FILE_ONLY TRUE )

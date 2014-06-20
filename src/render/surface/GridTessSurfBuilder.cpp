@@ -17,7 +17,8 @@
 
 #include "utils/GLSLTools.hpp"
 #include "utils/Logger.hpp"
-#include "render/GridTess.hpp"
+#include "render/mesh/PolyhedralMeshGPUModel.hpp"
+#include "render/mesh/PolygonMeshGPUModel.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
@@ -31,58 +32,55 @@ namespace render {
         namespace glsl {
             extern const std::string GridTessSurfBuilder_triangulate_vs;
             extern const std::string GridTessSurfBuilder_triangulate_gs;
-            extern const std::string GridTessSurfBuilder_extract_vs;
-            extern const std::string GridTessSurfBuilder_extract_gs;
+            extern const std::string GridTessSurfBuilder_extract1_vs;
+            extern const std::string GridTessSurfBuilder_extract1_gs;
+            extern const std::string GridTessSurfBuilder_extract2_vs;
+            extern const std::string GridTessSurfBuilder_extract2_gs;
         }
+        using boost::shared_ptr;
+        using boost::dynamic_pointer_cast;
+        using render::mesh::AbstractMeshGPUModel;
+        using render::mesh::PolyhedralMeshGPUModel;
+        using render::mesh::PolygonMeshGPUModel;
+        using render::mesh::VertexPositionInterface;
+        using render::mesh::PolygonSetInterface;
 
 GridTessSurfBuilder::GridTessSurfBuilder()
-    : m_meta_prog( "GridTessSurfBuilder.m_meta_prog"),
+    : m_meta1_prog( "GridTessSurfBuilder.m_meta1_prog"),
+      m_meta2_prog( "GridTessSurfBuilder.m_meta2_prog"),
       m_triangulate_count( 0 ),
       m_triangulate_prog( "GridTessSurfBuilder.m_triangulate_prog" )
 {
     Logger log = getLogger( "render.GridTessSurfBuilder.constructor" );
 
-    // -------------------------------------------------------------------------
-    // create polygon extract shader
-    // -------------------------------------------------------------------------
-    GLuint faces_vs = utils::compileShader( log, glsl::GridTessSurfBuilder_extract_vs,
-                                     GL_VERTEX_SHADER );
-
-    GLuint faces_gs = utils::compileShader( log, glsl::GridTessSurfBuilder_extract_gs,
-                                     GL_GEOMETRY_SHADER );
-
-
     static const char* faces_feedback[] = { "meta_subset",
                                             "meta_boundary",
                                             "meta_fault" };
-    glAttachShader( m_meta_prog.get(), faces_vs );
-    glAttachShader( m_meta_prog.get(), faces_gs );
-    glTransformFeedbackVaryings( m_meta_prog.get(), 3, faces_feedback, GL_SEPARATE_ATTRIBS );
-    utils::linkProgram( log, m_meta_prog.get() );
-    m_meta_loc_flip = glGetUniformLocation( m_meta_prog.get(), "flip_faces" );
+    GLuint faces_vs, faces_gs;
+
+    // --- surface meta extract ------------------------------------------------
+    faces_vs = utils::compileShader( log, glsl::GridTessSurfBuilder_extract1_vs, GL_VERTEX_SHADER );
+    faces_gs = utils::compileShader( log, glsl::GridTessSurfBuilder_extract1_gs, GL_GEOMETRY_SHADER );
+    glAttachShader( m_meta1_prog.get(), faces_vs );
+    glAttachShader( m_meta1_prog.get(), faces_gs );
+    glTransformFeedbackVaryings( m_meta1_prog.get(), 2, faces_feedback, GL_SEPARATE_ATTRIBS );
+    utils::linkProgram( log, m_meta1_prog.get() );
+    m_meta1_loc_flip = glGetUniformLocation( m_meta1_prog.get(), "flip_faces" );
     glDeleteShader( faces_vs );
     glDeleteShader( faces_gs );
 
+    // --- volume surace meta extract ------------------------------------------
+    faces_vs = utils::compileShader( log, glsl::GridTessSurfBuilder_extract2_vs, GL_VERTEX_SHADER );
+    faces_gs = utils::compileShader( log, glsl::GridTessSurfBuilder_extract2_gs, GL_GEOMETRY_SHADER );
+    glAttachShader( m_meta2_prog.get(), faces_vs );
+    glAttachShader( m_meta2_prog.get(), faces_gs );
+    glTransformFeedbackVaryings( m_meta2_prog.get(), 3, faces_feedback, GL_SEPARATE_ATTRIBS );
+    utils::linkProgram( log, m_meta2_prog.get() );
+    m_meta2_loc_flip = glGetUniformLocation( m_meta2_prog.get(), "flip_faces" );
+    glDeleteShader( faces_vs );
+    glDeleteShader( faces_gs );
 
-    /*GLint counter_size;
-    glGetActiveAtomicCounterBufferiv( m_meta_prog, 0, GL_ATOMIC_COUNTER_BUFFER_DATA_SIZE, &counter_size );
-
-    glGenBuffers( 1, &m_meta_counters );
-    glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_meta_counters );
-    glBufferData( GL_ATOMIC_COUNTER_BUFFER,
-                  counter_size,
-                  NULL,
-                  GL_STREAM_COPY );
-    glClearBufferData( GL_ATOMIC_COUNTER_BUFFER,
-                       GL_R32UI,
-                       GL_RED,
-                       GL_UNSIGNED_INT,
-                       NULL );
-    glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
-
-    std::cerr << "!!!!\n";
-*/
-     // -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // create meta buffers
     // -------------------------------------------------------------------------
     glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, m_meta_xfb.get() );
@@ -142,20 +140,34 @@ GridTessSurfBuilder::rebuildTriangulationProgram( GLsizei max_vertices )
 
 
 void
-GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
+GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
                                     boost::shared_ptr<GridTessSurf> surf_subset_boundary,
                                     boost::shared_ptr<GridTessSurf> surf_faults,
                                     boost::shared_ptr<const subset::Representation> subset,
-                                    boost::shared_ptr<const GridTess> tess,
+                                    boost::shared_ptr<const mesh::AbstractMeshGPUModel> mesh,
                                     bool                     flip_faces )
 {
     Logger log = getLogger( "GridTessSurfBuilder.buildSurfaces" );
+
+    shared_ptr<const PolygonSetInterface> polygon_set
+            = dynamic_pointer_cast<const PolygonSetInterface>( mesh );
+    if( !polygon_set ) {
+        LOGGER_ERROR( log, "mesh does not implement the polygon set interface." );
+        return;
+    }
+    shared_ptr<const VertexPositionInterface> vertex_positions
+            = dynamic_pointer_cast<const VertexPositionInterface>( mesh );
+    if( !vertex_positions ) {
+        LOGGER_ERROR( log, "mesh does not implement the vertex positions interface." );
+        return;
+    }
+    
     GridTessSurf* surfaces[ SURFACE_N ];
     surfaces[ SURFACE_SUBSET          ] = surf_subset.get();
     surfaces[ SURFACE_SUBSET_BOUNDARY ] = surf_subset_boundary.get();
     surfaces[ SURFACE_FAULT ]           = surf_faults.get();
 
-    if( tess->polygonCount() == 0 ) {
+    if( polygon_set->polygonCount() == 0 ) {
         for( int i=0; i< SURFACE_N; i++ ) {
             if( surfaces[i] != NULL ) {
                 surfaces[i]->setTriangleCount( 0 );
@@ -166,12 +178,10 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
 
     // Late shader builing; we don't know the max output until the tessellation
     // has been built.
-    if( m_triangulate_count != tess->polygonMaxPolygonSize() ) {
-        rebuildTriangulationProgram( tess->polygonMaxPolygonSize() );
+    if( m_triangulate_count != polygon_set->polygonMaxPolygonSize() ) {
+        rebuildTriangulationProgram( polygon_set->polygonMaxPolygonSize() );
     }
-
-
-
+    
     // Find all polygons that we want to render
 
     glActiveTexture( GL_TEXTURE0 );
@@ -181,9 +191,9 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
     else {
         glBindTexture( GL_TEXTURE_BUFFER, 0 );
     }
-    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, tess->polygonNormalIndexTexture() );
-    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, tess->polygonVertexIndexTexture() );
-    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, tess->vertexPositionsAsBufferTexture() );
+    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonNormalIndexTexture() );
+    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonVertexIndexTexture() );
+    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, vertex_positions->vertexPositionsAsBufferTexture() );
 
     glEnable( GL_RASTERIZER_DISCARD );
 
@@ -194,25 +204,32 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
 
         // --- try to extract all triangles that should be part of the surfaces
         if( redo_meta ) {
-            glBindVertexArray( tess->polygonVertexArray() );
-            glUseProgram( m_meta_prog.get() );
-            glUniform1i( m_meta_loc_flip, flip_faces ? GL_TRUE : GL_FALSE );
-
-            //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_meta_counters );
-            //glClearBufferData( GL_ATOMIC_COUNTER_BUFFER,
-            //                   GL_R32UI,
-            //                   GL_RED,
-            //                   GL_UNSIGNED_INT,
-            //                   NULL );
-            //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
-            //glBindBufferBase( GL_ATOMIC_COUNTER_BUFFER, 0, m_meta_counters );
-
+            
+            glBindVertexArray( polygon_set->polygonVertexArray() );
+            if( polygon_set->polygonCellCount() == 1 ) {
+                glUseProgram( m_meta1_prog.get() );
+                glUniform1i( m_meta1_loc_flip, flip_faces ? GL_TRUE : GL_FALSE );
+            }
+            else if( polygon_set->polygonCellCount() == 2 ) {
+                glUseProgram( m_meta2_prog.get() );
+                glUniform1i( m_meta2_loc_flip, flip_faces ? GL_TRUE : GL_FALSE );
+            }
+            else {
+                throw std::logic_error( "Illegal polygon cell count" );
+            }
+                
+                
             glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, m_meta_xfb.get() );
             glBeginTransformFeedback( GL_POINTS );
             for( uint i=0; i<SURFACE_N; i++ ) {
+                
+                // We use GL_PRIMITIVES_GENERATED and not
+                // GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN since we are
+                // interested in the full count since we want to detect buffer
+                // overflows.
                 glBeginQueryIndexed( GL_PRIMITIVES_GENERATED, i, m_meta_query[i].get() );
             }
-            glDrawArrays( GL_POINTS, 0, tess->polygonCount() );
+            glDrawArrays( GL_POINTS, 0, polygon_set->polygonCount() );
             for( uint i=0; i<SURFACE_N; i++ ) {
                 glEndQueryIndexed( GL_PRIMITIVES_GENERATED, i );
             }
@@ -220,20 +237,6 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
             redo_meta = false;
             redo_triangulate = true;
 
-            //std::vector<GLuint> foo(6);
-            //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, m_meta_counters );
-            //glGetBufferSubData( GL_ATOMIC_COUNTER_BUFFER,
-            //                    0,
-            //                    24,
-            //                    foo.data() );
-            //glBindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
-            //std::cerr << "FOO: "
-            //          << foo[0] << "\t"
-            //          << foo[1] << "\t"
-            //          << foo[2] << "\t"
-            //          << foo[3] << "\t"
-            //          << foo[4] << "\t"
-            //          << foo[5] << "\n";
         }
 
         // --- then, triangulate all the surfaces
@@ -246,7 +249,20 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
                     glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, surfaces[i]->indicesTransformFeedbackObject() );
                     glBeginQuery( GL_PRIMITIVES_GENERATED, surfaces[i]->indicesCountQuery() );
                     glBeginTransformFeedback( GL_POINTS );
+                    
+#if 0
+                    // The following call seems to invoke 'GL_INVALID_OPERATION
+                    // error generated. Transform feedback object not valid for
+                    // draw.'. Not sure why. If replaced with drawArrays using
+                    // count from queries, we get no error. Result seems to be
+                    // sane regardless of error.
                     glDrawTransformFeedbackStream( GL_POINTS, m_meta_xfb.get(), i );
+#else
+                    GLuint count;
+                    glGetQueryObjectuiv( m_meta_query[i].get(), GL_QUERY_RESULT, &count );
+                    glDrawArrays( GL_POINTS, 0, std::min( m_meta_buf_N[i], (GLsizei)count ) );
+#endif
+                    
                     glEndTransformFeedback( );
                     glEndQuery( GL_PRIMITIVES_GENERATED );
                 }
@@ -285,6 +301,9 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
                                   << " resized to accomodate " << result
                                   << " triangles." );
                     redo_triangulate = true;
+                }
+                else {
+                    LOGGER_DEBUG( log, "Triangle surface " << i << " has " << result << " triangles" );
                 }
             }
         }

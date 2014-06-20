@@ -16,7 +16,7 @@
  */
 
 #include "PillarWallSampler.hpp"
-#include "render/GridTessBridge.hpp"
+#include "bridge/PolyhedralMeshBridge.hpp"
 
 namespace cornerpoint {
 
@@ -96,7 +96,7 @@ PillarWallSampler<Tessellation>::normal( const Real u, const Real w )
 
 
 
-template class PillarWallSampler< render::GridTessBridge >;
-template PillarWallSampler< render::GridTessBridge >::PillarWallSampler( const float*, const float*);
+template class PillarWallSampler< bridge::PolyhedralMeshBridge >;
+template PillarWallSampler< bridge::PolyhedralMeshBridge >::PillarWallSampler( const float*, const float*);
 
 } // of namespace cornerpoint

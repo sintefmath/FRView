@@ -28,21 +28,42 @@ in GO {
     smooth vec3  obj_pos;
 } in_f;
 
-uniform vec4            edge_color;
-uniform float line_width = 1.0;
+uniform vec4   edge_color;
+uniform float  line_width = 0.5; // actually half the width of the line.
 
-// area of circular segment:
-// acos(1-(x+1)) - (1-(x+1))*sqrt(2*(x+1)-(x+1)*(x+1))
-// approximate differences of this using a linear function
+/** Analytical anti-aliasing: determine the line coverage of a pixel
+  *
+  * For simplicity, we assume that the pixel is circular, and has unit area,
+  * that is, R = sqrt( 1/PI ). We find the distance from the pixel center to the
+  * line. Then given a line width, we determine the area of the intersection
+  * between this circle and the thick line.
+  */
 float
-lineCover( const in vec2 p, const in vec3 line, const float w )
+lineCover( const in vec2 p, const in vec3 line, const float width )
 {
-    float h = abs(dot( p, line.xy ) + line.z) + 1.0;
-    float h0 = h + w;
-    float h1 = h - w;
+    // Pixel radius.
+    float R = sqrt( 1.f/3.1415926535897932384626433832795f );
+    
+    // Distance between pixel center and line, always positive.
+    float d = abs( dot(p, line.xy ) + line.z );
 
-
-    return clamp( h + w, 0.0, 1.0 ) - clamp( h - w, 0.0, 1.0 );
+    // In: smallest distance, may be negative.
+    float ei = d - width;
+    if( ei >= R ) {
+        // triangle interior, fast path
+        return 0.0f;
+    }
+    else {
+        float ai = abs(ei);
+        ai = R*R*acos( min( 1.f, ai/R) ) - ai*sqrt( max( 0.f, R*R - ai*ai) );
+        ei = ei > 0.f ? ai : 1.f - ai;
+        
+        // Out: greatest distance, always positive
+        float eo = d + width;
+        eo = R*R*acos( min( 1.f, eo/R) ) - eo*sqrt( max( 0.f, R*R - eo*eo) );
+        
+        return ei - eo;
+    }
 }
 
 vec4 colorize()
@@ -55,7 +76,16 @@ vec4 colorize()
     float s = pow( max( 0.f, dot(n,h) ), 50.f );
 
     vec4 color = in_f.color;
-    color.rgb = clamp( d*color.rgb /* + vec3(s)*/, vec3(0.f), vec3(1.f) );
+    color.rgb = clamp(
+#ifdef SHADING_DIFFUSE_COMPONENT
+                        d*color.rgb
+#else
+                        color.rgb
+#endif
+#ifdef SHADING_SPECULAR_COMPONENT
+                        + vec3(color.a*s)
+#endif
+                        , vec3(0.f), vec3(1.f) );
 
 #ifdef DO_PAINT
     if( edge_color.w > 0.f ) {
@@ -64,15 +94,10 @@ vec4 colorize()
         float cb = lineCover( gl_FragCoord.xy, in_f.boundary_b, line_width );
         float cc = lineCover( gl_FragCoord.xy, in_f.boundary_c, line_width );
 
-        float c = max( ca, max( cb, cc ) );
+        float c = edge_color.w*max( ca, max( cb, cc ) );
         if( c > 0.f ) {
-            float alpha = edge_color.w *c;
-
-            color.rgb = mix( color.rgb, edge_color.rgb, alpha );
-            color.a += alpha;
-            //  color = mix( vec4(alpha*edge_color.rgb, alpha), color, 0.1*alpha );
-
-//            color += vec4( alpha*edge_color.rgb, alpha );
+            color.rgb = c*edge_color.rgb + (1.f-c)*color.rgb;
+            color.a   = color.a + c - color.a*c;
         }
 #else
         float line = min(abs(dot( vec3( gl_FragCoord.xy, 1.f ), in_f.boundary_a )),
