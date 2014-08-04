@@ -30,6 +30,7 @@ namespace render {
     }
     namespace surface {
         class GridTessSurf;
+        class TriangleSoup;
     }
 
 struct RenderItem {
@@ -41,6 +42,7 @@ struct RenderItem {
     boost::shared_ptr<const mesh::AbstractMeshGPUModel>  m_mesh;
     boost::shared_ptr<const GridField>                   m_field;
     boost::shared_ptr<const surface::GridTessSurf>       m_surf;
+    boost::shared_ptr<const surface::TriangleSoup>       m_trisoup; ///< Optional tri-soup representation.
     boost::shared_ptr<wells::Representation>             m_well;
     boost::shared_ptr<const GLTexture>                   m_color_map;
     //bool                                    m_field;
