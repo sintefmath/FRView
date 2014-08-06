@@ -138,6 +138,16 @@ GridTessSurfBuilder::rebuildTriangulationProgram( GLsizei max_vertices )
     glDeleteShader( poly_subset_gs );
 }
 
+void
+GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<TriangleSoup>                      surf_subset,
+                                    boost::shared_ptr<TriangleSoup>                      surf_subset_boundary,
+                                    boost::shared_ptr<TriangleSoup>                      surf_faults,
+                                    boost::shared_ptr<const subset::Representation>      subset,
+                                    boost::shared_ptr<const mesh::AbstractMeshGPUModel>  mesh,
+                                    bool                                                 flip_faces )
+{
+    
+}
 
 void
 GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
@@ -184,13 +194,6 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
     
     // Find all polygons that we want to render
 
-    glActiveTexture( GL_TEXTURE0 );
-    if( subset.get() != NULL ) {
-        glBindTexture( GL_TEXTURE_BUFFER, subset->subsetAsTexture() );
-    }
-    else {
-        glBindTexture( GL_TEXTURE_BUFFER, 0 );
-    }
     glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonNormalIndexTexture() );
     glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonVertexIndexTexture() );
     glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, vertex_positions->vertexPositionsAsBufferTexture() );
@@ -204,39 +207,9 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
 
         // --- try to extract all triangles that should be part of the surfaces
         if( redo_meta ) {
-            
-            glBindVertexArray( polygon_set->polygonVertexArray() );
-            if( polygon_set->polygonCellCount() == 1 ) {
-                glUseProgram( m_meta1_prog.get() );
-                glUniform1i( m_meta1_loc_flip, flip_faces ? GL_TRUE : GL_FALSE );
-            }
-            else if( polygon_set->polygonCellCount() == 2 ) {
-                glUseProgram( m_meta2_prog.get() );
-                glUniform1i( m_meta2_loc_flip, flip_faces ? GL_TRUE : GL_FALSE );
-            }
-            else {
-                throw std::logic_error( "Illegal polygon cell count" );
-            }
-                
-                
-            glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, m_meta_xfb.get() );
-            glBeginTransformFeedback( GL_POINTS );
-            for( uint i=0; i<SURFACE_N; i++ ) {
-                
-                // We use GL_PRIMITIVES_GENERATED and not
-                // GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN since we are
-                // interested in the full count since we want to detect buffer
-                // overflows.
-                glBeginQueryIndexed( GL_PRIMITIVES_GENERATED, i, m_meta_query[i].get() );
-            }
-            glDrawArrays( GL_POINTS, 0, polygon_set->polygonCount() );
-            for( uint i=0; i<SURFACE_N; i++ ) {
-                glEndQueryIndexed( GL_PRIMITIVES_GENERATED, i );
-            }
-            glEndTransformFeedback();
+            runMetaPass( polygon_set, subset, flip_faces );
             redo_meta = false;
             redo_triangulate = true;
-
         }
 
         // --- then, triangulate all the surfaces
@@ -312,11 +285,71 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
     glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
     glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
     glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
-    glActiveTexture( GL_TEXTURE0 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
     glDisable( GL_RASTERIZER_DISCARD );
     glUseProgram( 0 );
     glBindVertexArray( 0 );
 }
+
+void
+GridTessSurfBuilder::runMetaPass( boost::shared_ptr<const mesh::PolygonSetInterface>  polygon_set,
+                                  boost::shared_ptr<const subset::Representation>     subset,
+                                  bool                                                flip_faces)
+{
+
+    // layout(binding=0)   uniform usamplerBuffer  cell_subset;
+    glActiveTexture( GL_TEXTURE0 );
+    if( subset.get() != NULL ) {
+        glBindTexture( GL_TEXTURE_BUFFER, subset->subsetAsTexture() );
+    }
+    else {
+        glBindTexture( GL_TEXTURE_BUFFER, 0 );
+    }
+    
+    // layout(location=0) in [uint|uint2]  cell_ix;
+    // layout(location=1) in uint          offset_a;
+    // layout(location=2) in uint          offset_b;
+    glBindVertexArray( polygon_set->polygonVertexArray() );
+
+    if( polygon_set->polygonCellCount() == 1 ) {
+        glUseProgram( m_meta1_prog.get() );
+        glUniform1i( m_meta1_loc_flip, flip_faces ? GL_TRUE : GL_FALSE );
+    }
+    else if( polygon_set->polygonCellCount() == 2 ) {
+        glUseProgram( m_meta2_prog.get() );
+        glUniform1i( m_meta2_loc_flip, flip_faces ? GL_TRUE : GL_FALSE );
+    }
+    else {
+        throw std::logic_error( "Illegal polygon cell count" );
+    }
+        
+    // layout(stream=0) out uvec4  meta_subset;
+    // layout(stream=1) out uvec4  meta_boundary;
+    // layout(stream=2) out uvec4  meta_fault;
+    glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, m_meta_xfb.get() );
+    glBeginTransformFeedback( GL_POINTS );
+    for( uint i=0; i<SURFACE_N; i++ ) {
+        
+        // We use GL_PRIMITIVES_GENERATED and not
+        // GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN since we are
+        // interested in the full count since we want to detect buffer
+        // overflows.
+        glBeginQueryIndexed( GL_PRIMITIVES_GENERATED, i, m_meta_query[i].get() );
+    }
+
+    glEnable( GL_RASTERIZER_DISCARD );
+    glDrawArrays( GL_POINTS, 0, polygon_set->polygonCount() );
+    glDisable( GL_RASTERIZER_DISCARD );
+
+    for( uint i=0; i<SURFACE_N; i++ ) {
+        glEndQueryIndexed( GL_PRIMITIVES_GENERATED, i );
+    }
+    glEndTransformFeedback();
+ 
+    glBindVertexArray( 0 );
+    glBindTexture( GL_TEXTURE_BUFFER, 0 );
+}
+
+
 
     } // of namespace surface
 } // of namespace render

@@ -24,13 +24,16 @@
 namespace render {
     class PolyhedralRepresentation;
     namespace mesh {
+        class AbstractMeshGPUModel;
         class PolyhedralMeshGPUModel;
+        class PolygonSetInterface;
     }
     namespace subset {
         class Representation;
     }
     namespace  surface {
         class GridTessSurf;
+        class TriangleSoup;
 
 class GridTessSurfBuilder : public boost::noncopyable
 {
@@ -38,6 +41,14 @@ public:
     GridTessSurfBuilder();
 
     ~GridTessSurfBuilder();
+
+    void
+    buildSurfaces( boost::shared_ptr<TriangleSoup>                      surf_subset,
+                   boost::shared_ptr<TriangleSoup>                      surf_subset_boundary,
+                   boost::shared_ptr<TriangleSoup>                      surf_faults,
+                   boost::shared_ptr<const subset::Representation>      subset,
+                   boost::shared_ptr<const mesh::AbstractMeshGPUModel>  mesh,
+                   bool                                                 flip_faces );
 
     void
     buildSurfaces( boost::shared_ptr<GridTessSurf>            surf_subset,
@@ -69,6 +80,10 @@ protected:
     void
     rebuildTriangulationProgram( GLsizei max_vertices );
 
+    void
+    runMetaPass( boost::shared_ptr<const mesh::PolygonSetInterface>  polygon_set,
+                 boost::shared_ptr<const subset::Representation>     subset,
+                 bool                                                flip_faces );
     //GLuint  m_meta_counters;
 };
 
