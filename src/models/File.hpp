@@ -37,6 +37,21 @@ public:
     setFileName( const std::string& filename );
 
     const std::string&
+    filename() const { return m_filename; }
+    
+    int
+    refineI() const { return m_refine_i; }
+
+    int
+    refineJ() const { return m_refine_j; }
+
+    int
+    refineK() const { return m_refine_k; }
+    
+    bool
+    triangulate() const { return m_triangulate; }
+    
+    const std::string&
     titleKey() const;
 
     void
@@ -46,8 +61,13 @@ public:
     guiFactory() const;
 
 protected:
-    boost::shared_ptr<tinia::model::ExposedModel> m_model;
-    Logic&                                      m_logic;
+    boost::shared_ptr<tinia::model::ExposedModel>   m_model;
+    Logic&                                          m_logic;
+    std::string                                     m_filename;
+    int                                             m_refine_i;
+    int                                             m_refine_j;
+    int                                             m_refine_k;
+    bool                                            m_triangulate;
 
 
 };

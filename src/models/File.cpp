@@ -35,20 +35,38 @@ namespace models {
 
 File::File( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic )
     : m_model( model ),
-      m_logic( logic )
+      m_logic( logic ),
+      m_filename( "" ),
+      m_refine_i( 1 ),
+      m_refine_j( 1 ),
+      m_refine_k( 1 ),
+      m_triangulate( true )
 {
     m_model->addElement<bool>( file_tab_key, false, "Add source" );
 //    m_model->addElement<bool>( file_tab_visible_key, false );
-    m_model->addElement<string>( file_name_key, "" );
-    m_model->addElement<bool>( file_load_key, false, "Load" );
-    m_model->addElement<string>( file_refine_label_key, "", "Refinement" );
-    m_model->addConstrainedElement<int>( file_refine_i_key, 1, 1, 16, "I" );
-    m_model->addConstrainedElement<int>( file_refine_j_key, 1, 1, 16, "J" );
-    m_model->addConstrainedElement<int>( file_refine_k_key, 1, 1, 16, "K" );
-    m_model->addElement<string>( file_preprocess_label_key, "", "Preprocessing" );
-    m_model->addElement<bool>( file_triangulate_option_key, false, "Triangulate" );
 
+    m_model->addElement<string>( file_name_key, "" );
+    m_model->addStateListener( file_name_key, this );
+
+    m_model->addElement<bool>( file_load_key, false, "Load" );
     m_model->addStateListener( file_load_key, this );
+
+    m_model->addElement<string>( file_refine_label_key, "", "Refinement" );
+
+    m_model->addConstrainedElement<int>( file_refine_i_key, m_refine_i, 1, 16, "I" );
+    m_model->addStateListener( file_refine_i_key, this );
+    
+    m_model->addConstrainedElement<int>( file_refine_j_key, m_refine_j, 1, 16, "J" );
+    m_model->addStateListener( file_refine_j_key, this );
+
+    m_model->addConstrainedElement<int>( file_refine_k_key, m_refine_k, 1, 16, "K" );
+    m_model->addStateListener( file_refine_k_key, this );
+
+    m_model->addElement<string>( file_preprocess_label_key, "", "Preprocessing" );
+
+    m_model->addElement<bool>( file_triangulate_option_key, m_triangulate, "Triangulate" );
+    m_model->addStateListener( file_triangulate_option_key, this );
+
 }
 
 File::~File()
@@ -79,19 +97,23 @@ File::stateElementModified( tinia::model::StateElement * stateElement )
             m_model->updateElement( file_load_key, false );
             m_model->updateElement( file_tab_key, false );
 
-            string filename;
-            m_model->getElementValue( file_name_key, filename );
-
-            int refine_i, refine_j, refine_k;
-            m_model->getElementValue( file_refine_i_key, refine_i );
-            m_model->getElementValue( file_refine_j_key, refine_j );
-            m_model->getElementValue( file_refine_k_key, refine_k );
-
-            bool triangulate;
-            m_model->getElementValue( file_triangulate_option_key, triangulate );
-
-            m_logic.loadFile( filename, refine_i, refine_j, refine_k, triangulate );
+            m_logic.loadFile( m_filename );
         }
+    }
+    else if( key == file_name_key ) {
+        stateElement->getValue( m_filename );
+    }
+    else if( key == file_refine_i_key ) {
+        stateElement->getValue( m_refine_i );
+    }
+    else if( key == file_refine_j_key ) {
+        stateElement->getValue( m_refine_j );
+    }
+    else if( key == file_refine_k_key ) {
+        stateElement->getValue( m_refine_k );
+    }
+    else if( key == file_triangulate_option_key ) {
+        stateElement->getValue( m_triangulate );
     }
 }
 
