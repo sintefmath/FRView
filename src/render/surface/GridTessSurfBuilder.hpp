@@ -27,6 +27,7 @@ namespace render {
         class AbstractMeshGPUModel;
         class PolyhedralMeshGPUModel;
         class PolygonSetInterface;
+        class VertexPositionInterface;
     }
     namespace subset {
         class Representation;
@@ -78,13 +79,29 @@ protected:
     GLQuery             m_meta_query[SURFACE_N];
 
     void
+    drawMetaStream( int index );
+    
+    void
     rebuildTriangulationProgram( GLsizei max_vertices );
 
     void
     runMetaPass( boost::shared_ptr<const mesh::PolygonSetInterface>  polygon_set,
                  boost::shared_ptr<const subset::Representation>     subset,
                  bool                                                flip_faces );
-    //GLuint  m_meta_counters;
+
+    /** Resize meta buffer if the previous meta pass produced more output than the meta buffer can hold.
+     *
+     * \note Discards the current contents of the meta buffer, which must be repopulated.
+     * \return true If the buffer was resized.
+     */
+    bool
+    resizeMetabufferIfNeeded();
+    
+    void
+    runTriangulatePasses( GridTessSurf**                                          surfaces,
+                          boost::shared_ptr<const mesh::PolygonSetInterface>      polygon_set,
+                          boost::shared_ptr<const mesh::VertexPositionInterface>  vertex_positions );
+
 };
 
 

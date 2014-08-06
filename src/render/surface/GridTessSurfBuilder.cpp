@@ -186,23 +186,8 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
         return;
     }
 
-    // Late shader builing; we don't know the max output until the tessellation
-    // has been built.
-    if( m_triangulate_count != polygon_set->polygonMaxPolygonSize() ) {
-        rebuildTriangulationProgram( polygon_set->polygonMaxPolygonSize() );
-    }
-    
-    // Find all polygons that we want to render
-
-    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonNormalIndexTexture() );
-    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonVertexIndexTexture() );
-    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, vertex_positions->vertexPositionsAsBufferTexture() );
-
-    glEnable( GL_RASTERIZER_DISCARD );
-
     bool redo_meta = true;
     bool redo_triangulate = true;
-    GLuint polygons_count[SURFACE_N];
     for( uint k=0; k<3 &&(redo_meta || redo_triangulate); k++ ) {
 
         // --- try to extract all triangles that should be part of the surfaces
@@ -214,54 +199,12 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
 
         // --- then, triangulate all the surfaces
         if( redo_triangulate ) {
-            glUseProgram( m_triangulate_prog.get() );
-
-            for( int i=0; i< SURFACE_N; i++ ) {
-                if( surfaces[i] != NULL ) {
-                    glBindVertexArray( m_meta_vao[ i ].get() );
-                    glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, surfaces[i]->indicesTransformFeedbackObject() );
-                    glBeginQuery( GL_PRIMITIVES_GENERATED, surfaces[i]->indicesCountQuery() );
-                    glBeginTransformFeedback( GL_POINTS );
-                    
-#if 0
-                    // The following call seems to invoke 'GL_INVALID_OPERATION
-                    // error generated. Transform feedback object not valid for
-                    // draw.'. Not sure why. If replaced with drawArrays using
-                    // count from queries, we get no error. Result seems to be
-                    // sane regardless of error.
-                    glDrawTransformFeedbackStream( GL_POINTS, m_meta_xfb.get(), i );
-#else
-                    GLuint count;
-                    glGetQueryObjectuiv( m_meta_query[i].get(), GL_QUERY_RESULT, &count );
-                    glDrawArrays( GL_POINTS, 0, std::min( m_meta_buf_N[i], (GLsizei)count ) );
-#endif
-                    
-                    glEndTransformFeedback( );
-                    glEndQuery( GL_PRIMITIVES_GENERATED );
-                }
-            }
+            runTriangulatePasses( surfaces, polygon_set, vertex_positions );
             redo_triangulate = false;
         }
 
-        // --- check if meta buffers were large enough
-        for(int i=0; i<SURFACE_N; i++ ) {
-            glGetQueryObjectuiv( m_meta_query[i].get(),
-                                 GL_QUERY_RESULT,
-                                 &polygons_count[i] );
-            if( m_meta_buf_N[i] < (GLsizei)(polygons_count[i]) ) {
-                m_meta_buf_N[i] = 1.1f*polygons_count[i];
-                glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_meta_buf[i].get() );
-                glBufferData( GL_TRANSFORM_FEEDBACK_BUFFER,
-                              sizeof(unsigned int)*4*m_meta_buf_N[i],
-                              NULL,
-                              GL_DYNAMIC_COPY );
-                glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, 0 );
-                redo_meta = true;
-                LOGGER_DEBUG( log, "Meta buffer " << i
-                              << " resized to accomodate " << polygons_count[i]
-                              << " polygons." );
-            }
-        }
+        redo_meta = resizeMetabufferIfNeeded();
+        
         // --- check if triangle buffers were large enough
         for( int i=0; i< SURFACE_N; i++ ) {
             if( surfaces[i] != NULL ) {
@@ -281,13 +224,6 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
             }
         }
     }
-    glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, 0 );
-    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
-    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
-    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
-    glDisable( GL_RASTERIZER_DISCARD );
-    glUseProgram( 0 );
-    glBindVertexArray( 0 );
 }
 
 void
@@ -349,7 +285,90 @@ GridTessSurfBuilder::runMetaPass( boost::shared_ptr<const mesh::PolygonSetInterf
     glBindTexture( GL_TEXTURE_BUFFER, 0 );
 }
 
+void
+GridTessSurfBuilder::drawMetaStream( int index )
+{
+#if 0
+            // The following call seems to invoke 'GL_INVALID_OPERATION
+            // error generated. Transform feedback object not valid for
+            // draw.'. Not sure why. If replaced with drawArrays using
+            // count from queries, we get no error. Result seems to be
+            // sane regardless of error.
+            glDrawTransformFeedbackStream( GL_POINTS, m_meta_xfb.get(), index );
+#else
+            GLuint count;
+            glGetQueryObjectuiv( m_meta_query[index].get(), GL_QUERY_RESULT, &count );
+            glDrawArrays( GL_POINTS, 0, std::min( m_meta_buf_N[index], (GLsizei)count ) );
+#endif
+}
 
+bool
+GridTessSurfBuilder::resizeMetabufferIfNeeded()
+{
+    Logger log = getLogger( "GridTessSurfBuilder.resizeMetabufferIfNeeded" );
+
+    bool was_resized = false;
+    for(int i=0; i<SURFACE_N; i++ ) {
+        GLuint polygon_count;
+
+        glGetQueryObjectuiv( m_meta_query[i].get(),
+                             GL_QUERY_RESULT,
+                             &polygon_count );
+        if( m_meta_buf_N[i] < (GLsizei)(polygon_count) ) {
+            m_meta_buf_N[i] = 1.1f*polygon_count;
+            glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, m_meta_buf[i].get() );
+            glBufferData( GL_TRANSFORM_FEEDBACK_BUFFER,
+                          sizeof(unsigned int)*4*m_meta_buf_N[i],
+                          NULL,
+                          GL_DYNAMIC_COPY );
+            glBindBuffer( GL_TRANSFORM_FEEDBACK_BUFFER, 0 );
+            was_resized = true;
+            LOGGER_DEBUG( log, "Meta buffer " << i
+                          << " resized to accomodate " << polygon_count
+                          << " polygons." );
+        }
+    }
+    return was_resized;
+}
+
+
+void
+GridTessSurfBuilder::runTriangulatePasses( GridTessSurf** surfaces,
+                                           boost::shared_ptr<const mesh::PolygonSetInterface>  polygon_set,
+                                           boost::shared_ptr<const mesh::VertexPositionInterface> vertex_positions )
+{
+    // Late shader builing; we don't know the max output until the tessellation
+    // has been built.
+    if(  m_triangulate_count < polygon_set->polygonMaxPolygonSize() ) {
+        rebuildTriangulationProgram( polygon_set->polygonMaxPolygonSize() );
+    }
+    
+    glEnable( GL_RASTERIZER_DISCARD );
+    glUseProgram( m_triangulate_prog.get() );
+    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonNormalIndexTexture() );
+    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonVertexIndexTexture() );
+    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, vertex_positions->vertexPositionsAsBufferTexture() );
+    
+    for( int i=0; i<SURFACE_N; i++ ) {
+        if( surfaces[i] != NULL ) {
+            glBindVertexArray( m_meta_vao[ i ].get() );
+            glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, surfaces[i]->indicesTransformFeedbackObject() );
+            glBeginQuery( GL_PRIMITIVES_GENERATED, surfaces[i]->indicesCountQuery() );
+            glBeginTransformFeedback( GL_POINTS );
+            drawMetaStream( i );
+            glEndTransformFeedback( );
+            glEndQuery( GL_PRIMITIVES_GENERATED );
+        }
+    }
+
+    glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, 0 );
+    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
+    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
+    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
+    glDisable( GL_RASTERIZER_DISCARD );
+    glUseProgram( 0 );
+    glBindVertexArray( 0 );
+}    
 
     } // of namespace surface
 } // of namespace render
