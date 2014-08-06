@@ -28,6 +28,11 @@ class TriangleSoup : public boost::noncopyable
 {
 public:
     
+    TriangleSoup();
+    
+    bool
+    resizeBuffersIfNeeded( const GLsizei vertices );
+    
 protected:
     GLsizei                     m_vertex_alloc; ///< Number of vertices allocated.
     GLsizei                     m_vertex_count; ///< Actual number of vertices in surface.
@@ -38,13 +43,17 @@ protected:
      * vec3 normal vector
      * vec3 position
      *
-     *
      */
     GLBuffer                    m_attributes;
+
+    /** Track number of vertices produced. */
+    GLQuery                     m_attributes_qry;
     GLTransformFeedback         m_attributes_xfb;
 
     /** Vertex array object with attribute data, for drawing. */
     GLVertexArrayObject         m_attributes_vao;
+
+
 };
 
 

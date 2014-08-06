@@ -33,6 +33,7 @@
 #include "render/subset/BuilderSelectOnPlane.hpp"
 #include "render/ClipPlane.hpp"
 #include "render/surface/GridTessSurf.hpp"
+#include "render/surface/TriangleSoup.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
 
 void
@@ -150,28 +151,41 @@ FRViewJob::doCompute()
                     m_under_the_hood.surfaceGenerateTimer().beginQuery();
                 }
                 
-                source_item->m_subset_surface->setTriangleCount( 0 );
-                source_item->m_boundary_surface->setTriangleCount( 0 );
-                source_item->m_faults_surface->setTriangleCount( 0 );
-                boost::shared_ptr<render::surface::GridTessSurf> subset_surf;
-                if( source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_SUBSET ) {
-                    subset_surf = source_item->m_subset_surface;
+                if( m_create_nonindexed_geometry ) {
+                    if( !source_item->m_subset_surface_soup ) { source_item->m_subset_surface_soup.reset( new render::surface::TriangleSoup ); }
+                    if( !source_item->m_boundary_surface_soup ) { source_item->m_boundary_surface_soup.reset( new render::surface::TriangleSoup ); }
+                    if( !source_item->m_faults_surface_soup ) { source_item->m_faults_surface_soup.reset( new render::surface::TriangleSoup ); }
+                    
                 }
-                boost::shared_ptr<render::surface::GridTessSurf> boundary_surf;
-                if( source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_BOUNDARY ) {
-                    boundary_surf = source_item->m_boundary_surface;
+                else {
+                    if( !source_item->m_subset_surface ) { source_item->m_subset_surface.reset( new render::surface::GridTessSurf ); }
+                    if( !source_item->m_boundary_surface ) { source_item->m_boundary_surface.reset( new render::surface::GridTessSurf ); }
+                    if( !source_item->m_faults_surface ) { source_item->m_faults_surface.reset( new render::surface::GridTessSurf ); }
+                    
+                    
+                    source_item->m_subset_surface->setTriangleCount( 0 );
+                    source_item->m_boundary_surface->setTriangleCount( 0 );
+                    source_item->m_faults_surface->setTriangleCount( 0 );
+                    boost::shared_ptr<render::surface::GridTessSurf> subset_surf;
+                    if( source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_SUBSET ) {
+                        subset_surf = source_item->m_subset_surface;
+                    }
+                    boost::shared_ptr<render::surface::GridTessSurf> boundary_surf;
+                    if( source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_BOUNDARY ) {
+                        boundary_surf = source_item->m_boundary_surface;
+                    }
+                    boost::shared_ptr<render::surface::GridTessSurf> faults_surf;
+                    if( source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_FAULTS ) {
+                        faults_surf = source_item->m_faults_surface;
+                    }
+                    
+                    m_grid_tess_surf_builder->buildSurfaces( subset_surf,
+                                                             boundary_surf,
+                                                             faults_surf,
+                                                             source_item->m_grid_tess_subset,
+                                                             source_item->m_grid_tess,
+                                                             flip_faces );
                 }
-                boost::shared_ptr<render::surface::GridTessSurf> faults_surf;
-                if( source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_FAULTS ) {
-                    faults_surf = source_item->m_faults_surface;
-                }
-                
-                m_grid_tess_surf_builder->buildSurfaces( subset_surf,
-                                                         boundary_surf,
-                                                         faults_surf,
-                                                         source_item->m_grid_tess_subset,
-                                                         source_item->m_grid_tess,
-                                                         flip_faces );
                 if( m_under_the_hood.profilingEnabled() ) {
                     m_under_the_hood.surfaceGenerateTimer().endQuery();
                 }

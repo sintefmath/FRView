@@ -88,7 +88,9 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_render_clip_plane = false;
     m_care_about_updates = true;
 
+    m_create_nonindexed_geometry = false;
 
+    
     float identity[16] = {
         1.f, 0.f, 0.f, 0.f,
         0.f, 1.f, 0.f, 0.f,
@@ -296,8 +298,6 @@ FRViewJob::FRViewJob( const std::list<string>& files )
         }
     }
 }
-
-
 
 
 bool
@@ -664,6 +664,23 @@ bool FRViewJob::setupPipeline()
 void
 FRViewJob::doLogic()
 {
+    
+    if( m_create_nonindexed_geometry != m_renderconfig.createNonindexedSurfaces() ) {
+        m_create_nonindexed_geometry = m_renderconfig.createNonindexedSurfaces();
+
+        for( size_t i=0; i<m_source_items.size(); i++ ) {
+            SourceItem& si = *m_source_items[i];
+            si.m_faults_surface.reset();
+            si.m_faults_surface_soup.reset();
+            si.m_subset_surface.reset();
+            si.m_subset_surface_soup.reset();
+            si.m_boundary_surface.reset();
+            si.m_boundary_surface_soup.reset();
+            si.m_do_update_subset = true;
+        }
+    }
+        
+
     
     if( m_zscale != m_grid_stats.zScale() ) {
         m_zscale = m_grid_stats.zScale();

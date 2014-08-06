@@ -203,6 +203,7 @@ private:
 
     bool                                            m_care_about_updates;
     bool                                            m_render_clip_plane;
+    bool                                            m_create_nonindexed_geometry;
     float                                           m_proxy_box_min[3];
     float                                           m_proxy_box_max[3];
     float                                           m_proxy_transform[16];
