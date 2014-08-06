@@ -151,37 +151,90 @@ FRViewJob::doCompute()
                     m_under_the_hood.surfaceGenerateTimer().beginQuery();
                 }
                 
+                bool generate_subset   = source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_SUBSET;
+                bool generate_boundary = source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_BOUNDARY;
+                bool generate_faults   = source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_FAULTS;
+
                 if( m_create_nonindexed_geometry ) {
-                    if( !source_item->m_subset_surface_soup ) { source_item->m_subset_surface_soup.reset( new render::surface::TriangleSoup ); }
-                    if( !source_item->m_boundary_surface_soup ) { source_item->m_boundary_surface_soup.reset( new render::surface::TriangleSoup ); }
-                    if( !source_item->m_faults_surface_soup ) { source_item->m_faults_surface_soup.reset( new render::surface::TriangleSoup ); }
+
+                    if( generate_subset ) {
+                        if( !source_item->m_subset_surface_soup ) {
+                            source_item->m_subset_surface_soup.reset( new render::surface::TriangleSoup );
+                        }
+                        else {
+                            source_item->m_subset_surface_soup->setTriangleCount( 0 );
+                        }
+                    }
+                    else {
+                        source_item->m_subset_surface_soup.reset();
+                    }
+
+                    if( generate_boundary ) {
+                        if( !source_item->m_boundary_surface_soup ) {
+                            source_item->m_boundary_surface_soup.reset( new render::surface::TriangleSoup );
+                        }
+                        else {
+                            source_item->m_boundary_surface_soup->setTriangleCount( 0 );
+                        }
+                    }
+                    else {
+                        source_item->m_boundary_surface_soup.reset();
+                    }
+
+                    if( generate_faults ) {
+                        if( !source_item->m_faults_surface_soup ) {
+                            source_item->m_faults_surface_soup.reset( new render::surface::TriangleSoup );
+                        }
+                        else {
+                            source_item->m_faults_surface_soup->setTriangleCount( 0 );
+                        }
+                    }
+                    else {
+                        source_item->m_faults_surface_soup.reset();
+                    }
                     
                 }
                 else {
-                    if( !source_item->m_subset_surface ) { source_item->m_subset_surface.reset( new render::surface::GridTessSurf ); }
-                    if( !source_item->m_boundary_surface ) { source_item->m_boundary_surface.reset( new render::surface::GridTessSurf ); }
-                    if( !source_item->m_faults_surface ) { source_item->m_faults_surface.reset( new render::surface::GridTessSurf ); }
-                    
-                    
-                    source_item->m_subset_surface->setTriangleCount( 0 );
-                    source_item->m_boundary_surface->setTriangleCount( 0 );
-                    source_item->m_faults_surface->setTriangleCount( 0 );
-                    boost::shared_ptr<render::surface::GridTessSurf> subset_surf;
-                    if( source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_SUBSET ) {
-                        subset_surf = source_item->m_subset_surface;
+
+                    if( generate_subset ) {
+                        if( !source_item->m_subset_surface ) {
+                            source_item->m_subset_surface.reset( new render::surface::GridTessSurf );
+                        }
+                        else {
+                            source_item->m_subset_surface->setTriangleCount( 0 );
+                        }
                     }
-                    boost::shared_ptr<render::surface::GridTessSurf> boundary_surf;
-                    if( source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_BOUNDARY ) {
-                        boundary_surf = source_item->m_boundary_surface;
+                    else {
+                        source_item->m_subset_surface.reset();
                     }
-                    boost::shared_ptr<render::surface::GridTessSurf> faults_surf;
-                    if( source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_FAULTS ) {
-                        faults_surf = source_item->m_faults_surface;
+
+                    if( generate_boundary ) {
+                        if( !source_item->m_boundary_surface ) {
+                            source_item->m_boundary_surface.reset( new render::surface::GridTessSurf );
+                        }
+                        else {
+                            source_item->m_boundary_surface->setTriangleCount( 0 );
+                        }
                     }
-                    
-                    m_grid_tess_surf_builder->buildSurfaces( subset_surf,
-                                                             boundary_surf,
-                                                             faults_surf,
+                    else {
+                        source_item->m_boundary_surface.reset();
+                    }
+
+                    if( generate_faults ) {
+                        if( !source_item->m_faults_surface ) {
+                            source_item->m_faults_surface.reset( new render::surface::GridTessSurf );
+                        }
+                        else {
+                            source_item->m_faults_surface->setTriangleCount( 0 );
+                        }
+                    }
+                    else {
+                        source_item->m_faults_surface.reset();
+                    }
+
+                    m_grid_tess_surf_builder->buildSurfaces( source_item->m_subset_surface,
+                                                             source_item->m_boundary_surface,
+                                                             source_item->m_faults_surface,
                                                              source_item->m_grid_tess_subset,
                                                              source_item->m_grid_tess,
                                                              flip_faces );

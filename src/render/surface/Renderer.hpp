@@ -57,6 +57,15 @@ protected:
     GLint       m_loc_surface_color;
     GLint       m_loc_edge_color;
     GLint       m_loc_screen_size;
+
+    GLProgram   m_draw_triangle_soup;
+    GLint       m_draw_triangle_soup_loc_mvp;
+    GLint       m_draw_triangle_soup_loc_mv;
+    GLint       m_draw_triangle_soup_loc_nm;
+    GLint       m_draw_triangle_soup_loc_surface_color;
+    GLint       m_draw_triangle_soup_loc_edge_color;
+    GLint       m_draw_triangle_soup_loc_screen_size;
+
 };
     
 

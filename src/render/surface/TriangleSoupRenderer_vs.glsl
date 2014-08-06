@@ -16,12 +16,12 @@
  * along with the FRView.  If not, see http://www.gnu.org/licenses/.
  */
 
-layout(location=0)  in vec4 position;
+layout(location=0)  in vec4 color;
 layout(location=1)  in vec3 normal;
-layout(location=2)  in vec3 color;
+layout(location=2)  in vec3 position;
 
 out FRAGMENT_IN {
-    vec3 color;
+    vec4 color;
     vec3 normal;
 } fragment_in;
 
@@ -35,6 +35,4 @@ main()
     fragment_in.color  = color;
     fragment_in.normal = NM * normal;
     gl_Position = MVP*vec4( position.xyz, 1.f );
-    
-    
 }

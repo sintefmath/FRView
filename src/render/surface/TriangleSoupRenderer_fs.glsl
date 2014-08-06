@@ -16,6 +16,7 @@
  * along with the FRView.  If not, see http://www.gnu.org/licenses/.
  */
 
+
 in FRAGMENT_IN {
     vec4 color;
 } fragment_in;
@@ -24,3 +25,6 @@ vec4 colorize()
 {
     return fragment_in.color;
 }
+
+
+

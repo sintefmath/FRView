@@ -148,7 +148,7 @@ FRViewJob::render( const float*  projection,
             }
             
             bool emit_fault_surface = false;
-            if( source_item->m_faults_surface
+            if( (source_item->m_faults_surface || source_item->m_faults_surface_soup)
                     && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_FAULTS ) )
             {
                 const glm::vec3 fc = ap.faultsColor();
@@ -157,6 +157,7 @@ FRViewJob::render( const float*  projection,
                 items.back().m_mesh = source_item->m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
                 items.back().m_surf = source_item->m_faults_surface;
+                items.back().m_trisoup = source_item->m_faults_surface_soup;
                 items.back().m_line_thickness = m_renderconfig.lineThickness();
                 items.back().m_edge_color[0] = line_color.r;
                 items.back().m_edge_color[1] = line_color.g;
@@ -170,7 +171,7 @@ FRViewJob::render( const float*  projection,
             }
 
             bool emit_subset_surface = false;
-            if( source_item->m_subset_surface
+            if( (source_item->m_subset_surface || source_item->m_subset_surface_soup)
                     && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_SUBSET ) )
             {
                 const glm::vec3 fc = ap.subsetColor();
@@ -179,6 +180,7 @@ FRViewJob::render( const float*  projection,
                 items.back().m_mesh = source_item->m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
                 items.back().m_surf = source_item->m_subset_surface;
+                items.back().m_trisoup = source_item->m_subset_surface_soup;
                 items.back().m_field = source_item->m_grid_field;
                 items.back().m_field_log_map = log_map;
                 items.back().m_color_map = source_item->m_color_map;
@@ -198,7 +200,7 @@ FRViewJob::render( const float*  projection,
             }
 
             bool emit_boundary_surface = false;
-            if( source_item->m_boundary_surface
+            if( (source_item->m_boundary_surface || source_item->m_boundary_surface_soup )
                     && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_BOUNDARY ) )
             {
                 const glm::vec3 fc = ap.boundaryColor();
@@ -207,6 +209,7 @@ FRViewJob::render( const float*  projection,
                 items.back().m_mesh = source_item->m_grid_tess;
                 items.back().m_renderer = render::RenderItem::RENDERER_SURFACE;
                 items.back().m_surf = source_item->m_boundary_surface;
+                items.back().m_trisoup = source_item->m_boundary_surface_soup;
                 items.back().m_field = source_item->m_grid_field;
                 items.back().m_color_map = source_item->m_color_map;
                 items.back().m_field_log_map = log_map;

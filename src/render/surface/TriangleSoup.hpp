@@ -31,11 +31,18 @@ public:
     TriangleSoup();
     
     bool
-    resizeBuffersIfNeeded( const GLsizei vertices );
+    setTriangleCount(const GLsizei triangles );
     
+    GLsizei
+    triangleCount() const { return m_triangle_count; }
+
+    GLint
+    vertexAttributesAsVertexArrayObject() const
+    { return m_attributes_vao.get(); }
+
 protected:
-    GLsizei                     m_vertex_alloc; ///< Number of vertices allocated.
-    GLsizei                     m_vertex_count; ///< Actual number of vertices in surface.
+    GLsizei                     m_triangle_count; ///< Actual number of triangles in surface.
+    GLsizei                     m_triangle_alloc; ///< Number of triangles allocated.
 
     /** Buffer holding vertex attribute data
      *

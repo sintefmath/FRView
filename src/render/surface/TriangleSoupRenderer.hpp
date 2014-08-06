@@ -22,6 +22,8 @@
 #include "render/surface/TriangleSoup.hpp"
 
 namespace render {
+    class RenderItem;
+
 namespace surface {
 
 class TriangleSoupRenderer : public boost::noncopyable
