@@ -291,7 +291,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
         }
         
         if( (*it).find('.') != std::string::npos ) {
-            loadFile( *it, 1, 1, 1, false );
+            loadFile( *it );
             //break;
         }
     }
@@ -356,19 +356,15 @@ FRViewJob::updateCurrentFieldData()
 
 
 void
-FRViewJob::loadFile( const std::string& filename,
-                     int refine_i,
-                     int refine_j,
-                     int refine_k,
-                     bool triangulate )
+FRViewJob::loadFile( const std::string& filename )
 {
     m_source_selector.file().setFileName( filename );
 
     m_async_reader->issueOpenSource( filename,
-                                      refine_i,
-                                      refine_j,
-                                      refine_k,
-                                      triangulate );
+                                     m_source_selector.file().refineI(),
+                                     m_source_selector.file().refineJ(),
+                                     m_source_selector.file().refineK(),
+                                     m_source_selector.file().triangulate() );
 }
 
 void
