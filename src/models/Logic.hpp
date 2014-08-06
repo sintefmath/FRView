@@ -45,11 +45,7 @@ public:
 
     virtual
     void
-    loadFile( const std::string& filename,
-              int refine_i,
-              int refine_j,
-              int refine_k,
-              bool triangulate ) = 0;
+    loadFile( const std::string& filename ) = 0;
 
 
 protected:
