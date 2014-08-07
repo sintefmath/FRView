@@ -30,6 +30,7 @@ in GO {
 
 uniform vec4   edge_color;
 uniform float  line_width = 0.5; // actually half the width of the line.
+uniform bool            solid_pass;
 
 /** Analytical anti-aliasing: determine the line coverage of a pixel
   *

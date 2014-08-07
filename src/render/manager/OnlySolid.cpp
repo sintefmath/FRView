@@ -63,7 +63,7 @@ TransparencyNone::render(GLuint                              fbo,
     glDisable( GL_BLEND );
     
     m_surface_renderer.draw( glm::value_ptr( M ), projection,
-                             m_width, m_height, items );
+                             m_width, m_height, items, true );
     renderMiscellaneous( width, height,
                          local_to_world, modelview, projection,
                          items );

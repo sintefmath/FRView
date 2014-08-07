@@ -38,8 +38,6 @@ TransparencyAdditive::TransparencyAdditive(  const models::RenderConfig& appeara
     : AbstractBase( appearance, width, height ),
       m_surface_renderer( defines(), glsl::TransparencyAdditive_geo_fs )
 {
-    m_surface_renderer_solid_pass = glGetUniformLocation( m_surface_renderer.program().get(),
-                                                          "solid_pass" );
 
     static const GLfloat quad[ 4*4 ] = {
          1.f, -1.f, 0.f, 1.f,
@@ -183,13 +181,11 @@ TransparencyAdditive::render(GLuint                              fbo,
     glDepthFunc( GL_LESS );
     glDepthMask( GL_TRUE );
     glDisable( GL_BLEND );
-    glProgramUniform1i( m_surface_renderer.program().get(),
-                        m_surface_renderer_solid_pass,
-                        GL_TRUE );
+
     m_surface_renderer.draw( glm::value_ptr( M ),
                              projection,
                              m_width,
-                             m_height, items );
+                             m_height, items, true );
     renderMiscellaneous( width, height,
                          local_to_world, modelview, projection,
                          items );
@@ -201,13 +197,10 @@ TransparencyAdditive::render(GLuint                              fbo,
     glEnable( GL_BLEND );
     glBlendFunc( GL_ONE, GL_ONE );  // alpha * color done in geometry shader
 
-    glProgramUniform1i( m_surface_renderer.program().get(),
-                        m_surface_renderer_solid_pass,
-                        GL_FALSE );
     m_surface_renderer.draw( glm::value_ptr( M ),
                              projection,
                              m_width,
-                             m_height, items );
+                             m_height, items, false );
 
     glDepthMask( GL_TRUE );
     glDisable( GL_BLEND );

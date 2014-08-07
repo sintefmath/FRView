@@ -16,6 +16,8 @@
  * along with the FRView.  If not, see http://www.gnu.org/licenses/.
  */
 
+uniform bool  solid_pass;
+uniform vec4  surface_color;
 
 in FRAGMENT_IN {
     vec4 color;
@@ -23,7 +25,7 @@ in FRAGMENT_IN {
 
 vec4 colorize()
 {
-    return vec4( fragment_in.color.rgb, 1.f );
+    return surface_color; //.a * vec4( fragment_in.color.rgb, 1.0 );
 }
 
 

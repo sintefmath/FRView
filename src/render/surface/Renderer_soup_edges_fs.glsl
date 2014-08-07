@@ -16,11 +16,11 @@
  * along with the FRView.  If not, see http://www.gnu.org/licenses/.
  */
 
-uniform vec4 edge_color;
+uniform bool  solid_pass;
+uniform vec4  edge_color;
 
 vec4 colorize()
 {
-    return vec4( 1.f, 1.f, 0.f, 0.f );
     return edge_color;
 }
 

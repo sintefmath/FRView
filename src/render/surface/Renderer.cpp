@@ -79,6 +79,7 @@ Renderer::Renderer( const std::string& defines, const std::string& fragment_sour
 
         utils::linkProgram( log, m_main.get() );
 
+        m_loc_solid_pass    = glGetUniformLocation( m_main.get(), "solid_pass" );
         m_loc_mvp           = glGetUniformLocation( m_main.get(), "MVP" );
         m_loc_mv            = glGetUniformLocation( m_main.get(), "MV" );
         m_loc_nm            = glGetUniformLocation( m_main.get(), "NM" );
@@ -102,12 +103,11 @@ Renderer::Renderer( const std::string& defines, const std::string& fragment_sour
 
         utils::linkProgram( log, m_draw_triangle_soup.get() );
 
+        m_draw_triangle_soup_loc_solid_pass    = glGetUniformLocation( m_draw_triangle_soup.get(), "solid_pass" );
         m_draw_triangle_soup_loc_mvp           = glGetUniformLocation( m_draw_triangle_soup.get(), "MVP" );
         m_draw_triangle_soup_loc_mv            = glGetUniformLocation( m_draw_triangle_soup.get(), "MV" );
         m_draw_triangle_soup_loc_nm            = glGetUniformLocation( m_draw_triangle_soup.get(), "NM" );
         m_draw_triangle_soup_loc_surface_color = glGetUniformLocation( m_draw_triangle_soup.get(), "surface_color" );
-        m_draw_triangle_soup_loc_edge_color    = glGetUniformLocation( m_draw_triangle_soup.get(), "edge_color" );
-        m_draw_triangle_soup_loc_screen_size   = glGetUniformLocation( m_draw_triangle_soup.get(), "screen_size" );
     }
 
     // -------------------------------------------------------------------------
@@ -125,6 +125,7 @@ Renderer::Renderer( const std::string& defines, const std::string& fragment_sour
 
         utils::linkProgram( log, m_draw_soup_edges_prog.get() );
 
+        m_draw_soup_edges_loc_solid_pass = glGetUniformLocation( m_draw_soup_edges_prog.get(), "solid_pass" );
         m_draw_soup_edges_loc_mvp        = glGetUniformLocation( m_draw_soup_edges_prog.get(), "MVP" );
         m_draw_soup_edges_loc_edge_color = glGetUniformLocation( m_draw_soup_edges_prog.get(), "edge_color" );
 
@@ -138,7 +139,8 @@ Renderer::draw( const GLfloat*                            modelview,
                 const GLfloat*                            projection,
                 const GLsizei                             width,
                 const GLsizei                             height,
-                const std::vector<RenderItem>&            render_items )
+                const std::vector<RenderItem>&            render_items,
+                bool                                      solid_pass  )
 {
     using boost::shared_ptr;
     using boost::dynamic_pointer_cast;
@@ -184,6 +186,7 @@ Renderer::draw( const GLfloat*                            modelview,
             }
 
             glUseProgram( m_main.get() );
+            glUniform1i( m_loc_solid_pass, solid_pass ? GL_TRUE : GL_FALSE );
             glUniformMatrix4fv( m_loc_mvp, 1, GL_FALSE, glm::value_ptr( MVP ) );
             glUniformMatrix3fv( m_loc_nm, 1, GL_FALSE, nm3 );
             glUniformMatrix4fv( m_loc_mv, 1, GL_FALSE, modelview );
@@ -264,35 +267,44 @@ Renderer::draw( const GLfloat*                            modelview,
 
             if( item.m_trisoup->triangleVertexCount() > 0 ) {
 
-                //glPolygonOffset( 1.f, 1.f );
-                //glEnable( GL_POLYGON_OFFSET_FILL );
+                glPolygonOffset( 1.f, 1.f );
+                glEnable( GL_POLYGON_OFFSET_FILL );
 
                 glUseProgram( m_draw_triangle_soup.get() );
+                glUniform1i( m_draw_triangle_soup_loc_solid_pass, solid_pass ? GL_TRUE : GL_FALSE );
                 glUniformMatrix4fv( m_draw_triangle_soup_loc_mvp, 1, GL_FALSE, glm::value_ptr( MVP ) );
                 glUniformMatrix3fv( m_draw_triangle_soup_loc_nm, 1, GL_FALSE, nm3 );
                 glUniformMatrix4fv( m_draw_triangle_soup_loc_mv, 1, GL_FALSE, modelview );
-                glUniform2f( m_draw_triangle_soup_loc_screen_size, width, height );
 
-                glUniform4fv( m_draw_triangle_soup_loc_surface_color, 1, item.m_face_color );
+                glUniform4f( m_draw_triangle_soup_loc_surface_color,
+                             item.m_face_color[3]*item.m_face_color[0],
+                             item.m_face_color[3]*item.m_face_color[1],
+                             item.m_face_color[3]*item.m_face_color[2],
+                             item.m_face_color[3] );
 
                 glBindVertexArray( item.m_trisoup->triangleVertexAttributesAsVertexArrayObject() );
 
                 glDrawArrays( GL_TRIANGLES, 0, item.m_trisoup->triangleVertexCount() );
 
-                //glDisable( GL_POLYGON_OFFSET_FILL );
+                glDisable( GL_POLYGON_OFFSET_FILL );
 
             }
             if( (item.m_trisoup->edgeVertexCount() > 0) /*&& (item.m_edge_color[3] > 0.f )*/ ) {
                 glUseProgram( m_draw_soup_edges_prog.get() );
+                glUniform1i( m_draw_soup_edges_loc_solid_pass, solid_pass ? GL_TRUE : GL_FALSE );
                 glUniformMatrix4fv( m_draw_soup_edges_loc_mvp, 1, GL_FALSE, glm::value_ptr( MVP ) );
-                glUniform4fv( m_draw_soup_edges_loc_edge_color, 1, item.m_edge_color );
+                glUniform4f( m_draw_soup_edges_loc_edge_color,
+                             item.m_edge_color[3]*item.m_edge_color[0],
+                             item.m_edge_color[3]*item.m_edge_color[1],
+                             item.m_edge_color[3]*item.m_edge_color[2],
+                             item.m_edge_color[3] );
 
                 glBindVertexArray( item.m_trisoup->edgeVertexAttributesAsVertexArrayObject() );
                 glDrawArrays( GL_LINES, 0, item.m_trisoup->edgeVertexCount() );
             }
         }
     }
-    glDisable( GL_POLYGON_OFFSET_FILL );
+    //glDisable( GL_POLYGON_OFFSET_FILL );
 
 
 
