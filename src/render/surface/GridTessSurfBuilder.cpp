@@ -21,6 +21,7 @@
 #include "render/mesh/PolygonMeshGPUModel.hpp"
 #include "render/subset/Representation.hpp"
 #include "render/surface/GridTessSurf.hpp"
+#include "render/surface/TriangleSoup.hpp"
 #include "render/surface/GridTessSurfBuilder.hpp"
 #include <sstream>
 
@@ -32,6 +33,8 @@ namespace render {
         namespace glsl {
             extern const std::string GridTessSurfBuilder_triangulate_vs;
             extern const std::string GridTessSurfBuilder_triangulate_gs;
+            extern const std::string GridTessSurfBuilder_triangulate_indexed_gs;
+            extern const std::string GridTessSurfBuilder_triangulate_trisoup_gs;
             extern const std::string GridTessSurfBuilder_extract1_vs;
             extern const std::string GridTessSurfBuilder_extract1_gs;
             extern const std::string GridTessSurfBuilder_extract2_vs;
@@ -48,8 +51,10 @@ namespace render {
 GridTessSurfBuilder::GridTessSurfBuilder()
     : m_meta1_prog( "GridTessSurfBuilder.m_meta1_prog"),
       m_meta2_prog( "GridTessSurfBuilder.m_meta2_prog"),
-      m_triangulate_count( 0 ),
-      m_triangulate_prog( "GridTessSurfBuilder.m_triangulate_prog" )
+      m_triangulate_indexed_count( 0 ),
+      m_triangulate_indexed_prog( "GridTessSurfBuilder.riangulate_indexed_prog" ),
+      m_triangulate_trisoup_count( 0 ),
+      m_triangulate_trisoup_prog( "GridTessSurfBuilder.triangulate_trisoup_prog" )
 {
     Logger log = getLogger( "render.GridTessSurfBuilder.constructor" );
 
@@ -108,12 +113,12 @@ GridTessSurfBuilder::~GridTessSurfBuilder()
 }
 
 void
-GridTessSurfBuilder::rebuildTriangulationProgram( GLsizei max_vertices )
+GridTessSurfBuilder::rebuildIndexedTriangulationProgram( GLsizei max_vertices )
 {
-    Logger log = getLogger( "render.GridTessSurfBuilder.rebuildTriangulationProgram" );
+    Logger log = getLogger( "render.GridTessSurfBuilder.rebuildIndexedTriangulationProgram" );
 
-    m_triangulate_count = max_vertices;
-    m_triangulate_prog.reset();
+    m_triangulate_indexed_count = max_vertices;
+    m_triangulate_indexed_prog.reset();
 
     static const char* triangle_feedback[2] = {
         "cell",
@@ -128,31 +133,57 @@ GridTessSurfBuilder::rebuildTriangulationProgram( GLsizei max_vertices )
                                            GL_VERTEX_SHADER );
     GLuint poly_subset_gs = utils::compileShader( log,
                                                   o.str() +
+                                                  glsl::GridTessSurfBuilder_triangulate_indexed_gs +
                                                   glsl::GridTessSurfBuilder_triangulate_gs,
                                                   GL_GEOMETRY_SHADER );
-    glAttachShader( m_triangulate_prog.get(), poly_vs );
-    glAttachShader( m_triangulate_prog.get(), poly_subset_gs );
-    glTransformFeedbackVaryings( m_triangulate_prog.get(), 2, triangle_feedback, GL_SEPARATE_ATTRIBS );
-    utils::linkProgram( log, m_triangulate_prog.get() );
+    glAttachShader( m_triangulate_indexed_prog.get(), poly_vs );
+    glAttachShader( m_triangulate_indexed_prog.get(), poly_subset_gs );
+    glTransformFeedbackVaryings( m_triangulate_indexed_prog.get(), 2, triangle_feedback, GL_SEPARATE_ATTRIBS );
+    utils::linkProgram( log, m_triangulate_indexed_prog.get() );
     glDeleteShader( poly_vs );
     glDeleteShader( poly_subset_gs );
 }
 
 void
-GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<TriangleSoup>                      surf_subset,
-                                    boost::shared_ptr<TriangleSoup>                      surf_subset_boundary,
-                                    boost::shared_ptr<TriangleSoup>                      surf_faults,
-                                    boost::shared_ptr<const subset::Representation>      subset,
-                                    boost::shared_ptr<const mesh::AbstractMeshGPUModel>  mesh,
-                                    bool                                                 flip_faces )
+GridTessSurfBuilder::rebuildTriSoupTriangulationProgram( GLsizei max_vertices )
 {
-    
+    Logger log = getLogger( "render.GridTessSurfBuilder.rebuildTriSoupTriangulationProgram" );
+
+    m_triangulate_trisoup_count = max_vertices;
+    m_triangulate_trisoup_prog.reset();
+
+    static const char* triangle_feedback[3] = {
+        "out_color",
+        "out_normal",
+        "out_position"
+    };
+
+    GLsizei max_out = std::max( (GLsizei)3, max_vertices )-2;
+    std::stringstream o;
+    o << "#define MAX_OUT " << (3*max_out) << "\n";
+    GLuint poly_vs = utils::compileShader( log,
+                                           glsl::GridTessSurfBuilder_triangulate_vs,
+                                           GL_VERTEX_SHADER );
+    GLuint poly_subset_gs = utils::compileShader( log,
+                                                  o.str() +
+                                                  glsl::GridTessSurfBuilder_triangulate_trisoup_gs +
+                                                  glsl::GridTessSurfBuilder_triangulate_gs,
+                                                  GL_GEOMETRY_SHADER );
+    glAttachShader( m_triangulate_trisoup_prog.get(), poly_vs );
+    glAttachShader( m_triangulate_trisoup_prog.get(), poly_subset_gs );
+    glTransformFeedbackVaryings( m_triangulate_trisoup_prog.get(), 3, triangle_feedback, GL_INTERLEAVED_ATTRIBS );
+    utils::linkProgram( log, m_triangulate_trisoup_prog.get() );
+    glDeleteShader( poly_vs );
+    glDeleteShader( poly_subset_gs );
 }
 
 void
-GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
+GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
+                                    boost::shared_ptr<TriangleSoup> surf_subset_soup,
                                     boost::shared_ptr<GridTessSurf> surf_subset_boundary,
+                                    boost::shared_ptr<TriangleSoup> surf_subset_boundary_soup,
                                     boost::shared_ptr<GridTessSurf> surf_faults,
+                                    boost::shared_ptr<TriangleSoup> surf_faults_soup,
                                     boost::shared_ptr<const subset::Representation> subset,
                                     boost::shared_ptr<const mesh::AbstractMeshGPUModel> mesh,
                                     bool                     flip_faces )
@@ -172,15 +203,38 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
         return;
     }
     
-    GridTessSurf* surfaces[ SURFACE_N ];
-    surfaces[ SURFACE_SUBSET          ] = surf_subset.get();
-    surfaces[ SURFACE_SUBSET_BOUNDARY ] = surf_subset_boundary.get();
-    surfaces[ SURFACE_FAULT ]           = surf_faults.get();
+    bool any_indexed_surfaces = false;
+    GridTessSurf* indexed_surfaces[ SURFACE_N ];
+    indexed_surfaces[ SURFACE_SUBSET          ] = surf_subset.get();
+    indexed_surfaces[ SURFACE_SUBSET_BOUNDARY ] = surf_subset_boundary.get();
+    indexed_surfaces[ SURFACE_FAULT ]           = surf_faults.get();
+    for( int i=0; i<SURFACE_N; i++ ) {
+        if( indexed_surfaces[i] != NULL ) {
+            any_indexed_surfaces = true;
+        }
+    }
+
+    bool any_trisoup_surfaces = false;
+    TriangleSoup* trisoup_surfaces[ SURFACE_N ];
+    trisoup_surfaces[ SURFACE_SUBSET          ] = surf_subset_soup.get();
+    trisoup_surfaces[ SURFACE_SUBSET_BOUNDARY ] = surf_subset_boundary_soup.get();
+    trisoup_surfaces[ SURFACE_FAULT ]           = surf_faults_soup.get();
+    for( int i=0; i<SURFACE_N; i++ ) {
+        if( trisoup_surfaces[i] != NULL ) {
+            any_trisoup_surfaces = true;
+        }
+    }
+
+    if( !(any_indexed_surfaces || any_trisoup_surfaces) ) {
+        // nothing to do
+        return;
+    }
+
 
     if( polygon_set->polygonCount() == 0 ) {
         for( int i=0; i< SURFACE_N; i++ ) {
-            if( surfaces[i] != NULL ) {
-                surfaces[i]->setTriangleCount( 0 );
+            if( indexed_surfaces[i] != NULL ) {
+                indexed_surfaces[i]->setTriangleCount( 0 );
             }
         }
         return;
@@ -199,29 +253,59 @@ GridTessSurfBuilder::buildSurfaces(boost::shared_ptr<GridTessSurf> surf_subset,
 
         // --- then, triangulate all the surfaces
         if( redo_triangulate ) {
-            runTriangulatePasses( surfaces, polygon_set, vertex_positions );
+            if( any_indexed_surfaces ) {
+                runIndexedTriangulatePasses( indexed_surfaces, polygon_set, vertex_positions );
+            }
+            if( any_trisoup_surfaces ) {
+                runTriSoupTriangulatePasses( trisoup_surfaces, polygon_set, vertex_positions );
+            }
             redo_triangulate = false;
         }
 
         redo_meta = resizeMetabufferIfNeeded();
         
         // --- check if triangle buffers were large enough
-        for( int i=0; i< SURFACE_N; i++ ) {
-            if( surfaces[i] != NULL ) {
-                GLuint result;
-                glGetQueryObjectuiv( surfaces[i]->indicesCountQuery(),
-                                     GL_QUERY_RESULT,
-                                     &result );
-                if( surfaces[i]->setTriangleCount( result ) ) {
-                    LOGGER_DEBUG( log, "Triangle buffer " << i
-                                  << " resized to accomodate " << result
-                                  << " triangles." );
-                    redo_triangulate = true;
-                }
-                else {
-                    LOGGER_DEBUG( log, "Triangle surface " << i << " has " << result << " triangles" );
+        if( any_indexed_surfaces ) {
+            for( int i=0; i< SURFACE_N; i++ ) {
+                if( indexed_surfaces[i] != NULL ) {
+                    GLuint result;
+                    glGetQueryObjectuiv( indexed_surfaces[i]->indicesCountQuery(),
+                                         GL_QUERY_RESULT,
+                                         &result );
+                    if( indexed_surfaces[i]->setTriangleCount( result ) ) {
+                        LOGGER_DEBUG( log, "Triangle buffer " << i
+                                      << " resized to accomodate " << result
+                                      << " triangles." );
+                        redo_triangulate = true;
+                    }
+                    else {
+                        LOGGER_DEBUG( log, "Triangle surface " << i << " has " << result << " triangles" );
+                    }
                 }
             }
+        }
+        if( any_trisoup_surfaces ) {
+
+            for( int i=0; i< SURFACE_N; i++ ) {
+                if( trisoup_surfaces[i] != NULL ) {
+                    GLuint result;
+                    glGetQueryObjectuiv( trisoup_surfaces[i]->primitiveCountQuery(),
+                                         GL_QUERY_RESULT,
+                                         &result );
+
+                    LOGGER_DEBUG( log, result );
+                    if( trisoup_surfaces[i]->setTriangleCount( result ) ) {
+                        LOGGER_DEBUG( log, "Triangle buffer " << i
+                                      << " resized to accomodate " << result
+                                      << " triangles." );
+                        redo_triangulate = true;
+                    }
+                    else {
+                        LOGGER_DEBUG( log, "Triangle surface " << i << " has " << result << " triangles" );
+                    }
+                }
+            }
+
         }
     }
 }
@@ -299,6 +383,9 @@ GridTessSurfBuilder::drawMetaStream( int index )
             GLuint count;
             glGetQueryObjectuiv( m_meta_query[index].get(), GL_QUERY_RESULT, &count );
             glDrawArrays( GL_POINTS, 0, std::min( m_meta_buf_N[index], (GLsizei)count ) );
+
+            //Logger log = getLogger( "foo");
+            //LOGGER_DEBUG( log, "meta_count = " << count );
 #endif
 }
 
@@ -333,22 +420,24 @@ GridTessSurfBuilder::resizeMetabufferIfNeeded()
 
 
 void
-GridTessSurfBuilder::runTriangulatePasses( GridTessSurf** surfaces,
+GridTessSurfBuilder::runIndexedTriangulatePasses( GridTessSurf** surfaces,
                                            boost::shared_ptr<const mesh::PolygonSetInterface>  polygon_set,
                                            boost::shared_ptr<const mesh::VertexPositionInterface> vertex_positions )
 {
+
     // Late shader builing; we don't know the max output until the tessellation
     // has been built.
-    if(  m_triangulate_count < polygon_set->polygonMaxPolygonSize() ) {
-        rebuildTriangulationProgram( polygon_set->polygonMaxPolygonSize() );
+    if(  m_triangulate_indexed_count < polygon_set->polygonMaxPolygonSize() ) {
+        rebuildIndexedTriangulationProgram( polygon_set->polygonMaxPolygonSize() );
     }
     
     glEnable( GL_RASTERIZER_DISCARD );
-    glUseProgram( m_triangulate_prog.get() );
+    glUseProgram( m_triangulate_indexed_prog.get() );
     glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonNormalIndexTexture() );
     glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonVertexIndexTexture() );
     glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, vertex_positions->vertexPositionsAsBufferTexture() );
     
+
     for( int i=0; i<SURFACE_N; i++ ) {
         if( surfaces[i] != NULL ) {
             glBindVertexArray( m_meta_vao[ i ].get() );
@@ -370,5 +459,42 @@ GridTessSurfBuilder::runTriangulatePasses( GridTessSurf** surfaces,
     glBindVertexArray( 0 );
 }    
 
-    } // of namespace surface
+void
+GridTessSurfBuilder::runTriSoupTriangulatePasses( TriangleSoup** surfaces,
+                                           boost::shared_ptr<const mesh::PolygonSetInterface>  polygon_set,
+                                           boost::shared_ptr<const mesh::VertexPositionInterface> vertex_positions )
+{
+    if(  m_triangulate_trisoup_count < polygon_set->polygonMaxPolygonSize() ) {
+        rebuildTriSoupTriangulationProgram( polygon_set->polygonMaxPolygonSize() );
+    }
+    glEnable( GL_RASTERIZER_DISCARD );
+    glUseProgram( m_triangulate_trisoup_prog.get() );
+    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonNormalIndexTexture() );
+    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonVertexIndexTexture() );
+    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, vertex_positions->vertexPositionsAsBufferTexture() );
+
+    for( int i=0; i<SURFACE_N; i++ ) {
+        if( surfaces[i] != NULL ) {
+            glBindVertexArray( m_meta_vao[ i ].get() );
+            glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, surfaces[i]->vertexAttributesTransformFeedback() );
+            glBeginQuery( GL_PRIMITIVES_GENERATED, surfaces[i]->primitiveCountQuery() );
+            glBeginTransformFeedback( GL_TRIANGLES );
+            drawMetaStream( i );
+            glEndTransformFeedback( );
+            glEndQuery( GL_PRIMITIVES_GENERATED );
+        }
+    }
+
+    glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, 0 );
+    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
+    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
+    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
+    glDisable( GL_RASTERIZER_DISCARD );
+    glUseProgram( 0 );
+    glBindVertexArray( 0 );
+
+
+}
+
+} // of namespace surface
 } // of namespace render

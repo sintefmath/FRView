@@ -232,13 +232,16 @@ FRViewJob::doCompute()
                         source_item->m_faults_surface.reset();
                     }
 
-                    m_grid_tess_surf_builder->buildSurfaces( source_item->m_subset_surface,
-                                                             source_item->m_boundary_surface,
-                                                             source_item->m_faults_surface,
-                                                             source_item->m_grid_tess_subset,
-                                                             source_item->m_grid_tess,
-                                                             flip_faces );
                 }
+                m_grid_tess_surf_builder->buildSurfaces( source_item->m_subset_surface,
+                                                         source_item->m_subset_surface_soup,
+                                                         source_item->m_boundary_surface,
+                                                         source_item->m_boundary_surface_soup,
+                                                         source_item->m_faults_surface,
+                                                         source_item->m_faults_surface_soup,
+                                                         source_item->m_grid_tess_subset,
+                                                         source_item->m_grid_tess,
+                                                         flip_faces );
                 if( m_under_the_hood.profilingEnabled() ) {
                     m_under_the_hood.surfaceGenerateTimer().endQuery();
                 }

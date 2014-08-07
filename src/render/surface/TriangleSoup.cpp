@@ -35,8 +35,8 @@ TriangleSoup::TriangleSoup()
       m_attributes_xfb( "TriangleSoup.m_attributes_xfb" ),
       m_attributes_vao( "TriangleSoup.m_attributes_vao" )
 {
-    setTriangleCount( 1 );
-
+    setTriangleCount( 0 );
+/*
     static const GLfloat quad[ 4*10 ] = {
         1.f,  0.f, 0.f, 0.5f,   0.f, 1.f,  1.f,    1.f, -1.f, 0.f,
         1.f,  1.f, 0.f,  0.5f,  0.f, 1.f,  1.f,    1.f,  1.f, 0.f,
@@ -44,34 +44,32 @@ TriangleSoup::TriangleSoup()
         1.f,  1.f, 0.f, 0.5f,   0.f, 1.f,  1.f,   -1.f,  1.f, 0.f,
     };
     
-    glBindBuffer( GL_ARRAY_BUFFER, m_attributes.get() );
     glBufferData( GL_ARRAY_BUFFER,
                   4*9*sizeof(float),
                   quad,
                   GL_DYNAMIC_COPY );
-   
+  */
     // --- set up vertex array object ------------------------------------------
+    glBindBuffer( GL_ARRAY_BUFFER, m_attributes.get() );
     glBindVertexArray( m_attributes_vao.get() );
 
-    glVertexAttribPointer( 0, 4, GL_FLOAT, GL_FALSE, 9*sizeof(float), 0*sizeof(float) );
+    glVertexAttribPointer( 0, 4, GL_FLOAT, GL_FALSE, 10*sizeof(float), 0*sizeof(float) );
     glEnableVertexAttribArray( 0 );
 
-    glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (const GLvoid*)(4*sizeof(float)) );
+    glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 10*sizeof(float), (const GLvoid*)(4*sizeof(float)) );
     glEnableVertexAttribArray( 1 );
 
-    glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 9*sizeof(float), (const GLvoid*)(7*sizeof(float)) );
+    glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 10*sizeof(float), (const GLvoid*)(7*sizeof(float)) );
     glEnableVertexAttribArray( 2 );
  
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
     glBindVertexArray( 0 );
 
     // --- set up transform feedback -------------------------------------------
-    /*
+
     glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, m_attributes_xfb.get() );
-    glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, m_cell_buffer.get() );
-    glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 1, m_vertex_ix_buf.get() );
+    glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, m_attributes.get() );
     glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, 0 );
-   */
 }
 
 bool
@@ -83,7 +81,7 @@ TriangleSoup::setTriangleCount( const GLsizei triangles )
         return false;
     }
     else {
-        m_triangle_alloc = 1.1f*m_triangle_count;
+        m_triangle_alloc = std::max( 1024.f, 1.1f*m_triangle_count );
         GLsizei bytes = 10*3*sizeof(float)*m_triangle_alloc;
 
         LOGGER_DEBUG( log,

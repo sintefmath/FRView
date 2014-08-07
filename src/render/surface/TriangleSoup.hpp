@@ -40,6 +40,13 @@ public:
     vertexAttributesAsVertexArrayObject() const
     { return m_attributes_vao.get(); }
 
+    GLuint
+    vertexAttributesTransformFeedback()
+    { return m_attributes_xfb.get(); }
+
+    GLuint
+    primitiveCountQuery() { return m_count_qry.get(); }
+
 protected:
     GLsizei                     m_triangle_count; ///< Actual number of triangles in surface.
     GLsizei                     m_triangle_alloc; ///< Number of triangles allocated.
@@ -60,7 +67,7 @@ protected:
     /** Vertex array object with attribute data, for drawing. */
     GLVertexArrayObject         m_attributes_vao;
 
-
+    GLQuery                     m_count_qry;
 };
 
 

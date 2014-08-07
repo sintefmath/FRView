@@ -43,21 +43,17 @@ public:
 
     ~GridTessSurfBuilder();
 
+    /** Populate non-null surface objects. */
     void
-    buildSurfaces( boost::shared_ptr<TriangleSoup>                      surf_subset,
-                   boost::shared_ptr<TriangleSoup>                      surf_subset_boundary,
-                   boost::shared_ptr<TriangleSoup>                      surf_faults,
+    buildSurfaces( boost::shared_ptr<GridTessSurf>                      surf_subset,
+                   boost::shared_ptr<TriangleSoup>                      surf_subset_soup,
+                   boost::shared_ptr<GridTessSurf>                      surf_subset_boundary,
+                   boost::shared_ptr<TriangleSoup>                      surf_subset_boundary_soup,
+                   boost::shared_ptr<GridTessSurf>                      surf_faults,
+                   boost::shared_ptr<TriangleSoup>                      surf_faults_soup,
                    boost::shared_ptr<const subset::Representation>      subset,
                    boost::shared_ptr<const mesh::AbstractMeshGPUModel>  mesh,
                    bool                                                 flip_faces );
-
-    void
-    buildSurfaces( boost::shared_ptr<GridTessSurf>            surf_subset,
-                   boost::shared_ptr<GridTessSurf>            surf_subset_boundary,
-                   boost::shared_ptr<GridTessSurf>            surf_faults,
-                   boost::shared_ptr<const subset::Representation>    subset,
-                   boost::shared_ptr<const mesh::AbstractMeshGPUModel>  mesh,
-                   bool                     flip_faces );
 
 protected:
     enum Surfaces {
@@ -70,8 +66,10 @@ protected:
     GLint               m_meta1_loc_flip;
     GLProgram           m_meta2_prog;
     GLint               m_meta2_loc_flip;
-    GLsizei             m_triangulate_count;
-    GLProgram           m_triangulate_prog;
+    GLsizei             m_triangulate_indexed_count;
+    GLProgram           m_triangulate_indexed_prog;
+    GLsizei             m_triangulate_trisoup_count;
+    GLProgram           m_triangulate_trisoup_prog;
     GLTransformFeedback m_meta_xfb;                 ///< Transform feedback object with SURFACE_N streams
     GLsizei             m_meta_buf_N[SURFACE_N];
     GLBuffer            m_meta_buf[SURFACE_N];
@@ -82,7 +80,10 @@ protected:
     drawMetaStream( int index );
     
     void
-    rebuildTriangulationProgram( GLsizei max_vertices );
+    rebuildIndexedTriangulationProgram( GLsizei max_vertices );
+
+    void
+    rebuildTriSoupTriangulationProgram( GLsizei max_vertices );
 
     void
     runMetaPass( boost::shared_ptr<const mesh::PolygonSetInterface>  polygon_set,
@@ -98,9 +99,14 @@ protected:
     resizeMetabufferIfNeeded();
     
     void
-    runTriangulatePasses( GridTessSurf**                                          surfaces,
-                          boost::shared_ptr<const mesh::PolygonSetInterface>      polygon_set,
-                          boost::shared_ptr<const mesh::VertexPositionInterface>  vertex_positions );
+    runIndexedTriangulatePasses( GridTessSurf**                                          surfaces,
+                                 boost::shared_ptr<const mesh::PolygonSetInterface>      polygon_set,
+                                 boost::shared_ptr<const mesh::VertexPositionInterface>  vertex_positions );
+
+    void
+    runTriSoupTriangulatePasses( TriangleSoup**                                          surfaces,
+                                 boost::shared_ptr<const mesh::PolygonSetInterface>      polygon_set,
+                                 boost::shared_ptr<const mesh::VertexPositionInterface>  vertex_positions );
 
 };
 
