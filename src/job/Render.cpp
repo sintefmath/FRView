@@ -33,6 +33,8 @@
 #include "render/manager/TransparencyAdditive.hpp"
 #include "render/manager/TransparencyWeightedAverage.hpp"
 #include "render/manager/OrderIndependentTransparency.hpp"
+#include "render/surface/GridTessSurf.hpp"
+#include "render/surface/TriangleSoup.hpp"
 #include "render/RenderItem.hpp"
 
 void
@@ -148,8 +150,10 @@ FRViewJob::render( const float*  projection,
             }
             
             bool emit_fault_surface = false;
-            if( (source_item->m_faults_surface || source_item->m_faults_surface_soup)
-                    && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_FAULTS ) )
+            if( (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_FAULTS )
+                    && ( (source_item->m_faults_surface && (source_item->m_faults_surface->triangleCount() > 0) )
+                         || (source_item->m_faults_surface_soup && ( (source_item->m_faults_surface_soup->triangleVertexCount() > 0 )
+                                                                     || (source_item->m_faults_surface_soup->edgeVertexCount() > 0 ) ) ) ) )
             {
                 const glm::vec3 fc = ap.faultsColor();
 
@@ -171,8 +175,10 @@ FRViewJob::render( const float*  projection,
             }
 
             bool emit_subset_surface = false;
-            if( (source_item->m_subset_surface || source_item->m_subset_surface_soup)
-                    && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_SUBSET ) )
+            if( (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_SUBSET )
+                    && ( (source_item->m_subset_surface && (source_item->m_subset_surface->triangleCount() > 0) )
+                         || (source_item->m_subset_surface_soup && ( (source_item->m_subset_surface_soup->triangleVertexCount() > 0 )
+                                                                       || (source_item->m_subset_surface_soup->edgeVertexCount() > 0 ) ) ) ) )
             {
                 const glm::vec3 fc = ap.subsetColor();
 
@@ -200,8 +206,10 @@ FRViewJob::render( const float*  projection,
             }
 
             bool emit_boundary_surface = false;
-            if( (source_item->m_boundary_surface || source_item->m_boundary_surface_soup )
-                    && (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_BOUNDARY ) )
+            if( (source_item->m_visibility_mask & models::AppearanceData::VISIBILITY_MASK_BOUNDARY )
+                    && ( (source_item->m_boundary_surface && (source_item->m_boundary_surface->triangleCount() > 0) )
+                         || (source_item->m_boundary_surface_soup && ( (source_item->m_boundary_surface_soup->triangleVertexCount() > 0 )
+                                                                       || (source_item->m_boundary_surface_soup->edgeVertexCount() > 0 ) ) ) ) )
             {
                 const glm::vec3 fc = ap.boundaryColor();
 
@@ -258,7 +266,22 @@ FRViewJob::render( const float*  projection,
             }
         }
         
-        switch ( m_renderconfig.renderQuality() ) {
+        bool transparent_geometry = false;
+        for( size_t i=0; i<items.size(); i++ ) {
+            if( (items[i].m_edge_color[3] > 0.0f) && (items[i].m_edge_color[3] < 1.0f) ) {
+                transparent_geometry = true;
+            }
+            if( (items[i].m_face_color[3] > 0.0f) && (items[i].m_face_color[3] < 1.0f) ) {
+                transparent_geometry = true;
+            }
+        }
+
+        int render_quality = 0;
+        if( transparent_geometry ) {
+            render_quality = m_renderconfig.renderQuality();
+        }
+
+        switch ( render_quality ) {
         case 0:
             if( (!m_screen_manager)
                     || (typeid(*m_screen_manager.get()) != typeid(render::manager::TransparencyNone))

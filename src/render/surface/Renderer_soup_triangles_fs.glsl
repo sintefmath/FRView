@@ -23,7 +23,7 @@ in FRAGMENT_IN {
 
 vec4 colorize()
 {
-    return fragment_in.color;
+    return vec4( fragment_in.color.rgb, 1.f );
 }
 
 

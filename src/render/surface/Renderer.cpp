@@ -264,8 +264,8 @@ Renderer::draw( const GLfloat*                            modelview,
 
             if( item.m_trisoup->triangleVertexCount() > 0 ) {
 
-                glPolygonOffset( 1.f, 1.f );
-                glEnable( GL_POLYGON_OFFSET_FILL );
+                //glPolygonOffset( 1.f, 1.f );
+                //glEnable( GL_POLYGON_OFFSET_FILL );
 
                 glUseProgram( m_draw_triangle_soup.get() );
                 glUniformMatrix4fv( m_draw_triangle_soup_loc_mvp, 1, GL_FALSE, glm::value_ptr( MVP ) );
@@ -279,7 +279,7 @@ Renderer::draw( const GLfloat*                            modelview,
 
                 glDrawArrays( GL_TRIANGLES, 0, item.m_trisoup->triangleVertexCount() );
 
-                glDisable( GL_POLYGON_OFFSET_FILL );
+                //glDisable( GL_POLYGON_OFFSET_FILL );
 
             }
             if( (item.m_trisoup->edgeVertexCount() > 0) /*&& (item.m_edge_color[3] > 0.f )*/ ) {

@@ -20,7 +20,7 @@ uniform vec4 edge_color;
 
 vec4 colorize()
 {
-    return vec4( 1.f, 1.f, 0.f, 0.999f );
+    return vec4( 1.f, 1.f, 0.f, 0.f );
     return edge_color;
 }
 
