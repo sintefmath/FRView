@@ -28,30 +28,17 @@ namespace surface {
 
 
 TriangleSoup::TriangleSoup()
-    : m_triangle_count(0),
-      m_triangle_alloc(0),
-      m_attributes( "TriangleSoup.m_attributes" ),
-      m_attributes_qry( "TriangleSoup.m_attributes_qry" ),
+    : m_triangle_vtx_count(0),
+      m_triangle_vtx_alloc(0),
+      m_triangle_attributes( "TriangleSoup.m_attributes" ),
       m_attributes_xfb( "TriangleSoup.m_attributes_xfb" ),
-      m_attributes_vao( "TriangleSoup.m_attributes_vao" )
+      m_triangle_attributes_vao( "TriangleSoup.m_attributes_vao" )
 {
-    setTriangleCount( 0 );
-/*
-    static const GLfloat quad[ 4*10 ] = {
-        1.f,  0.f, 0.f, 0.5f,   0.f, 1.f,  1.f,    1.f, -1.f, 0.f,
-        1.f,  1.f, 0.f,  0.5f,  0.f, 1.f,  1.f,    1.f,  1.f, 0.f,
-        0.f,  1.f, 0.f, 0.5f,   0.f, 1.f,  1.f,   -1.f, -1.f, 0.f,
-        1.f,  1.f, 0.f, 0.5f,   0.f, 1.f,  1.f,   -1.f,  1.f, 0.f,
-    };
-    
-    glBufferData( GL_ARRAY_BUFFER,
-                  4*9*sizeof(float),
-                  quad,
-                  GL_DYNAMIC_COPY );
-  */
+    setTriangleAndEdgeVertexCount( 0, 0 );
+
     // --- set up vertex array object ------------------------------------------
-    glBindBuffer( GL_ARRAY_BUFFER, m_attributes.get() );
-    glBindVertexArray( m_attributes_vao.get() );
+    glBindBuffer( GL_ARRAY_BUFFER, m_triangle_attributes.get() );
+    glBindVertexArray( m_triangle_attributes_vao.get() );
 
     glVertexAttribPointer( 0, 4, GL_FLOAT, GL_FALSE, 10*sizeof(float), 0*sizeof(float) );
     glEnableVertexAttribArray( 0 );
@@ -62,41 +49,68 @@ TriangleSoup::TriangleSoup()
     glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 10*sizeof(float), (const GLvoid*)(7*sizeof(float)) );
     glEnableVertexAttribArray( 2 );
  
+    glBindBuffer( GL_ARRAY_BUFFER, m_edge_attributes.get() );
+    glBindVertexArray( m_edge_attributes_vao.get() );
+    glVertexAttribPointer( 0, 4, GL_FLOAT, GL_FALSE, 0, 0 );
+    glEnableVertexAttribArray( 0 );
+
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
     glBindVertexArray( 0 );
 
     // --- set up transform feedback -------------------------------------------
 
     glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, m_attributes_xfb.get() );
-    glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, m_attributes.get() );
+    glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 0, m_triangle_attributes.get() );
+    glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER, 1, m_edge_attributes.get() );
     glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, 0 );
 }
 
 bool
-TriangleSoup::setTriangleCount( const GLsizei triangles )
+TriangleSoup::setTriangleAndEdgeVertexCount(const GLsizei triangle_vertices, const GLsizei edge_vertices )
 {
+    bool retval = false;
+
     Logger log = getLogger( package + ".setTriangleCount");
-    m_triangle_count = triangles;
-    if( m_triangle_count < m_triangle_alloc ) {
-        return false;
-    }
-    else {
-        m_triangle_alloc = std::max( 1024.f, 1.1f*m_triangle_count );
-        GLsizei bytes = 10*3*sizeof(float)*m_triangle_alloc;
+    m_triangle_vtx_count = triangle_vertices;
+
+    if( m_triangle_vtx_count > m_triangle_vtx_alloc ) {
+        m_triangle_vtx_alloc = std::max( 1024.f, 1.1f*m_triangle_vtx_count );
+        GLsizei bytes = 10*sizeof(float)*m_triangle_vtx_alloc;
 
         LOGGER_DEBUG( log,
-                      "Surface has " << m_triangle_count <<
-                      " triangles, resizing buffers to hold " << m_triangle_alloc <<
-                      " triangles (" << ((bytes/1024.f)/1024.f) << " MB).\n" );
+                      "Surface has " << m_triangle_vtx_count <<
+                      " triangle vertices, resizing buffers to hold " << m_triangle_vtx_alloc <<
+                      " triangle vertices (" << ((bytes/1024.f)/1024.f) << " MB).\n" );
 
-        glBindBuffer( GL_ARRAY_BUFFER, m_attributes.get() );
+        glBindBuffer( GL_ARRAY_BUFFER, m_triangle_attributes.get() );
         glBufferData( GL_ARRAY_BUFFER,
                       bytes,
                       NULL,
                       GL_DYNAMIC_COPY );
         glBindBuffer( GL_ARRAY_BUFFER, 0 );
-        return true;
+        retval = true;
     }
+
+    m_edge_vtx_count = edge_vertices;
+    if( m_edge_vtx_count > m_edge_vtx_alloc ) {
+        m_edge_vtx_alloc = std::max( 1024.f, 1.1f*m_edge_vtx_count );
+        GLsizei bytes = 4*sizeof(float)*m_edge_vtx_alloc;
+
+        LOGGER_DEBUG( log,
+                      "Surface has " << m_edge_vtx_count <<
+                      " edge vertices, resizing buffers to hold " << m_edge_vtx_alloc <<
+                      " edge vertices (" << ((bytes/1024.f)/1024.f) << " MB).\n" );
+
+        glBindBuffer( GL_ARRAY_BUFFER, m_edge_attributes.get() );
+        glBufferData( GL_ARRAY_BUFFER,
+                      bytes,
+                      NULL,
+                      GL_DYNAMIC_COPY );
+        glBindBuffer( GL_ARRAY_BUFFER, 0 );
+        retval = true;
+    }
+
+    return retval;
 }
 
 

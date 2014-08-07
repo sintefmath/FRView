@@ -66,6 +66,10 @@ protected:
     GLint       m_draw_triangle_soup_loc_edge_color;
     GLint       m_draw_triangle_soup_loc_screen_size;
 
+    GLProgram   m_draw_soup_edges_prog;
+    GLint       m_draw_soup_edges_loc_mvp;
+    GLint       m_draw_soup_edges_loc_edge_color;
+
 };
     
 

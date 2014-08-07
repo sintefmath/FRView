@@ -31,25 +31,38 @@ public:
     TriangleSoup();
     
     bool
-    setTriangleCount(const GLsizei triangles );
+    setTriangleAndEdgeVertexCount( const GLsizei triangle_vertices, const GLsizei edge_vertices );
     
     GLsizei
-    triangleCount() const { return m_triangle_count; }
+    triangleVertexCount() const { return m_triangle_vtx_count; }
+
+    GLsizei
+    edgeVertexCount() const { return m_edge_vtx_count; }
 
     GLint
-    vertexAttributesAsVertexArrayObject() const
-    { return m_attributes_vao.get(); }
+    triangleVertexAttributesAsVertexArrayObject() const
+    { return m_triangle_attributes_vao.get(); }
+
+    GLint
+    edgeVertexAttributesAsVertexArrayObject() const
+    { return m_edge_attributes_vao.get(); }
 
     GLuint
     vertexAttributesTransformFeedback()
     { return m_attributes_xfb.get(); }
 
     GLuint
-    primitiveCountQuery() { return m_count_qry.get(); }
+    triangleVertexCountQuery() { return m_triangle_vertex_count_qry.get(); }
+
+    GLuint
+    edgeVertexCountQuery() { return m_edge_vertex_count_qry.get(); }
 
 protected:
-    GLsizei                     m_triangle_count; ///< Actual number of triangles in surface.
-    GLsizei                     m_triangle_alloc; ///< Number of triangles allocated.
+    GLsizei                     m_triangle_vtx_count; ///< Actual number of triangles in surface.
+    GLsizei                     m_triangle_vtx_alloc; ///< Number of triangles allocated.
+
+    GLsizei                     m_edge_vtx_count; ///< Actual number of triangles in surface.
+    GLsizei                     m_edge_vtx_alloc; ///< Number of triangles allocated.
 
     /** Buffer holding vertex attribute data
      *
@@ -58,16 +71,20 @@ protected:
      * vec3 position
      *
      */
-    GLBuffer                    m_attributes;
+    GLBuffer                    m_triangle_attributes;
+
+    GLBuffer                    m_edge_attributes;
 
     /** Track number of vertices produced. */
-    GLQuery                     m_attributes_qry;
     GLTransformFeedback         m_attributes_xfb;
 
     /** Vertex array object with attribute data, for drawing. */
-    GLVertexArrayObject         m_attributes_vao;
+    GLVertexArrayObject         m_triangle_attributes_vao;
 
-    GLQuery                     m_count_qry;
+    GLVertexArrayObject         m_edge_attributes_vao;
+
+    GLQuery                     m_triangle_vertex_count_qry;
+    GLQuery                     m_edge_vertex_count_qry;
 };
 
 

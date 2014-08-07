@@ -35,11 +35,13 @@ namespace {
 namespace render {
     namespace surface {
         namespace glsl {
-            extern const std::string Renderer_vs;
-            extern const std::string Renderer_gs;
-            extern const std::string Renderer_fs;
-            extern const std::string TriangleSoupRenderer_vs;
-            extern const std::string TriangleSoupRenderer_fs;
+            extern const std::string Renderer_indexed_vs;
+            extern const std::string Renderer_indexed_gs;
+            extern const std::string Renderer_indexed_fs;
+            extern const std::string Renderer_soup_triangles_vs;
+            extern const std::string Renderer_soup_triangles_fs;
+            extern const std::string Renderer_soup_edges_vs;
+            extern const std::string Renderer_soup_edges_fs;
         }
 
     
@@ -55,21 +57,21 @@ Renderer::Renderer( const std::string& defines, const std::string& fragment_sour
     // -------------------------------------------------------------------------
     {
         // move DO_PAINT into uniform
-        shader = utils::compileShader( log, glsl::Renderer_vs, GL_VERTEX_SHADER );
+        shader = utils::compileShader( log, glsl::Renderer_indexed_vs, GL_VERTEX_SHADER );
         glAttachShader( m_main.get(), shader );
         glDeleteShader( shader );
 
         shader = utils::compileShader( log,
                                        "#define DO_PAINT\n" +
                                        defines +
-                                       glsl::Renderer_gs, GL_GEOMETRY_SHADER );
+                                       glsl::Renderer_indexed_gs, GL_GEOMETRY_SHADER );
         glAttachShader( m_main.get(), shader );
         glDeleteShader( shader );
 
         shader = utils::compileShader( log,
                                        "#define DO_PAINT\n" +
                                        defines +
-                                       glsl::Renderer_fs +
+                                       glsl::Renderer_indexed_fs +
                                        fragment_source, GL_FRAGMENT_SHADER );
         glAttachShader( m_main.get(), shader );
         glDeleteShader( shader );
@@ -87,13 +89,13 @@ Renderer::Renderer( const std::string& defines, const std::string& fragment_sour
 
     // -------------------------------------------------------------------------
     {
-        shader = utils::compileShader( log, glsl::TriangleSoupRenderer_vs, GL_VERTEX_SHADER );
+        shader = utils::compileShader( log, glsl::Renderer_soup_triangles_vs, GL_VERTEX_SHADER );
         glAttachShader( m_draw_triangle_soup.get(), shader );
         glDeleteShader( shader );
 
         shader = utils::compileShader( log,
                                        defines +
-                                       glsl::TriangleSoupRenderer_fs +
+                                       glsl::Renderer_soup_triangles_fs +
                                        fragment_source, GL_FRAGMENT_SHADER );
         glAttachShader( m_draw_triangle_soup.get(), shader );
         glDeleteShader( shader );
@@ -106,6 +108,26 @@ Renderer::Renderer( const std::string& defines, const std::string& fragment_sour
         m_draw_triangle_soup_loc_surface_color = glGetUniformLocation( m_draw_triangle_soup.get(), "surface_color" );
         m_draw_triangle_soup_loc_edge_color    = glGetUniformLocation( m_draw_triangle_soup.get(), "edge_color" );
         m_draw_triangle_soup_loc_screen_size   = glGetUniformLocation( m_draw_triangle_soup.get(), "screen_size" );
+    }
+
+    // -------------------------------------------------------------------------
+    {
+        shader = utils::compileShader( log, glsl::Renderer_soup_edges_vs, GL_VERTEX_SHADER );
+        glAttachShader( m_draw_soup_edges_prog.get(), shader );
+        glDeleteShader( shader );
+
+        shader = utils::compileShader( log,
+                                       defines +
+                                       glsl::Renderer_soup_edges_fs +
+                                       fragment_source, GL_FRAGMENT_SHADER );
+        glAttachShader( m_draw_soup_edges_prog.get(), shader );
+        glDeleteShader( shader );
+
+        utils::linkProgram( log, m_draw_soup_edges_prog.get() );
+
+        m_draw_soup_edges_loc_mvp        = glGetUniformLocation( m_draw_soup_edges_prog.get(), "MVP" );
+        m_draw_soup_edges_loc_edge_color = glGetUniformLocation( m_draw_soup_edges_prog.get(), "edge_color" );
+
     }
 
 }
@@ -238,23 +260,36 @@ Renderer::draw( const GLfloat*                            modelview,
 #endif
         }
         else if( item.m_trisoup ) {
-            if( item.m_trisoup->triangleCount() < 1 ) {
-                continue;
+
+
+            if( item.m_trisoup->triangleVertexCount() > 0 ) {
+
+                glPolygonOffset( 1.f, 1.f );
+                glEnable( GL_POLYGON_OFFSET_FILL );
+
+                glUseProgram( m_draw_triangle_soup.get() );
+                glUniformMatrix4fv( m_draw_triangle_soup_loc_mvp, 1, GL_FALSE, glm::value_ptr( MVP ) );
+                glUniformMatrix3fv( m_draw_triangle_soup_loc_nm, 1, GL_FALSE, nm3 );
+                glUniformMatrix4fv( m_draw_triangle_soup_loc_mv, 1, GL_FALSE, modelview );
+                glUniform2f( m_draw_triangle_soup_loc_screen_size, width, height );
+
+                glUniform4fv( m_draw_triangle_soup_loc_surface_color, 1, item.m_face_color );
+
+                glBindVertexArray( item.m_trisoup->triangleVertexAttributesAsVertexArrayObject() );
+
+                glDrawArrays( GL_TRIANGLES, 0, item.m_trisoup->triangleVertexCount() );
+
+                glDisable( GL_POLYGON_OFFSET_FILL );
+
             }
+            if( (item.m_trisoup->edgeVertexCount() > 0) /*&& (item.m_edge_color[3] > 0.f )*/ ) {
+                glUseProgram( m_draw_soup_edges_prog.get() );
+                glUniformMatrix4fv( m_draw_soup_edges_loc_mvp, 1, GL_FALSE, glm::value_ptr( MVP ) );
+                glUniform4fv( m_draw_soup_edges_loc_edge_color, 1, item.m_edge_color );
 
-
-            glUseProgram( m_draw_triangle_soup.get() );
-            glUniformMatrix4fv( m_draw_triangle_soup_loc_mvp, 1, GL_FALSE, glm::value_ptr( MVP ) );
-            glUniformMatrix3fv( m_draw_triangle_soup_loc_nm, 1, GL_FALSE, nm3 );
-            glUniformMatrix4fv( m_draw_triangle_soup_loc_mv, 1, GL_FALSE, modelview );
-            glUniform2f( m_draw_triangle_soup_loc_screen_size, width, height );
-
-            glUniform4fv( m_draw_triangle_soup_loc_surface_color, 1, item.m_face_color );
-
-            glBindVertexArray( item.m_trisoup->vertexAttributesAsVertexArrayObject() );
-
-            glDrawArrays( GL_TRIANGLES, 0, 3*item.m_trisoup->triangleCount() );
-
+                glBindVertexArray( item.m_trisoup->edgeVertexAttributesAsVertexArrayObject() );
+                glDrawArrays( GL_LINES, 0, item.m_trisoup->edgeVertexCount() );
+            }
         }
     }
     glDisable( GL_POLYGON_OFFSET_FILL );

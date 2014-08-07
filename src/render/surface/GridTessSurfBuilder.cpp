@@ -152,15 +152,17 @@ GridTessSurfBuilder::rebuildTriSoupTriangulationProgram( GLsizei max_vertices )
     m_triangulate_trisoup_count = max_vertices;
     m_triangulate_trisoup_prog.reset();
 
-    static const char* triangle_feedback[3] = {
-        "out_color",
-        "out_normal",
-        "out_position"
+    static const char* triangle_feedback[5] = {
+        "out_triangle_color",
+        "out_triangle_normal",
+        "out_triangle_position",
+        "gl_NextBuffer",
+        "out_edge_position"
     };
 
     GLsizei max_out = std::max( (GLsizei)3, max_vertices )-2;
     std::stringstream o;
-    o << "#define MAX_OUT " << (3*max_out) << "\n";
+    o << "#define MAX_OUT " << (9*max_out) << "\n";
     GLuint poly_vs = utils::compileShader( log,
                                            glsl::GridTessSurfBuilder_triangulate_vs,
                                            GL_VERTEX_SHADER );
@@ -171,7 +173,7 @@ GridTessSurfBuilder::rebuildTriSoupTriangulationProgram( GLsizei max_vertices )
                                                   GL_GEOMETRY_SHADER );
     glAttachShader( m_triangulate_trisoup_prog.get(), poly_vs );
     glAttachShader( m_triangulate_trisoup_prog.get(), poly_subset_gs );
-    glTransformFeedbackVaryings( m_triangulate_trisoup_prog.get(), 3, triangle_feedback, GL_INTERLEAVED_ATTRIBS );
+    glTransformFeedbackVaryings( m_triangulate_trisoup_prog.get(), 5, triangle_feedback, GL_INTERLEAVED_ATTRIBS );
     utils::linkProgram( log, m_triangulate_trisoup_prog.get() );
     glDeleteShader( poly_vs );
     glDeleteShader( poly_subset_gs );
@@ -288,20 +290,23 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
 
             for( int i=0; i< SURFACE_N; i++ ) {
                 if( trisoup_surfaces[i] != NULL ) {
-                    GLuint result;
-                    glGetQueryObjectuiv( trisoup_surfaces[i]->primitiveCountQuery(),
-                                         GL_QUERY_RESULT,
-                                         &result );
+                    GLuint triangle_vertices;
+                    glGetQueryObjectuiv( trisoup_surfaces[i]->triangleVertexCountQuery(), GL_QUERY_RESULT, &triangle_vertices );
 
-                    LOGGER_DEBUG( log, result );
-                    if( trisoup_surfaces[i]->setTriangleCount( result ) ) {
+                    GLuint edge_vertices;
+                    glGetQueryObjectuiv( trisoup_surfaces[i]->edgeVertexCountQuery(), GL_QUERY_RESULT, &edge_vertices );
+
+                    if( trisoup_surfaces[i]->setTriangleAndEdgeVertexCount( triangle_vertices, edge_vertices ) ) {
                         LOGGER_DEBUG( log, "Triangle buffer " << i
-                                      << " resized to accomodate " << result
-                                      << " triangles." );
+                                      << " resized to accomodate " << (triangle_vertices)
+                                      << " triangle vertices and " << (edge_vertices)
+                                      << " edge vertices." );
                         redo_triangulate = true;
                     }
                     else {
-                        LOGGER_DEBUG( log, "Triangle surface " << i << " has " << result << " triangles" );
+                        LOGGER_DEBUG( log, "Surface " << i << " got " << (triangle_vertices)
+                                      << " triangle vertices and " << (edge_vertices)
+                                      << " edges vertices." );
                     }
                 }
             }
@@ -477,11 +482,13 @@ GridTessSurfBuilder::runTriSoupTriangulatePasses( TriangleSoup** surfaces,
         if( surfaces[i] != NULL ) {
             glBindVertexArray( m_meta_vao[ i ].get() );
             glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, surfaces[i]->vertexAttributesTransformFeedback() );
-            glBeginQuery( GL_PRIMITIVES_GENERATED, surfaces[i]->primitiveCountQuery() );
-            glBeginTransformFeedback( GL_TRIANGLES );
+            glBeginQueryIndexed( GL_PRIMITIVES_GENERATED, 0, surfaces[i]->triangleVertexCountQuery() );
+            glBeginQueryIndexed( GL_PRIMITIVES_GENERATED, 1, surfaces[i]->edgeVertexCountQuery() );
+            glBeginTransformFeedback( GL_POINTS );
             drawMetaStream( i );
             glEndTransformFeedback( );
-            glEndQuery( GL_PRIMITIVES_GENERATED );
+            glEndQueryIndexed( GL_PRIMITIVES_GENERATED, 0 );
+            glEndQueryIndexed( GL_PRIMITIVES_GENERATED, 1 );
         }
     }
 

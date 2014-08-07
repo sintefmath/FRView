@@ -162,7 +162,7 @@ FRViewJob::doCompute()
                             source_item->m_subset_surface_soup.reset( new render::surface::TriangleSoup );
                         }
                         else {
-                            source_item->m_subset_surface_soup->setTriangleCount( 0 );
+                            source_item->m_subset_surface_soup->setTriangleAndEdgeVertexCount( 0, 0 );
                         }
                     }
                     else {
@@ -174,7 +174,7 @@ FRViewJob::doCompute()
                             source_item->m_boundary_surface_soup.reset( new render::surface::TriangleSoup );
                         }
                         else {
-                            source_item->m_boundary_surface_soup->setTriangleCount( 0 );
+                            source_item->m_boundary_surface_soup->setTriangleAndEdgeVertexCount( 0, 0 );
                         }
                     }
                     else {
@@ -186,7 +186,7 @@ FRViewJob::doCompute()
                             source_item->m_faults_surface_soup.reset( new render::surface::TriangleSoup );
                         }
                         else {
-                            source_item->m_faults_surface_soup->setTriangleCount( 0 );
+                            source_item->m_faults_surface_soup->setTriangleAndEdgeVertexCount( 0, 0 );
                         }
                     }
                     else {
