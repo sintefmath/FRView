@@ -28,6 +28,7 @@ namespace render {
         class PolyhedralMeshGPUModel;
         class PolygonSetInterface;
         class VertexPositionInterface;
+        class NormalVectorInterface;
     }
     namespace subset {
         class Representation;
@@ -106,7 +107,8 @@ protected:
     void
     runTriSoupTriangulatePasses( TriangleSoup**                                          surfaces,
                                  boost::shared_ptr<const mesh::PolygonSetInterface>      polygon_set,
-                                 boost::shared_ptr<const mesh::VertexPositionInterface>  vertex_positions );
+                                 boost::shared_ptr<const mesh::VertexPositionInterface>  vertex_positions ,
+                                 boost::shared_ptr<const mesh::NormalVectorInterface>    normal_vectors );
 
 };
 

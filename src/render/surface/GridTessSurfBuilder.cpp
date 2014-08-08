@@ -47,6 +47,7 @@ namespace render {
         using render::mesh::PolygonMeshGPUModel;
         using render::mesh::VertexPositionInterface;
         using render::mesh::PolygonSetInterface;
+        using render::mesh::NormalVectorInterface;
 
 GridTessSurfBuilder::GridTessSurfBuilder()
     : m_meta1_prog( "GridTessSurfBuilder.m_meta1_prog"),
@@ -195,16 +196,23 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
     shared_ptr<const PolygonSetInterface> polygon_set
             = dynamic_pointer_cast<const PolygonSetInterface>( mesh );
     if( !polygon_set ) {
-        LOGGER_ERROR( log, "mesh does not implement the polygon set interface." );
+        LOGGER_ERROR( log, "mesh does not implement PolygonSetInterface." );
         return;
     }
     shared_ptr<const VertexPositionInterface> vertex_positions
             = dynamic_pointer_cast<const VertexPositionInterface>( mesh );
     if( !vertex_positions ) {
-        LOGGER_ERROR( log, "mesh does not implement the vertex positions interface." );
+        LOGGER_ERROR( log, "mesh does not implement VertexPositionInterface." );
         return;
     }
     
+    shared_ptr<const NormalVectorInterface> normal_vectors
+            = dynamic_pointer_cast<const NormalVectorInterface>( mesh );
+    if( !normal_vectors ) {
+        LOGGER_ERROR( log, "mesh does not implement NormalVectorInterface." );
+        return;
+    }
+
     bool any_indexed_surfaces = false;
     GridTessSurf* indexed_surfaces[ SURFACE_N ];
     indexed_surfaces[ SURFACE_SUBSET          ] = surf_subset.get();
@@ -256,10 +264,15 @@ GridTessSurfBuilder::buildSurfaces( boost::shared_ptr<GridTessSurf> surf_subset,
         // --- then, triangulate all the surfaces
         if( redo_triangulate ) {
             if( any_indexed_surfaces ) {
-                runIndexedTriangulatePasses( indexed_surfaces, polygon_set, vertex_positions );
+                runIndexedTriangulatePasses( indexed_surfaces,
+                                             polygon_set,
+                                             vertex_positions );
             }
             if( any_trisoup_surfaces ) {
-                runTriSoupTriangulatePasses( trisoup_surfaces, polygon_set, vertex_positions );
+                runTriSoupTriangulatePasses( trisoup_surfaces,
+                                             polygon_set,
+                                             vertex_positions,
+                                             normal_vectors );
             }
             redo_triangulate = false;
         }
@@ -467,16 +480,29 @@ GridTessSurfBuilder::runIndexedTriangulatePasses( GridTessSurf** surfaces,
 void
 GridTessSurfBuilder::runTriSoupTriangulatePasses( TriangleSoup** surfaces,
                                            boost::shared_ptr<const mesh::PolygonSetInterface>  polygon_set,
-                                           boost::shared_ptr<const mesh::VertexPositionInterface> vertex_positions )
+                                           boost::shared_ptr<const mesh::VertexPositionInterface> vertex_positions,
+                                                  boost::shared_ptr<const mesh::NormalVectorInterface> normal_vectors )
 {
     if(  m_triangulate_trisoup_count < polygon_set->polygonMaxPolygonSize() ) {
         rebuildTriSoupTriangulationProgram( polygon_set->polygonMaxPolygonSize() );
     }
     glEnable( GL_RASTERIZER_DISCARD );
     glUseProgram( m_triangulate_trisoup_prog.get() );
-    glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonNormalIndexTexture() );
-    glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonVertexIndexTexture() );
-    glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, vertex_positions->vertexPositionsAsBufferTexture() );
+
+    glActiveTexture( GL_TEXTURE1 );
+    glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonNormalIndexTexture() );
+
+    glActiveTexture( GL_TEXTURE2 );
+    glBindTexture( GL_TEXTURE_BUFFER, polygon_set->polygonVertexIndexTexture() );
+
+    glActiveTexture( GL_TEXTURE3 );
+    glBindTexture( GL_TEXTURE_BUFFER, vertex_positions->vertexPositionsAsBufferTexture() );
+
+    glActiveTexture( GL_TEXTURE4 );
+    glBindTexture( GL_TEXTURE_BUFFER, normal_vectors->normalVectorsAsBufferTexture() );
+
+//    glActiveTexture( GL_TEXTURE1 );
+//    glBindTexture( GL_TEXTURE_BUFFER, normals->normalVectorsAsBufferTexture() );
 
     for( int i=0; i<SURFACE_N; i++ ) {
         if( surfaces[i] != NULL ) {
@@ -493,6 +519,7 @@ GridTessSurfBuilder::runTriSoupTriangulatePasses( TriangleSoup** surfaces,
     }
 
     glBindTransformFeedback( GL_TRANSFORM_FEEDBACK, 0 );
+    glActiveTexture( GL_TEXTURE4 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
     glActiveTexture( GL_TEXTURE3 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
     glActiveTexture( GL_TEXTURE2 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );
     glActiveTexture( GL_TEXTURE1 );  glBindTexture( GL_TEXTURE_BUFFER, 0 );

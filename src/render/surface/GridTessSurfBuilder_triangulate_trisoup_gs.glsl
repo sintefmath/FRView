@@ -28,8 +28,7 @@ layout(stream=1) out vec4    out_edge_position;
 
 #define POSITIONS_DECLARED
 layout(binding=3)   uniform samplerBuffer   positions;
-layout(binding=4)   uniform usamplerBuffer  cells;
-layout(binding=5)   uniform samplerBuffer   normals;
+layout(binding=4)   uniform samplerBuffer   normals;
 
 
 void
@@ -41,17 +40,27 @@ emit_triangle( in uint cell_ix,
     vec4 pb = vec4( texelFetch( positions, int(vtx_ix.y) ).rgb, 1.f);
     vec4 pc = vec4( texelFetch( positions, int(vtx_ix.z) ).rgb, 1.f);
 
-    out_triangle_normal = texelFetch( normals, int(nrm_ix.x & 0x0fffffffu) ).rgb;
+    vec3 na = normalize( texelFetch( normals, int(nrm_ix.x & 0x0fffffffu) ).rgb );
+    vec3 nb = normalize( texelFetch( normals, int(nrm_ix.y & 0x0fffffffu) ).rgb );
+    vec3 nc = normalize( texelFetch( normals, int(nrm_ix.z & 0x0fffffffu) ).rgb );
+
+    if( (cell_ix & 0x80000000u) == 0u ) {
+        na = -na;
+        nb = -nb;
+        nc = -nc;
+    }
+
+    out_triangle_normal = na;
     out_triangle_cell = cell_ix;
     out_triangle_position = pa;
     EmitStreamVertex( 0 );
 
-    out_triangle_normal = texelFetch( normals, int(nrm_ix.y & 0x0fffffffu) ).rgb;
+    out_triangle_normal = nb;
     out_triangle_cell = cell_ix;
     out_triangle_position = pb;
     EmitStreamVertex(0);
 
-    out_triangle_normal = texelFetch( normals, int(nrm_ix.z & 0x0fffffffu) ).rgb;
+    out_triangle_normal = nc;
     out_triangle_cell = cell_ix;
     out_triangle_position = pc;
     EmitStreamVertex(0);

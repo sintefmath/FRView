@@ -17,15 +17,35 @@
  */
 
 uniform bool  solid_pass;
-uniform vec4  surface_color;
 
 in FRAGMENT_IN {
-    vec4 color;
+    flat vec4 color;
+         vec3 normal;
+         vec3 position;
 } fragment_in;
 
 vec4 colorize()
 {
-    return surface_color; //.a * vec4( fragment_in.color.rgb, 1.0 );
+    vec3 v = normalize( vec3( 0.f, 0.f, 1.5f ) - fragment_in.position ); // towards eye
+    vec3 l = normalize( vec3( 0.f, 1.5f, 1.5f ) - fragment_in.position );  // towards light
+    vec3 h = normalize( v + l );                  // half-vector
+    vec3 n = normalize( fragment_in.normal );
+    float d = max( 0.3f, dot(n,l) );
+    float s = pow( max( 0.f, dot(n,h) ), 50.f );
+
+    vec4 color = fragment_in.color;
+    color.rgb = clamp(
+#ifdef SHADING_DIFFUSE_COMPONENT
+                       d*color.rgb
+#else
+                       color.rgb
+#endif
+#ifdef SHADING_SPECULAR_COMPONENT
+                       + vec3(color.a*s)
+#endif
+                , vec3(0.f), vec3(1.f) );
+
+    return color;
 }
 
 

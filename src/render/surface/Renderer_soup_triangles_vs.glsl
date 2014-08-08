@@ -21,18 +21,23 @@ layout(location=1)  in uint cell;
 layout(location=2)  in vec4 position;
 
 out FRAGMENT_IN {
-    vec4 color;
-    vec3 normal;
+    flat vec4 color;
+         vec3 normal;
+         vec3 position;
 } fragment_in;
 
-uniform mat4            MVP;
-uniform mat4            MV;
-uniform mat3            NM;
+uniform mat4    MVP;
+uniform mat4    MV;
+uniform mat3    NM;
+uniform vec4    surface_color;
 
 void
 main()
 {
-    fragment_in.color  = vec4(cell);
-    fragment_in.normal = NM * normal;
+    vec4 p = MV * vec4(position.xyz, 1.f);
+
+    fragment_in.color    = vec4( surface_color.w*surface_color.rgb, surface_color.w );
+    fragment_in.normal   = NM * normal;
+    fragment_in.position = (1.f/p.w)*p.xyz;
     gl_Position = MVP*vec4( position.xyz, 1.f );
 }
