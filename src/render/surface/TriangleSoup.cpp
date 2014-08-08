@@ -40,13 +40,13 @@ TriangleSoup::TriangleSoup()
     glBindBuffer( GL_ARRAY_BUFFER, m_triangle_attributes.get() );
     glBindVertexArray( m_triangle_attributes_vao.get() );
 
-    glVertexAttribPointer( 0, 4, GL_FLOAT, GL_FALSE, 10*sizeof(float), 0*sizeof(float) );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), 0*sizeof(float) );
     glEnableVertexAttribArray( 0 );
 
-    glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 10*sizeof(float), (const GLvoid*)(4*sizeof(float)) );
+    glVertexAttribIPointer( 1, 1, GL_UNSIGNED_INT,   8*sizeof(float), (const GLvoid*)(3*sizeof(float)) );
     glEnableVertexAttribArray( 1 );
 
-    glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 10*sizeof(float), (const GLvoid*)(7*sizeof(float)) );
+    glVertexAttribPointer( 2, 4, GL_FLOAT, GL_FALSE, 8*sizeof(float), (const GLvoid*)(4*sizeof(float)) );
     glEnableVertexAttribArray( 2 );
  
     glBindBuffer( GL_ARRAY_BUFFER, m_edge_attributes.get() );

@@ -16,9 +16,9 @@
  * along with the FRView.  If not, see http://www.gnu.org/licenses/.
  */
 
-layout(location=0)  in vec4 color;
-layout(location=1)  in vec3 normal;
-layout(location=2)  in vec3 position;
+layout(location=0)  in vec3 normal;
+layout(location=1)  in uint cell;
+layout(location=2)  in vec4 position;
 
 out FRAGMENT_IN {
     vec4 color;
@@ -32,7 +32,7 @@ uniform mat3            NM;
 void
 main()
 {
-    fragment_in.color  = color;
+    fragment_in.color  = vec4(cell);
     fragment_in.normal = NM * normal;
     gl_Position = MVP*vec4( position.xyz, 1.f );
 }

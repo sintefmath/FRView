@@ -153,8 +153,8 @@ GridTessSurfBuilder::rebuildTriSoupTriangulationProgram( GLsizei max_vertices )
     m_triangulate_trisoup_prog.reset();
 
     static const char* triangle_feedback[5] = {
-        "out_triangle_color",
         "out_triangle_normal",
+        "out_triangle_cell",
         "out_triangle_position",
         "gl_NextBuffer",
         "out_edge_position"
