@@ -107,6 +107,9 @@ Renderer::Renderer( const std::string& defines, const std::string& fragment_sour
         m_draw_triangle_soup_loc_mvp           = glGetUniformLocation( m_draw_triangle_soup.get(), "MVP" );
         m_draw_triangle_soup_loc_mv            = glGetUniformLocation( m_draw_triangle_soup.get(), "MV" );
         m_draw_triangle_soup_loc_nm            = glGetUniformLocation( m_draw_triangle_soup.get(), "NM" );
+        m_draw_triangle_soup_loc_use_field     = glGetUniformLocation( m_draw_triangle_soup.get(), "use_field" );
+        m_draw_triangle_soup_loc_log_map       = glGetUniformLocation( m_draw_triangle_soup.get(), "log_map" );
+        m_draw_triangle_soup_loc_field_remap   = glGetUniformLocation( m_draw_triangle_soup.get(), "field_remap" );
         m_draw_triangle_soup_loc_surface_color = glGetUniformLocation( m_draw_triangle_soup.get(), "surface_color" );
     }
 
@@ -281,6 +284,32 @@ Renderer::draw( const GLfloat*                            modelview,
                              item.m_face_color[3]*item.m_face_color[1],
                              item.m_face_color[3]*item.m_face_color[2],
                              item.m_face_color[3] );
+
+                if( item.m_field && item.m_color_map ) {
+
+                    glUniform1i( m_draw_triangle_soup_loc_use_field, 1 );
+                    if( item.m_field_log_map ) {
+                        glUniform1i( m_draw_triangle_soup_loc_log_map, GL_TRUE );
+                        glUniform2f( m_draw_triangle_soup_loc_field_remap,
+                                     1.f/ item.m_field_min,
+                                     1.f/logf( item.m_field_max/item.m_field_min ) );
+                    }
+                    else {
+                        glUniform1i( m_draw_triangle_soup_loc_log_map, GL_FALSE );
+                        glUniform2f( m_draw_triangle_soup_loc_field_remap,
+                                     item.m_field_min,
+                                     1.f/(item.m_field_max-item.m_field_min ) );
+                    }
+
+
+
+                    glActiveTexture( GL_TEXTURE2 );
+                    glBindTexture( GL_TEXTURE_BUFFER, item.m_field->texture() );
+
+                    glActiveTexture( GL_TEXTURE3 );
+                    glBindTexture( GL_TEXTURE_1D, item.m_color_map->get() );
+                }
+
 
                 glBindVertexArray( item.m_trisoup->triangleVertexAttributesAsVertexArrayObject() );
 

@@ -65,6 +65,9 @@ protected:
     GLint       m_draw_triangle_soup_loc_mvp;
     GLint       m_draw_triangle_soup_loc_mv;
     GLint       m_draw_triangle_soup_loc_nm;
+    GLint       m_draw_triangle_soup_loc_use_field;
+    GLint       m_draw_triangle_soup_loc_log_map;
+    GLint       m_draw_triangle_soup_loc_field_remap;
     GLint       m_draw_triangle_soup_loc_surface_color;
 
     GLProgram   m_draw_soup_edges_prog;
