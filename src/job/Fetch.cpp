@@ -115,19 +115,22 @@ FRViewJob::issueFieldFetch()
 
         shared_ptr<dataset::FieldDataInterface> fielddata
                 = dynamic_pointer_cast<dataset::FieldDataInterface>( si->m_source );
-        if( fielddata && (si->m_field_current >= 0) ) {
+
+        // field 0 is [none].
+        if( fielddata && (si->m_field_current > 0) ) {
 
             // TODO: check for mismatch with current field
 
-            if( fielddata->validFieldAtTimestep( si->m_field_current,
+            if( fielddata->validFieldAtTimestep( si->m_field_current-1,
                                                  si->m_timestep_current ) )
             {
                 m_async_reader->issueFetchField( si->m_source,
-                                                 si->m_field_current,
+                                                 si->m_field_current-1,
                                                  si->m_timestep_current );
-                LOGGER_DEBUG( log, "issued field fetch field=" << si->m_field_current
+                LOGGER_DEBUG( log, "issued field fetch field=" << (si->m_field_current-1)
                               << ", timestep=" << si->m_timestep_current
                               << " [source=" << si->m_source->name() << "]" );
+                return;
             }
             else {
                 LOGGER_DEBUG( log, "field not valid [source=" << si->m_source->name() << "]" );
@@ -136,6 +139,10 @@ FRViewJob::issueFieldFetch()
         else {
             LOGGER_DEBUG( log, "No field data [source=" << si->m_source->name() << "]" );
         }
+
+        si->m_do_update_renderlist = true;
+        si->m_grid_field.reset();
+        updateCurrentFieldData();
     }
     else {
         LOGGER_WARN( log, "current source item is invalid." );
@@ -163,7 +170,7 @@ FRViewJob::handleFetchField()
         
         // --- find matching source item ---------------------------------------
         if( (m_source_items[i]->m_source == source)
-                && (m_source_items[i]->m_field_current == (int)field_index )
+                && ((m_source_items[i]->m_field_current-1) == (int)field_index )
                 && (m_source_items[i]->m_timestep_current == (int)timestep_index ) )
         {
             boost::shared_ptr<SourceItem> si = m_source_items[i];

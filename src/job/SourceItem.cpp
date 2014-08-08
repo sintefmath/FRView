@@ -59,6 +59,8 @@ SourceItem::SourceItem( boost::shared_ptr< dataset::AbstractDataSource > source,
     using dataset::FieldDataInterface;
 
     // --- extract list of files & number of timesteps -------------------------
+    m_field_names.push_back( "[none]" );
+
     shared_ptr<FieldDataInterface> fielddata =
             dynamic_pointer_cast<FieldDataInterface>( m_source );
     if( fielddata ) {
@@ -67,10 +69,6 @@ SourceItem::SourceItem( boost::shared_ptr< dataset::AbstractDataSource > source,
             m_field_names.push_back( fielddata->fieldName(i) );
         }
         m_timestep_num = (int)fielddata->timesteps();
-    }
-
-    if( m_field_names.empty() ) {
-        m_field_names.push_back( "[none]" );
     }
 
 
