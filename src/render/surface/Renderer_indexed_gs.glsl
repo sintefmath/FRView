@@ -26,6 +26,7 @@ in GI {
 } in_g[3];
 
 out GO {
+    flat bool    two_sided;
     flat vec4    color;
 #ifdef DO_PAINT
     flat vec3    boundary_a;
@@ -62,16 +63,6 @@ main()
 
 
     bool flip = false;
-    if( (cell & 0x20000000u) != 0u ) {
-        // surface, check orientation of triangle
-        vec2 a = in_g[1].scr_pos - in_g[0].scr_pos;
-        vec2 b = in_g[2].scr_pos - in_g[0].scr_pos;
-        float z = a.x*b.y - b.x*a.y;
-        if( z > 0.f ) {
-            flip = true;
-        }
-    }
-    
     if( (cell & 0x80000000u) == 0u ) {
         flip = !flip;
     }
@@ -103,6 +94,7 @@ main()
         color = surface_color.rgb;
     }
 
+    out_g.two_sided = bitfieldExtract( cell, 29, 1 ) == 1u;
     out_g.color = surface_color.w*vec4( color, 1.0 );
 #ifdef DO_PAINT
     vec2 da = normalize( in_g[1].scr_pos - in_g[0].scr_pos );

@@ -18,6 +18,7 @@
 
 
 in GO {
+    flat bool    two_sided;
     flat vec4    color;
 #ifdef DO_PAINT
     flat vec3    boundary_a;
@@ -73,6 +74,10 @@ vec4 colorize()
     vec3 l = normalize( vec3( 0.f, 1.5f, 1.5f ) - in_f.obj_pos );  // towards light
     vec3 h = normalize( v + l );                  // half-vector
     vec3 n = normalize( in_f.normal );
+    if( in_f.two_sided && !gl_FrontFacing ) {
+        n = -n;
+    }
+    
     float d = max( 0.3f, dot(n,l) );
     float s = pow( max( 0.f, dot(n,h) ), 50.f );
 
