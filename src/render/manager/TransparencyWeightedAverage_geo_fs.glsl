@@ -17,7 +17,6 @@
 
 layout(location=0)  out vec4                frag_color;
 layout(location=1)  out float               complexity;
-                    uniform bool            solid_pass;
 
 void main(void)
 {

@@ -24,6 +24,7 @@ namespace {
 
     const std::string proxy_label_key         = "ProxyGeometry";
     const std::string proxy_resolution_key    = "Resolution";
+    const std::string create_nonindexed_surfaces_key = "create_nonindexed_surfaces";
 }
 
 
@@ -57,6 +58,7 @@ RenderConfig::RenderConfig(boost::shared_ptr<tinia::model::ExposedModel>& model,
       m_shading_model( Diffuse ),
       m_render_grid( false ),
       m_render_wells( false ),
+      m_create_nonindexed_surfaces( true ),
       m_line_thickness( 0.5f ),
       m_clip_plane_visible( true )
 {
@@ -83,6 +85,8 @@ RenderConfig::RenderConfig(boost::shared_ptr<tinia::model::ExposedModel>& model,
     m_model->addElement<bool>( light_theme_key, false, "Light theme" );
     m_model->addElement<bool>( render_clipplane_key, true, "Render clip plane" );
 
+    m_model->addElement<bool>( create_nonindexed_surfaces_key, m_create_nonindexed_surfaces, "Create non-indexed surfaces" );
+    m_model->addStateListener( create_nonindexed_surfaces_key, this );
     
     m_model->addElementWithRestriction<std::string>( shading_model_key,
                                                      shading_model_strings[ m_shading_model ],
@@ -204,6 +208,10 @@ RenderConfig::stateElementModified( tinia::model::StateElement * stateElement )
             setDarkTheme();
         }
     }
+    else if( key == create_nonindexed_surfaces_key ) {
+        stateElement->getValue( m_create_nonindexed_surfaces );
+        m_logic.doLogic();
+    }
     else if( key == render_clipplane_key ) {
         stateElement->getValue( m_clip_plane_visible );
     }
@@ -234,6 +242,7 @@ RenderConfig::guiFactory() const
     render_options_layout->addChild( new tinia::model::gui::CheckBox( render_clipplane_key ) );
     render_options_layout->addChild( new tinia::model::gui::CheckBox( render_grid_key ) );
     render_options_layout->addChild( new tinia::model::gui::CheckBox( render_wells_key ) );
+    render_options_layout->addChild( new tinia::model::gui::CheckBox( create_nonindexed_surfaces_key ) );
 
     // -------------------------------------------------------------------------
     ElementGroup* rendering_quality_group = new ElementGroup( render_quality_key, true );

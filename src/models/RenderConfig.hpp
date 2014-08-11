@@ -73,6 +73,9 @@ public:
     bool
     renderWells() const { return m_render_wells; }
 
+    bool
+    createNonindexedSurfaces() const { return m_create_nonindexed_surfaces; }
+    
     int
     renderQuality() const { return m_render_quality; }
 
@@ -109,6 +112,7 @@ protected:
     Theme                                       m_theme;
     bool                                        m_render_grid;
     bool                                        m_render_wells;
+    bool                                        m_create_nonindexed_surfaces;
 
     float                                       m_line_thickness;
     glm::vec4                                   m_background_color;

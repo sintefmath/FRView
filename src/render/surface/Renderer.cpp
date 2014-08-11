@@ -24,6 +24,7 @@
 #include "render/GridField.hpp"
 #include "render/surface/GridTessSurf.hpp"
 #include "render/surface/Renderer.hpp"
+#include "render/surface/TriangleSoup.hpp"
 #include "utils/Logger.hpp"
 #include "utils/GLSLTools.hpp"
 
@@ -34,41 +35,105 @@ namespace {
 namespace render {
     namespace surface {
         namespace glsl {
-            extern const std::string Renderer_vs;
-            extern const std::string Renderer_gs;
-            extern const std::string Renderer_fs;
+            extern const std::string Renderer_indexed_vs;
+            extern const std::string Renderer_indexed_gs;
+            extern const std::string Renderer_indexed_fs;
+            extern const std::string Renderer_soup_triangles_vs;
+            extern const std::string Renderer_soup_triangles_fs;
+            extern const std::string Renderer_soup_edges_vs;
+            extern const std::string Renderer_soup_edges_fs;
         }
 
     
 Renderer::Renderer( const std::string& defines, const std::string& fragment_source )
-    : m_main( package + ".main" )
+    : m_main( package + ".main" ),
+      m_draw_triangle_soup( package + ".draw_triangle_soup" )
 {
     Logger log = getLogger( package + ".constructor" );
 
-    // move DO_PAINT into uniform
-    
-    GLint vs = utils::compileShader( log, glsl::Renderer_vs, GL_VERTEX_SHADER );
-    GLint gs = utils::compileShader( log,
-                                     "#define DO_PAINT\n" +
-                                     defines +
-                                     glsl::Renderer_gs, GL_GEOMETRY_SHADER );
-    GLint fs = utils::compileShader( log,
-                                     "#define DO_PAINT\n" +
-                                     defines +
-                                     glsl::Renderer_fs +
-                                     fragment_source, GL_FRAGMENT_SHADER );
+    GLint shader;
 
-    glAttachShader( m_main.get(), vs );
-    glAttachShader( m_main.get(), gs );
-    glAttachShader( m_main.get(), fs );
-    utils::linkProgram( log, m_main.get() );
 
-    m_loc_mvp           = glGetUniformLocation( m_main.get(), "MVP" );
-    m_loc_mv            = glGetUniformLocation( m_main.get(), "MV" );
-    m_loc_nm            = glGetUniformLocation( m_main.get(), "NM" );
-    m_loc_surface_color = glGetUniformLocation( m_main.get(), "surface_color" );
-    m_loc_edge_color    = glGetUniformLocation( m_main.get(), "edge_color" );
-    m_loc_screen_size   = glGetUniformLocation( m_main.get(), "screen_size" );
+    // -------------------------------------------------------------------------
+    {
+        // move DO_PAINT into uniform
+        shader = utils::compileShader( log, glsl::Renderer_indexed_vs, GL_VERTEX_SHADER );
+        glAttachShader( m_main.get(), shader );
+        glDeleteShader( shader );
+
+        shader = utils::compileShader( log,
+                                       "#define DO_PAINT\n" +
+                                       defines +
+                                       glsl::Renderer_indexed_gs, GL_GEOMETRY_SHADER );
+        glAttachShader( m_main.get(), shader );
+        glDeleteShader( shader );
+
+        shader = utils::compileShader( log,
+                                       "#define DO_PAINT\n" +
+                                       defines +
+                                       glsl::Renderer_indexed_fs +
+                                       fragment_source, GL_FRAGMENT_SHADER );
+        glAttachShader( m_main.get(), shader );
+        glDeleteShader( shader );
+
+
+        utils::linkProgram( log, m_main.get() );
+
+        m_loc_solid_pass    = glGetUniformLocation( m_main.get(), "solid_pass" );
+        m_loc_mvp           = glGetUniformLocation( m_main.get(), "MVP" );
+        m_loc_mv            = glGetUniformLocation( m_main.get(), "MV" );
+        m_loc_nm            = glGetUniformLocation( m_main.get(), "NM" );
+        m_loc_surface_color = glGetUniformLocation( m_main.get(), "surface_color" );
+        m_loc_edge_color    = glGetUniformLocation( m_main.get(), "edge_color" );
+        m_loc_screen_size   = glGetUniformLocation( m_main.get(), "screen_size" );
+    }
+
+    // -------------------------------------------------------------------------
+    {
+        shader = utils::compileShader( log, glsl::Renderer_soup_triangles_vs, GL_VERTEX_SHADER );
+        glAttachShader( m_draw_triangle_soup.get(), shader );
+        glDeleteShader( shader );
+
+        shader = utils::compileShader( log,
+                                       defines +
+                                       glsl::Renderer_soup_triangles_fs +
+                                       fragment_source, GL_FRAGMENT_SHADER );
+        glAttachShader( m_draw_triangle_soup.get(), shader );
+        glDeleteShader( shader );
+
+        utils::linkProgram( log, m_draw_triangle_soup.get() );
+
+        m_draw_triangle_soup_loc_solid_pass    = glGetUniformLocation( m_draw_triangle_soup.get(), "solid_pass" );
+        m_draw_triangle_soup_loc_mvp           = glGetUniformLocation( m_draw_triangle_soup.get(), "MVP" );
+        m_draw_triangle_soup_loc_mv            = glGetUniformLocation( m_draw_triangle_soup.get(), "MV" );
+        m_draw_triangle_soup_loc_nm            = glGetUniformLocation( m_draw_triangle_soup.get(), "NM" );
+        m_draw_triangle_soup_loc_use_field     = glGetUniformLocation( m_draw_triangle_soup.get(), "use_field" );
+        m_draw_triangle_soup_loc_log_map       = glGetUniformLocation( m_draw_triangle_soup.get(), "log_map" );
+        m_draw_triangle_soup_loc_field_remap   = glGetUniformLocation( m_draw_triangle_soup.get(), "field_remap" );
+        m_draw_triangle_soup_loc_surface_color = glGetUniformLocation( m_draw_triangle_soup.get(), "surface_color" );
+    }
+
+    // -------------------------------------------------------------------------
+    {
+        shader = utils::compileShader( log, glsl::Renderer_soup_edges_vs, GL_VERTEX_SHADER );
+        glAttachShader( m_draw_soup_edges_prog.get(), shader );
+        glDeleteShader( shader );
+
+        shader = utils::compileShader( log,
+                                       defines +
+                                       glsl::Renderer_soup_edges_fs +
+                                       fragment_source, GL_FRAGMENT_SHADER );
+        glAttachShader( m_draw_soup_edges_prog.get(), shader );
+        glDeleteShader( shader );
+
+        utils::linkProgram( log, m_draw_soup_edges_prog.get() );
+
+        m_draw_soup_edges_loc_solid_pass = glGetUniformLocation( m_draw_soup_edges_prog.get(), "solid_pass" );
+        m_draw_soup_edges_loc_mvp        = glGetUniformLocation( m_draw_soup_edges_prog.get(), "MVP" );
+        m_draw_soup_edges_loc_edge_color = glGetUniformLocation( m_draw_soup_edges_prog.get(), "edge_color" );
+
+    }
+
 }
 
     
@@ -77,7 +142,8 @@ Renderer::draw( const GLfloat*                            modelview,
                 const GLfloat*                            projection,
                 const GLsizei                             width,
                 const GLsizei                             height,
-                const std::vector<RenderItem>&            render_items )
+                const std::vector<RenderItem>&            render_items,
+                bool                                      solid_pass  )
 {
     using boost::shared_ptr;
     using boost::dynamic_pointer_cast;
@@ -103,106 +169,173 @@ Renderer::draw( const GLfloat*                            modelview,
                              nm4[4], nm4[5], nm4[6],
                              nm4[8], nm4[9], nm4[10] };
     
-    
-    glUseProgram( m_main.get() );
-    glUniformMatrix4fv( m_loc_mvp, 1, GL_FALSE, glm::value_ptr( MVP ) );
-    glUniformMatrix3fv( m_loc_nm, 1, GL_FALSE, nm3 );
-    glUniformMatrix4fv( m_loc_mv, 1, GL_FALSE, modelview );
-    glUniform2f( m_loc_screen_size, width, height );
-
-    // bind normal vector texture
-
-
-    // Bind vertex position VAO
-   
     for( size_t i = 0; i<render_items.size(); i++) {
+
         const RenderItem& item = render_items[i];
         if( item.m_renderer != RenderItem::RENDERER_SURFACE ) {
             continue;
         }
-        if( item.m_surf->triangleCount() < 1 ) {
-            continue;
+        if( item.m_surf ) {
+            if( item.m_surf->triangleCount() < 1 ) {
+                continue;
+            }
+            shared_ptr<const VertexPositionInterface> vertices = dynamic_pointer_cast<const VertexPositionInterface>( item.m_mesh );
+            if( !vertices ) {
+                continue;
+            }
+            shared_ptr<const NormalVectorInterface>   normals  = dynamic_pointer_cast<const NormalVectorInterface>(item.m_mesh );
+            if( !normals ) {
+                continue;
+            }
+
+            glUseProgram( m_main.get() );
+            glUniform1i( m_loc_solid_pass, solid_pass ? GL_TRUE : GL_FALSE );
+            glUniformMatrix4fv( m_loc_mvp, 1, GL_FALSE, glm::value_ptr( MVP ) );
+            glUniformMatrix3fv( m_loc_nm, 1, GL_FALSE, nm3 );
+            glUniformMatrix4fv( m_loc_mv, 1, GL_FALSE, modelview );
+            glUniform2f( m_loc_screen_size, width, height );
+
+            glActiveTexture( GL_TEXTURE1 );
+            glBindTexture( GL_TEXTURE_BUFFER, normals->normalVectorsAsBufferTexture() );
+
+            glBindVertexArray( vertices->vertexPositonsAsVertexArrayObject() );
+
+            // set up field if enabled
+            glActiveTexture( GL_TEXTURE2 );
+            if( item.m_field ) {
+                glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), 1 );
+                glBindTexture( GL_TEXTURE_BUFFER, item.m_field->texture() );
+
+                if( item.m_color_map ) {
+                    glActiveTexture( GL_TEXTURE3 );
+                    glBindTexture( GL_TEXTURE_1D, item.m_color_map->get() );
+                }
+            }
+            else {
+                glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), 0 );
+                glBindTexture( GL_TEXTURE_BUFFER, 0 );
+            }
+
+            //if( item.m_edge_color[3] > 0.f ) {
+            //    glDisable( GL_POLYGON_OFFSET_FILL );
+            //}
+            //else {
+            //    glPolygonOffset( 1.f, 1.f );
+            //    glEnable( GL_POLYGON_OFFSET_FILL );
+            //
+            glActiveTexture( GL_TEXTURE0 );
+
+            glUniform1i( glGetUniformLocation( m_main.get(), "flat_normals"), GL_FALSE );
+            glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), item.m_field_log_map );
+            //        glUniform1i( glGetUniformLocation( m_main.get(), "solid_pass"), solid_pass ? GL_TRUE : GL_FALSE );
+            glUniform1f( glGetUniformLocation( m_main.get(), "line_width"), 0.5f*item.m_line_thickness );
+
+            glUniform4fv( m_loc_surface_color, 1, item.m_face_color );
+
+            glUniform4fv( m_loc_edge_color, 1, item.m_edge_color );
+            if( item.m_field_log_map ) {
+                glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), GL_TRUE );
+                glUniform2f( glGetUniformLocation( m_main.get(), "field_remap"),
+                             1.f/ item.m_field_min,
+                             1.f/logf( item.m_field_max/item.m_field_min ) );
+            }
+            else {
+                glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), GL_FALSE );
+                glUniform2f( glGetUniformLocation( m_main.get(), "field_remap"),
+                             item.m_field_min,
+                             1.f/(item.m_field_max-item.m_field_min ) );
+            }
+            glBindTexture( GL_TEXTURE_BUFFER, item.m_surf->triangleCellTexture() );
+            glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, item.m_surf->triangleCornerpointIndexBuffer() );
+            glDrawElements( GL_TRIANGLES, 3*item.m_surf->triangleCount(), GL_UNSIGNED_INT, NULL );
+
+#if 0
+            boost::shared_ptr<const mesh::PolygonSetInterface> polygon_set =
+                    boost::dynamic_pointer_cast<const mesh::PolygonSetInterface>( mesh );
+            glUseProgram( 0 );
+            glMatrixMode( GL_PROJECTION );
+            glLoadMatrixf( glm::value_ptr( P ) );
+            glMatrixMode( GL_MODELVIEW );
+            glLoadMatrixf( glm::value_ptr( M ) );
+
+            glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, polygon_set->polygonVertexIndexBuffer() );
+            //        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, item.m_surf->triangleCornerpointIndexBuffer() );
+
+            glDrawElements( GL_TRIANGLES, 1024, GL_UNSIGNED_INT, NULL );
+            glUseProgram( m_main.get() );
+#endif
         }
-        shared_ptr<const VertexPositionInterface> vertices = dynamic_pointer_cast<const VertexPositionInterface>( item.m_mesh );
-        if( !vertices ) {
-            continue;
-        }
-        shared_ptr<const NormalVectorInterface>   normals  = dynamic_pointer_cast<const NormalVectorInterface>(item.m_mesh );
-        if( !normals ) {
-            continue;
-        }        
+        else if( item.m_trisoup ) {
 
-        glActiveTexture( GL_TEXTURE1 );
-        glBindTexture( GL_TEXTURE_BUFFER, normals->normalVectorsAsBufferTexture() );
 
-        glBindVertexArray( vertices->vertexPositonsAsVertexArrayObject() );
-        
-        // set up field if enabled
-        glActiveTexture( GL_TEXTURE2 );
-        if( item.m_field ) {
-            glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), 1 );
-            glBindTexture( GL_TEXTURE_BUFFER, item.m_field->texture() );
+            if( item.m_trisoup->triangleVertexCount() > 0 ) {
 
-            if( item.m_color_map ) {
-                glActiveTexture( GL_TEXTURE3 );
-                glBindTexture( GL_TEXTURE_1D, item.m_color_map->get() );
+                glPolygonOffset( 1.f, 1.f );
+                glEnable( GL_POLYGON_OFFSET_FILL );
+
+                glUseProgram( m_draw_triangle_soup.get() );
+                glUniform1i( m_draw_triangle_soup_loc_solid_pass, solid_pass ? GL_TRUE : GL_FALSE );
+                glUniformMatrix4fv( m_draw_triangle_soup_loc_mvp, 1, GL_FALSE, glm::value_ptr( MVP ) );
+                glUniformMatrix3fv( m_draw_triangle_soup_loc_nm, 1, GL_FALSE, nm3 );
+                glUniformMatrix4fv( m_draw_triangle_soup_loc_mv, 1, GL_FALSE, modelview );
+
+                glUniform4f( m_draw_triangle_soup_loc_surface_color,
+                             item.m_face_color[3]*item.m_face_color[0],
+                             item.m_face_color[3]*item.m_face_color[1],
+                             item.m_face_color[3]*item.m_face_color[2],
+                             item.m_face_color[3] );
+
+                if( item.m_field && item.m_color_map ) {
+
+                    glUniform1i( m_draw_triangle_soup_loc_use_field, 1 );
+                    if( item.m_field_log_map ) {
+                        glUniform1i( m_draw_triangle_soup_loc_log_map, GL_TRUE );
+                        glUniform2f( m_draw_triangle_soup_loc_field_remap,
+                                     1.f/ item.m_field_min,
+                                     1.f/logf( item.m_field_max/item.m_field_min ) );
+                    }
+                    else {
+                        glUniform1i( m_draw_triangle_soup_loc_log_map, GL_FALSE );
+                        glUniform2f( m_draw_triangle_soup_loc_field_remap,
+                                     item.m_field_min,
+                                     1.f/(item.m_field_max-item.m_field_min ) );
+                    }
+
+
+
+                    glActiveTexture( GL_TEXTURE2 );
+                    glBindTexture( GL_TEXTURE_BUFFER, item.m_field->texture() );
+
+                    glActiveTexture( GL_TEXTURE3 );
+                    glBindTexture( GL_TEXTURE_1D, item.m_color_map->get() );
+                }
+
+
+                glBindVertexArray( item.m_trisoup->triangleVertexAttributesAsVertexArrayObject() );
+
+                glDrawArrays( GL_TRIANGLES, 0, item.m_trisoup->triangleVertexCount() );
+
+                glDisable( GL_POLYGON_OFFSET_FILL );
+
+            }
+            if( (item.m_trisoup->edgeVertexCount() > 0) /*&& (item.m_edge_color[3] > 0.f )*/ ) {
+                glUseProgram( m_draw_soup_edges_prog.get() );
+                glUniform1i( m_draw_soup_edges_loc_solid_pass, solid_pass ? GL_TRUE : GL_FALSE );
+                glUniformMatrix4fv( m_draw_soup_edges_loc_mvp, 1, GL_FALSE, glm::value_ptr( MVP ) );
+                glUniform4f( m_draw_soup_edges_loc_edge_color,
+                             item.m_edge_color[3]*item.m_edge_color[0],
+                             item.m_edge_color[3]*item.m_edge_color[1],
+                             item.m_edge_color[3]*item.m_edge_color[2],
+                             item.m_edge_color[3] );
+
+                glBindVertexArray( item.m_trisoup->edgeVertexAttributesAsVertexArrayObject() );
+                glDrawArrays( GL_LINES, 0, item.m_trisoup->edgeVertexCount() );
             }
         }
-        else {
-            glUniform1i( glGetUniformLocation( m_main.get(), "use_field" ), 0 );
-            glBindTexture( GL_TEXTURE_BUFFER, 0 );
-        }
-        
-        //if( item.m_edge_color[3] > 0.f ) {
-        //    glDisable( GL_POLYGON_OFFSET_FILL );
-        //}
-        //else {
-        //    glPolygonOffset( 1.f, 1.f );
-        //    glEnable( GL_POLYGON_OFFSET_FILL );
-        //
-        glActiveTexture( GL_TEXTURE0 );
-
-        glUniform1i( glGetUniformLocation( m_main.get(), "flat_normals"), GL_FALSE );
-        glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), item.m_field_log_map );
-//        glUniform1i( glGetUniformLocation( m_main.get(), "solid_pass"), solid_pass ? GL_TRUE : GL_FALSE );
-        glUniform1f( glGetUniformLocation( m_main.get(), "line_width"), 0.5f*item.m_line_thickness );
-
-        glUniform4fv( m_loc_surface_color, 1, item.m_face_color );
-
-        glUniform4fv( m_loc_edge_color, 1, item.m_edge_color );
-        if( item.m_field_log_map ) {
-            glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), GL_TRUE );
-            glUniform2f( glGetUniformLocation( m_main.get(), "field_remap"),
-                         1.f/ item.m_field_min,
-                         1.f/logf( item.m_field_max/item.m_field_min ) );
-        }
-        else {
-            glUniform1i( glGetUniformLocation( m_main.get(), "log_map"), GL_FALSE );
-            glUniform2f( glGetUniformLocation( m_main.get(), "field_remap"),
-                         item.m_field_min,
-                         1.f/(item.m_field_max-item.m_field_min ) );
-        }
-        glBindTexture( GL_TEXTURE_BUFFER, item.m_surf->triangleCellTexture() );
-        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, item.m_surf->triangleCornerpointIndexBuffer() );
-        glDrawElements( GL_TRIANGLES, 3*item.m_surf->triangleCount(), GL_UNSIGNED_INT, NULL );
-        
-#if 0
-        boost::shared_ptr<const mesh::PolygonSetInterface> polygon_set = 
-                boost::dynamic_pointer_cast<const mesh::PolygonSetInterface>( mesh );
-        glUseProgram( 0 );
-        glMatrixMode( GL_PROJECTION );
-        glLoadMatrixf( glm::value_ptr( P ) );
-        glMatrixMode( GL_MODELVIEW );
-        glLoadMatrixf( glm::value_ptr( M ) );
-
-        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, polygon_set->polygonVertexIndexBuffer() );
-//        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, item.m_surf->triangleCornerpointIndexBuffer() );
-
-        glDrawElements( GL_TRIANGLES, 1024, GL_UNSIGNED_INT, NULL );
-        glUseProgram( m_main.get() );
-#endif
     }
-    glDisable( GL_POLYGON_OFFSET_FILL );
+    //glDisable( GL_POLYGON_OFFSET_FILL );
+
+
 
 }
 

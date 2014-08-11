@@ -44,19 +44,37 @@ public:
           //const boost::shared_ptr<const mesh::AbstractMeshGPUModel>   mesh,
           //const boost::shared_ptr<const GridField>  field,
           //GLTexture&                                color_map,
-          const std::vector<RenderItem>&            render_items );
+          const std::vector<RenderItem>&            render_items,
+          bool                                      solid_pass );
 
     GLProgram&
     program() { return m_main; }
     
 protected:
     GLProgram   m_main;
+    GLint       m_loc_solid_pass;
     GLint       m_loc_mvp;
     GLint       m_loc_mv;
     GLint       m_loc_nm;
     GLint       m_loc_surface_color;
     GLint       m_loc_edge_color;
     GLint       m_loc_screen_size;
+
+    GLProgram   m_draw_triangle_soup;
+    GLint       m_draw_triangle_soup_loc_solid_pass;
+    GLint       m_draw_triangle_soup_loc_mvp;
+    GLint       m_draw_triangle_soup_loc_mv;
+    GLint       m_draw_triangle_soup_loc_nm;
+    GLint       m_draw_triangle_soup_loc_use_field;
+    GLint       m_draw_triangle_soup_loc_log_map;
+    GLint       m_draw_triangle_soup_loc_field_remap;
+    GLint       m_draw_triangle_soup_loc_surface_color;
+
+    GLProgram   m_draw_soup_edges_prog;
+    GLint       m_draw_soup_edges_loc_solid_pass;
+    GLint       m_draw_soup_edges_loc_mvp;
+    GLint       m_draw_soup_edges_loc_edge_color;
+
 };
     
 

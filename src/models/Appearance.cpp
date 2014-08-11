@@ -437,8 +437,8 @@ Appearance::update(boost::shared_ptr<SourceItem> source_item , size_t index)
         m_source_item->m_appearance_data->m_subset_fill_alpha = 1.f;
         m_source_item->m_appearance_data->m_subset_outline_alpha = 1.f;
         m_source_item->m_appearance_data->m_boundary_color = 0;
-        m_source_item->m_appearance_data->m_boundary_fill_alpha = 0.1f;
-        m_source_item->m_appearance_data->m_boundary_outline_alpha = 1.f;
+        m_source_item->m_appearance_data->m_boundary_fill_alpha = 0.f;
+        m_source_item->m_appearance_data->m_boundary_outline_alpha = 0.f;
         m_source_item->m_appearance_data->m_faults_color = 1;
         m_source_item->m_appearance_data->m_faults_fill_alpha = 1.f;
         m_source_item->m_appearance_data->m_faults_outline_alpha = 1.f;

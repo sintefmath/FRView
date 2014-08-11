@@ -44,7 +44,6 @@ public:
     
 protected:
     surface::Renderer   m_surface_renderer;
-    GLint               m_surface_renderer_solid_pass;
     
     GLFramebuffer       m_fbo_solid;
     GLFramebuffer       m_fbo_weighted_average_transparent;

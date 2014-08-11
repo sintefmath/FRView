@@ -38,6 +38,7 @@ namespace render {
     }
     namespace surface {
         class GridTessSurf;
+        class TriangleSoup;
     }
     namespace rlgen {
         class Splats;
@@ -67,6 +68,9 @@ struct SourceItem {
     boost::shared_ptr<render::surface::GridTessSurf>       m_faults_surface;
     boost::shared_ptr<render::surface::GridTessSurf>       m_subset_surface;
     boost::shared_ptr<render::surface::GridTessSurf>       m_boundary_surface;
+    boost::shared_ptr<render::surface::TriangleSoup>       m_faults_surface_soup;
+    boost::shared_ptr<render::surface::TriangleSoup>       m_subset_surface_soup;
+    boost::shared_ptr<render::surface::TriangleSoup>       m_boundary_surface_soup;
     boost::shared_ptr<render::GridField>                   m_grid_field;
     boost::shared_ptr<render::wells::Representation>       m_wells;
     boost::shared_ptr<render::GLTexture>                   m_color_map;

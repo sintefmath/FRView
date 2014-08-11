@@ -23,6 +23,7 @@ class Logic
 {
 public:
 
+   
     virtual
     void
     doLogic() = 0;

@@ -1,5 +1,5 @@
-#version 330
-/* Copyright STIFTELSEN SINTEF 2013
+#version 420
+/* Copyright STIFTELSEN SINTEF 2014
  *
  * This file is part of FRView.
  * FRView is free software: you can redistribute it and/or modify
@@ -16,11 +16,13 @@
  * along with the FRView.  If not, see http://www.gnu.org/licenses/.
  */
 
+uniform bool  solid_pass;
+uniform vec4  edge_color;
 
-layout(location=0)  out     vec4    frag_color;
-                    uniform vec4    edge_color;
-
-void main(void)
+vec4 colorize()
 {
-    frag_color = edge_color;
+    return edge_color;
 }
+
+
+

@@ -1,5 +1,5 @@
-#version 330
-/* Copyright STIFTELSEN SINTEF 2013
+#version 420
+/* Copyright STIFTELSEN SINTEF 2014
  *
  * This file is part of FRView.
  * FRView is free software: you can redistribute it and/or modify
@@ -15,13 +15,19 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with the FRView.  If not, see http://www.gnu.org/licenses/.
  */
+layout(points, invocations=1) in;
+layout(points, max_vertices=MAX_OUT) out;
 
 
-layout(location=0) in vec4 position;
+layout(location=0)  out uvec4               cell;
+layout(location=1)  out uvec3               indices;
 
-uniform mat4    MVP;
-
-void main()
+void
+emit_triangle( in uint cell_ix, in uvec3 nrm_ix, in uvec3 vtx_ix )
 {
-    gl_Position = MVP*vec4(position.xyz,1.f);
+    cell    = uvec4( cell_ix, nrm_ix );
+    indices = vtx_ix;
+    EmitVertex();
 }
+
+// void main() etc. from common triangulate_gs.glsl

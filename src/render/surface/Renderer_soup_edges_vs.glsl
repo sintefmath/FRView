@@ -1,5 +1,5 @@
 #version 330
-/* Copyright STIFTELSEN SINTEF 2013
+/* Copyright STIFTELSEN SINTEF 2014
  *
  * This file is part of FRView.
  * FRView is free software: you can redistribute it and/or modify
@@ -16,10 +16,13 @@
  * along with the FRView.  If not, see http://www.gnu.org/licenses/.
  */
 
-layout(location=0)  out vec4                frag_color;
-                    uniform vec3            solid_color;
+layout(location=0)  in vec4 position;
 
-void main(void)
+
+uniform mat4            MVP;
+
+void
+main()
 {
-    frag_color.rgb = solid_color;
+    gl_Position = MVP*vec4( position.xyz, 1.f );
 }

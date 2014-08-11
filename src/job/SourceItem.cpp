@@ -41,9 +41,6 @@ SourceItem::SourceItem( boost::shared_ptr< dataset::AbstractDataSource > source,
                                            glm::vec4(0.f, 1.f, 0.f, 0.f ) ) ),
       m_grid_tess( gpu_mesh ),
       m_grid_tess_subset( new render::subset::Representation ),
-      m_faults_surface( new render::surface::GridTessSurf ),
-      m_subset_surface( new render::surface::GridTessSurf ),
-      m_boundary_surface( new render::surface::GridTessSurf ),
       m_wells( new render::wells::Representation ),
       m_color_map( color_map ),
       m_visibility_mask( models::AppearanceData::VISIBILITY_MASK_NONE ),
@@ -62,6 +59,8 @@ SourceItem::SourceItem( boost::shared_ptr< dataset::AbstractDataSource > source,
     using dataset::FieldDataInterface;
 
     // --- extract list of files & number of timesteps -------------------------
+    m_field_names.push_back( "[none]" );
+
     shared_ptr<FieldDataInterface> fielddata =
             dynamic_pointer_cast<FieldDataInterface>( m_source );
     if( fielddata ) {
@@ -70,10 +69,6 @@ SourceItem::SourceItem( boost::shared_ptr< dataset::AbstractDataSource > source,
             m_field_names.push_back( fielddata->fieldName(i) );
         }
         m_timestep_num = (int)fielddata->timesteps();
-    }
-
-    if( m_field_names.empty() ) {
-        m_field_names.push_back( "[none]" );
     }
 
 
