@@ -21,6 +21,7 @@ layout(location=1)  in uint cell;
 layout(location=2)  in vec4 position;
 
 out FRAGMENT_IN {
+    flat bool two_sided;
     flat vec4 color;
          vec3 normal;
          vec3 position;
@@ -63,11 +64,15 @@ main()
     else {
         color = surface_color.rgb;
     }
+    
+    
+    
 /*
     color = vec3( ((cell & 0x1u) == 0) ? 1.f : 0.f,
                   ((cell & 0x2u) == 0) ? 1.f : 0.f,
                   ((cell & 0x4u) == 0) ? 1.f : 0.f );
 */
+    fragment_in.two_sided = bitfieldExtract( cell, 29, 1 ) == 1u;
     fragment_in.color    = vec4( surface_color.w*color, surface_color.w );
     fragment_in.normal   = NM * normal;
     fragment_in.position = (1.f/p.w)*p.xyz;
