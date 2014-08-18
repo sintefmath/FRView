@@ -79,7 +79,8 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_enable_gl_debug( false ),
       m_renderlist_initialized( false ),
       m_renderlist_update_revision( true ),
-      m_has_pipeline( false )
+      m_has_pipeline( false ),
+      m_show_wells( false )
 {
     
     // Triggers release of all sources.
@@ -738,12 +739,9 @@ FRViewJob::doLogic()
         m_model->updateElement<int>( "renderlist", m_renderlist_db.bump() );
     }
 
-    if( m_renderconfig.renderWells() ) {
-        shared_ptr<SourceItem> si = currentSourceItem();
-        if( si->m_show_wells != m_renderconfig.renderWells() ) {
-            si->m_show_wells = m_renderconfig.renderWells();
-            issueFieldFetch();
-        }
+    if( m_show_wells != m_renderconfig.renderWells() ) {
+        m_show_wells = m_renderconfig.renderWells();
+        issueFieldFetch();
     }
 
 }

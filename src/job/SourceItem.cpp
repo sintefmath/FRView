@@ -50,8 +50,7 @@ SourceItem::SourceItem( boost::shared_ptr< dataset::AbstractDataSource > source,
       m_field_num( 0 ),
       m_field_current( 0 ),
       m_timestep_num( 0 ),
-      m_timestep_current( 0 ),
-      m_show_wells( false )
+      m_timestep_current( 0 )
 {
     using boost::shared_ptr;
     using boost::dynamic_pointer_cast;
