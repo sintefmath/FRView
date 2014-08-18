@@ -191,6 +191,7 @@ RenderConfig::stateElementModified( tinia::model::StateElement * stateElement )
     }
     else if( key == render_wells_key ) {
         stateElement->getValue( m_render_wells );
+        m_reload = true;
     }
     else if( key == line_thickness_key ) {
         int val;
