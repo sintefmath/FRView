@@ -737,6 +737,15 @@ FRViewJob::doLogic()
         //m_model->updateElement( "renderlist", val+1 );
         m_model->updateElement<int>( "renderlist", m_renderlist_db.bump() );
     }
+
+    if( m_renderconfig.renderWells() ) {
+        shared_ptr<SourceItem> si = currentSourceItem();
+        if( si->m_show_wells != m_renderconfig.renderWells() ) {
+            si->m_show_wells = m_renderconfig.renderWells();
+            issueFieldFetch();
+        }
+    }
+
 }
 
 bool

@@ -96,6 +96,7 @@ struct SourceItem {
     std::vector<std::string>                                m_field_names;
     int                                                     m_timestep_num;
     int                                                     m_timestep_current;
+    bool                                                    m_show_wells;
 
     
 };
