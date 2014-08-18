@@ -80,7 +80,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_renderlist_initialized( false ),
       m_renderlist_update_revision( true ),
       m_has_pipeline( false ),
-      m_show_wells( false )
+      m_show_wells( m_renderconfig.renderWells() )
 {
     
     // Triggers release of all sources.
