@@ -181,6 +181,7 @@ private:
 
     
     bool                                                            m_has_pipeline;
+    bool                                                            m_show_wells;
     boost::shared_ptr<render::surface::GridTessSurfBuilder>         m_grid_tess_surf_builder;
     boost::shared_ptr<render::subset::BuilderSelectAll>             m_all_selector;
     boost::shared_ptr<render::subset::BuilderSelectByFieldValue>    m_field_selector;
