@@ -534,7 +534,12 @@ static void APIENTRY debugLogger( GLenum source,
                                   GLenum severity,
                                   GLsizei /*length*/,
                                   const GLchar* message,
-                                  void* /*data*/ )
+#ifdef BUILD_GLEW1_11
+                                  const GLvoid* /*data*/
+#else
+                                  void* /*data*/
+#endif
+                                )
 {
     if( strncmp( "Texture state usage warning", message, 27 ) == 0 ) {
         return;
