@@ -37,7 +37,8 @@ main()
 
 
 //    frag_color = d*vec3( prev.param.x, prev.param.y, 0.8f) + vec3(s);
-    frag_color = d*vec3( prev.color ) + vec3(s);
+frag_color = d*vec3( prev.color ) + vec3(s);
+//frag_color = vec3(1.0, 0.0, 0.0);
 
 //    frag_color = vec3( prev.param.x, prev.param.y, 0.8f);
 

@@ -46,10 +46,10 @@ main()
     vec4 nh = world_from_model * vec4( position + normal, 1.f );
 
     next.position = (1.f/ph.w)*ph.xyz;
-    next.tangent  = (1.f/th.w)*th.xyz - (1.f/ph.w)*ph.xyz;
-    next.normal   = (1.f/nh.w)*nh.xyz - (1.f/ph.w)*ph.xyz;
+//    next.tangent  = (1.f/th.w)*th.xyz - (1.f/ph.w)*ph.xyz;
+//    next.normal   = (1.f/nh.w)*nh.xyz - (1.f/ph.w)*ph.xyz;
 
     // Non-uniform scale destroys the orthogonalness of tangent and normal, so
     // we make it orthogonal.
-    next.normal   = normalize( next.normal - (dot(next.normal, next.tangent)/dot(next.tangent,next.tangent))*next.tangent );
+//    next.normal   = normalize( next.normal - (dot(next.normal, next.tangent)/dot(next.tangent,next.tangent))*next.tangent );
 }

@@ -43,15 +43,15 @@ Representation::clear()
 }
 
 void
-Representation::addSegments( const std::vector<float>& positions,
-                             const std::vector<float>& colors )
+Representation::addSegments( const std::vector<float>& positions, // Connected set of 3D vertices making out "a tube".
+                             const std::vector<float>& colors ) // One RGB for each of the 'positions'.
 {
     if( positions.size() < 2 ) {
         return;
     }
     Logger log = getLogger( package + ".addSegments" );
 
-    size_t N = positions.size()/3;
+    size_t N = positions.size()/3; // N positions, will result in N-1 "indexed" segments
 
     std::vector<float> tangent( 3*N );
 
@@ -119,11 +119,15 @@ Representation::addSegments( const std::vector<float>& positions,
 
     N = m_attribs.size()/12 - start;
 
-    m_indices.reserve( 2*(N-1) );
+    m_indices.reserve( 4*(N-1) );
     for( size_t i=0; i<(N-1); i++ ) {
+        // Each patch requires the vertex quadruple ( [i-1], [i], [i+1], [i+2] ) for rendering the segment between [i] and [i+1].
+        m_indices.push_back( i == 0 ? start + i : start + i - 1 );
         m_indices.push_back( start + i );
         m_indices.push_back( start + i + 1 );
-        //LOGGER_DEBUG( log, (start+i) << ", " << (start+i+1) );
+        m_indices.push_back( i == N-2 ? start + i + 1 : start + i + 2 );
+        // LOGGER_DEBUG( log, "i=" << i << ", \t" << m_indices[m_indices.size()-4] << " " << m_indices[m_indices.size()-3] << " " <<
+        // m_indices[m_indices.size()-2] << " " << m_indices[m_indices.size()-1] );
     }
     m_do_upload = true;
 
@@ -155,8 +159,14 @@ Representation::upload()
                   m_attribs.data(),
                   GL_STATIC_DRAW );
     
+// 0) pos
+// 1) tangent
+// 2) normal
+// 3) col
+
     glBindVertexArray( m_attribs_vao.get() );
-    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*12, reinterpret_cast<const GLvoid*>( sizeof(GLfloat)*3*0 ) );
+    glEnableVertexAttribArray( 0 );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*12, reinterpret_cast<const GLvoid*>( sizeof(GLfloat)*3*0 ) ); // index, size, type, normalized, stride, ptr
     glEnableVertexAttribArray( 0 );
     glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*12, reinterpret_cast<const GLvoid*>( sizeof(GLfloat)*3*1 ) );
     glEnableVertexAttribArray( 1 );

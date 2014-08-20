@@ -90,7 +90,7 @@ WellRenderer::render( GLsizei           width,
 
 
     glUseProgram( m_well_prog.get() );
-    glPatchParameteri( GL_PATCH_VERTICES, 2 );
+    glPatchParameteri( GL_PATCH_VERTICES, 4 );
 
     glUniformMatrix4fv( glGetUniformLocation( m_well_prog.get(), "projection" ), 1, GL_FALSE, projection );
     glUniformMatrix4fv( glGetUniformLocation( m_well_prog.get(), "modelview" ), 1, GL_FALSE, camera_from_world );
