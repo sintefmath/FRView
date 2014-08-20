@@ -534,7 +534,7 @@ static void APIENTRY debugLogger( GLenum source,
                                   GLenum severity,
                                   GLsizei /*length*/,
                                   const GLchar* message,
-#ifdef BUILD_GLEW1_11
+#ifdef GL_VERSION_4_5
                                   const GLvoid* /*data*/
 #else
                                   void* /*data*/
