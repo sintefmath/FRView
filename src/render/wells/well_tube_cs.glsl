@@ -1,5 +1,9 @@
 #version 420 core
 
+
+
+
+// -------------------- start of explicit inclusion of file 'common.glsl' --------------------
 #pragma unroll
 #pragma optionNV(unroll all)
 
@@ -18,7 +22,6 @@
 #define TUBE_AXIS_REFINEMENT 32
 #define TUBE_REFINEMENT_S 4
 #define TUBE_RADIUS 0.003
-
 
 
 
@@ -48,11 +51,11 @@ vec3 hermite_curve_eval(in vec3 p1, in vec3 m1, in vec3 p2, in vec3 m2,
                         in float u,
                         out vec3 c)
 {
-    float u0 = 2.0*u*u*u - 3.0*u*u + 1.0;	// h00(u)
-    float u1 = u*u*u - 2.0*u*u + u;     	// h10(u)
-    float u2 = -2.0*u*u*u + 3.0*u*u;		// h01(u)
+    float u0 = 2.0*u*u*u - 3.0*u*u + 1.0;       // h00(u)
+    float u1 = u*u*u - 2.0*u*u + u;             // h10(u)
+    float u2 = -2.0*u*u*u + 3.0*u*u;            // h01(u)
     float u3 = u*u*u - u*u;                 // h11(u)
-    c = u0*p1 + u1*m1 + u2*p2 + u3*m2;		// h00(u)*p1 + h10(u)*m1 + h01(u)*p2 + h11(u)*m2
+    c = u0*p1 + u1*m1 + u2*p2 + u3*m2;          // h00(u)*p1 + h10(u)*m1 + h01(u)*p2 + h11(u)*m2
 
     float u0du = 6.0*u*u - 6.0*u;           // (dh00/du)(u)
     float u1du = 3.0*u*u - 4.0*u + 1.0;
@@ -162,12 +165,13 @@ vec3 slerp( in vec3 v1, in vec3 v2, in float u )
 
 
 
-// Should only be used in the control shader in the end, but it is useful to have for debugging purposes in the eval shader as well.
+// Input vectors must be normalized by caller.
 
-vec3 find_middle_pseudonormal_w_normalized_input( in vec3 e1_new, in vec3 e2_below, in vec3 e2_above,
-                                                  in int lvl, // If we are splitting [0, 1], lvl==0, on next level, lvl==1, and so on. Will be < s and < REC_REF_LEVELS when
-                                                              // called from TCS. When called from TES, will be equal to min(s, REC_REF_LEVELS).
-                                                  in bool called_from_TES = false )
+vec3 find_middle_pseudonormal( in vec3 e1_new, in vec3 e2_below, in vec3 e2_above,
+                               in int lvl // If we are splitting [0, 1], lvl==0, on next level, lvl==1, and so on. Will be < s and < REC_REF_LEVELS when
+                                          // called from TCS. When called from TES, will be equal to min(s, REC_REF_LEVELS).
+                               // in bool called_from_ES = false // not in use
+                             )
 {
     // We split the interval in half, and compute *_new from *_bot and *_top values.
 
@@ -178,37 +182,44 @@ vec3 find_middle_pseudonormal_w_normalized_input( in vec3 e1_new, in vec3 e2_bel
 
     float cos_angle = dot(e2_above, e2_below); // Remember that cos(-x) = cos(x), and we get -1 <= cos_angle <= 1.
 
-    // case 0: with 120 deg threshold we get into "cancelling" branch
-
     vec3 e2_new;
 
-    if ( cos_angle < cos(radians(30.0)) ) { // <=> angle > 30 deg
-
-        e2_new = cross(e1_new, e2_below-e2_above); // Note the subtraction!
-
-        // Hmm... Sometimes e2_above-e2_below is much better. But is it possible to determine which one is best while
-        // we are here? Yes, we choose the one giving a result more similar to the average direction than otherwise.
-        // (If they cancel exactly, the average vanishes, but then the choice doesn't matter so mush either!)
-        //
-        // If e2_above x e2_below more or less point in the same direction as e1_new, we go for the e2_above-e2_below
-        // choice.
-
-        if ( dot(e1_new, cross(e2_below, e2_above)) < 0.0 ) { // No need to normalize when comparing to zero
-            e2_new = -e2_new; // This gives cross(e1_new, e2_above-e2_below))
-        } // (Faster than mult with sign(...).)
-
+    // Using the difference between e2_above and e2_below. Must first check if they point in opposite directions, in
+    // which case the difference makes less sense.
+    if ( cos_angle < -cos(radians(1.0)) ) { // Doesn't seem to be triggered often?! (Never?!)
+        e2_new = most_perpendicular_axis( e2_below );
     } else {
 
-        // Relatively similar directions, the middle should be a good choice. Note that SLERP is equal for u=0.5.
+        if ( cos_angle < cos(radians(30.0)) ) { // <=> angle > 30 deg
+            e2_new = cross(e1_new, e2_below-e2_above); // Note the subtraction.
+            // Hmm... Sometimes e2_above-e2_below is much better. But is it possible to determine which one is best while
+            // we are here? We choose the one giving a result more similar to the average direction than otherwise.
+            // (If they cancel exactly, the average vanishes, but that should have been taken care of already.)
+            
+            // Note that further below, we check for e2_new being parallel to e1_new. What we have not done is to check if
+            // the e2_new just calculated makes sense, i.e., that e2_below-e2_above is not parallel to e1_new!
+            float cos_angle2 = dot( normalize(e2_below-e2_above), e1_new );
+            if ( abs(cos_angle2) > cos(radians(1.0)) ) {
+                e2_new = most_perpendicular_axis( e1_new );
+            }
 
-        e2_new = 0.5*(e2_below+e2_above);
-        // e2_new = slerp( e2_below, e2_above, 0.5 );
-
+            // If e2_above x e2_below more or less point in the same direction as e1_new, we go for the e2_above-e2_below
+            // choice.
+            // 140728: Hva er dette?? Blir dette en test på om e2_below-e2_above er nærmere e2_below+e2_above eller motsatt??
+            if ( dot(e1_new, cross(e2_below, e2_above)) < 0.0 ) { // No need to normalize when comparing to zero
+                e2_new = -e2_new;
+            }
+        } else {
+            // Relatively similar directions, the middle should be a good choice. Note that SLERP is equal for u=0.5.
+            e2_new = 0.5*(e2_below+e2_above);
+        }
+        
     }
 
     // Must now test if this guess (most of the time the average of the below and above e3s) is more or less parallel to e1
     // 131215: Hmm... If the stuff above works as intended, we should not really get into this situation. Disabling it.
     // 131218: Was that correct? Why can this not happen? Putting it back in.
+    // 140728: Again, don't think this is really needed, but must double-check.
     cos_angle = dot( normalize(e2_new), e1_new );
     if ( abs(cos_angle) > cos(radians(1.0)) ) {
         e2_new = most_perpendicular_axis( e1_new );
@@ -233,8 +244,29 @@ int num_of_rec_ref_frames(in int s)
 
 vec2 cart_to_sph(in vec3 v)
 {
-    return vec2( acos(v.z), atan(v.y, v.x) );
+    // return vec2( acos(clamp(v.z, -1.0, 1.0)), atan(v.y, v.x) );
+    float acos_z, atan2;
+    if (v.z<=-1.0) {
+        acos_z = PI;
+    } else {
+        if (v.z>=1.0) {
+            acos_z = 0.0;
+        } else {
+            acos_z = acos(v.z);
+        }
+    }
+    if (v.x==0.0) {
+        if (v.y>0.0) {
+            atan2 = 0.5*PI;
+        } else {
+            atan2 = -0.5*PI;
+        }
+    } else {
+        atan2 = atan(v.y, v.x);
+    }
+    return vec2( acos_z, atan2 );
 }
+
 
 
 
@@ -256,36 +288,50 @@ ivec2 p42_index_and_offset( in int vec2_indx )
 
 
 
+// Adding this for increased readability of code using it
+
+vec3 fetch_normal_from_list( in vec4 rec_ref_e2[P42_VEC4S], in int indx )
+{
+    vec2 e2;
+    if ( (indx & 1) == 0 ) {
+        e2 = rec_ref_e2[ indx >> 1 ].xy;
+    } else {
+        e2 = rec_ref_e2[ indx >> 1 ].zw;
+    }
+    return sph_to_cart(e2);
+}
+
+// n should be normalized by caller
+void store_normal_in_list( inout vec4 rec_ref_e2[P42_VEC4S], in int indx, in vec3 n )
+{
+    if ( (indx & 1) == 0 ) {
+        rec_ref_e2[ indx >> 1 ].xy = cart_to_sph( n );
+    } else {
+        rec_ref_e2[ indx >> 1 ].zw = cart_to_sph( n );
+    }
+}
+
+
+
+
 void compute_frame_in_middle( inout vec4 rec_ref_e2[P42_VEC4S],
                               in vec3 p1, in vec3 m1, in vec3 p2, in vec3 m2, in float u,
                               in int indx_bot, in int indx_top,
                               in int indx_new, in int lvl ) // If we are splitting [0, 1], lvl==0, on next level, lvl==1, and so on. Will be < s and < REC_REF_LEVELS.
-                                                            // This is not called from the TES. That one calls find_middle_pseudonormal_w_normalized_input directly.
+                                                            // This is not called from the TES. That one calls find_middle_pseudonormal() directly.
 {
     const vec3 e1 = normalize( hermite_curve_tangent(p1, m1, p2, m2, u) );
-    vec2 e2_bot, e2_top;
-    if ( (indx_bot & 1) == 0 ) {
-        e2_bot = rec_ref_e2[ indx_bot >> 1 ].xy;
-    } else {
-        e2_bot = rec_ref_e2[ indx_bot >> 1 ].zw;
-    }
-    if ( (indx_top & 1) == 0 ) {
-        e2_top = rec_ref_e2[ indx_top >> 1 ].xy;
-    } else {
-        e2_top = rec_ref_e2[ indx_top >> 1 ].zw;
-    }
-
-    const vec3 pseudo_e2 = find_middle_pseudonormal_w_normalized_input( e1, sph_to_cart(e2_bot), sph_to_cart(e2_top), lvl );
+    const vec3 e2_bot = fetch_normal_from_list( rec_ref_e2, indx_bot );
+    const vec3 e2_top = fetch_normal_from_list( rec_ref_e2, indx_top );
+    const vec3 pseudo_e2 = find_middle_pseudonormal( e1, e2_bot, e2_top, lvl );
     // The frame the way it will be computed in the eval shader. We need this for the angle-testing (and
     // other computations?) for the deeper levels of the tree, to be computed below.
-    const vec3 e3 = normalize(cross(e1, pseudo_e2));
-
-    if ( (indx_new & 1) == 0 ) {
-        rec_ref_e2[ indx_new >> 1 ].xy = cart_to_sph(cross(e3, e1));
-    } else {
-        rec_ref_e2[ indx_new >> 1 ].zw = cart_to_sph(cross(e3, e1));
-    }
+    const vec3 e3 = normalize(cross(e1, pseudo_e2)); // e3 normalized and orthogonal to e1, ...
+    vec3 e2 = cross(e3, e1);
+    store_normal_in_list( rec_ref_e2, indx_new, e2 ); // ..., so e3 x e1 will not need normalizing.
 }
+// -------------------- end of explicit inclusion of file 'common.glsl' --------------------
+
 
 
 
