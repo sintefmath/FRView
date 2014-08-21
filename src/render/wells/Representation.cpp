@@ -165,7 +165,6 @@ Representation::upload()
 // 3) col
 
     glBindVertexArray( m_attribs_vao.get() );
-    glEnableVertexAttribArray( 0 );
     glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*12, reinterpret_cast<const GLvoid*>( sizeof(GLfloat)*3*0 ) ); // index, size, type, normalized, stride, ptr
     glEnableVertexAttribArray( 0 );
     glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*12, reinterpret_cast<const GLvoid*>( sizeof(GLfloat)*3*1 ) );
