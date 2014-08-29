@@ -309,6 +309,9 @@ Renderer::draw( const GLfloat*                            modelview,
                     glActiveTexture( GL_TEXTURE3 );
                     glBindTexture( GL_TEXTURE_1D, item.m_color_map->get() );
                 }
+                else {
+                    glUniform1i( m_draw_triangle_soup_loc_use_field, 0 );
+                }
 
 
                 glBindVertexArray( item.m_trisoup->triangleVertexAttributesAsVertexArrayObject() );
