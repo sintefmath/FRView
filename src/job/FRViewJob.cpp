@@ -80,6 +80,8 @@ FRViewJob::FRViewJob( const std::list<string>& files )
       m_renderlist_initialized( false ),
       m_renderlist_update_revision( true ),
       m_has_pipeline( false ),
+      m_query_primitives( false ),
+      m_numprimitives( 0 ),
       m_show_wells( m_renderconfig.renderWells() )
 {
     
@@ -136,7 +138,8 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     VerticalLayout* main  = new VerticalLayout;
     main->setPadContents( false );
 
-    m_model->addElement<string>( "source_element_group", "n/a", "Source" );
+    m_model->addElement<string>( "source_element_group", "n/a", "Options" );
+    m_model->addElement<string>( "experimental_element_group", "n/a", "Experimental" );
 
 
     root->addChild( left_right_wrapper );
@@ -187,100 +190,98 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     left_right_wrapper->addChild( outer_tabs );
 
 
-    // --- source --------------------------------------------------------------
-    {   Tab* source_tab = new Tab( "source_element_group" );
+    // --- options tab ----------------------------------------------------------
+    {   
+
+
+        Tab* source_tab = new Tab( "source_element_group" );
+
+        VerticalLayout* options = new VerticalLayout;
+        source_tab->setChild( options );
         outer_tabs->addChild( source_tab );
 
-        VerticalLayout* source = new VerticalLayout;
-        source_tab->setChild( source );
-
-        source->addChild( m_source_selector.guiFactory() );
-        source->addChild( new VerticalSpace );
-
-        // --- source tabs -----------------------------------------------------
-        {   TabLayout* tabs = new TabLayout;
-
-            // --- details tab ---------------------------------------------------------
-            {   m_model->addElement<string>( "details_tab", "", "Details" );
-                Tab* source_tab = new Tab( "details_tab", true );
-                VerticalLayout* source_tab_layout = new VerticalLayout;
-
-                m_model->addElement<bool>( "field_info_enable", true, "Field" );
-
-                ElementGroup* field_details_group = new ElementGroup( "field_info_enable", true );
-                Grid* field_details_grid = new Grid( 4, 4 );
-                field_details_grid->setChild( 0, 1, new HorizontalSpace );
-                field_details_grid->setChild( 0, 3, new HorizontalExpandingSpace );
-
-                m_model->addElementWithRestriction<string>( "field_solution",
-                                                            solutions.front(),
-                                                            solutions.begin(),
-                                                            solutions.end() );
-                m_model->addAnnotation( "field_solution", "Solution" );
-                m_model->addStateListener( "field_solution", this);
-                field_details_grid->setChild( 0, 0, new Label( "field_solution" ) );
-                field_details_grid->setChild( 0, 2, new ComboBox( "field_solution" ) );
-
-                m_model->addConstrainedElement<int>("field_report_step", 0, 0, 0, "Report step" );
-                m_model->addStateListener( "field_report_step", this);
-                field_details_grid->setChild( 1, 0, new Label( "field_report_step" ) );
-                field_details_grid->setChild( 1, 2, new HorizontalSlider( "field_report_step" ) );
-
-                m_model->addElement<string>( "field_info_calendar", "n/a", "Date" );
-                field_details_grid->setChild( 2, 0, new Label( "field_info_calendar" ));
-                field_details_grid->setChild( 2, 2, (new Label( "field_info_calendar", true ))->setEnabledKey( "has_field") );
-
-                m_model->addElement<string>( "field_info_range", "n/a", "Range" );
-                field_details_grid->setChild( 3, 0, new Label( "field_info_range" ) );
-                field_details_grid->setChild( 3, 2, (new Label( "field_info_range", true ))->setEnabledKey( "has_field" ) );
-                field_details_group->setChild( field_details_grid );
-
-                source_tab_layout->addChild( m_grid_stats.guiFactory() );
-                source_tab_layout->addChild( field_details_group );
-                source_tab_layout->addChild( new VerticalExpandingSpace );
-                source_tab->setChild( source_tab_layout );
-
-                tabs->addChild( source_tab );
-            }
-
-            // --- subset tab --------------------------------------------------
-            {
-                Tab* subset_tab = new Tab( "subset_label", true );
-                VerticalLayout* subset_tab_layout = new VerticalLayout;
-
-                subset_tab_layout->addChild( m_subset_selector.guiFactory() );
-                subset_tab_layout->addChild( new VerticalExpandingSpace );
-                subset_tab->setChild( subset_tab_layout );
-                tabs->addChild( subset_tab );
-            }
-
-            // --- appearance tab ------------------------------------------------------
-            {
-                VerticalLayout* appearance_layout = new VerticalLayout;
-                appearance_layout->addChild( m_appearance.guiFactory() );
-                appearance_layout->addChild( new VerticalExpandingSpace );
-                Tab* appearance_tab = new Tab( m_appearance.titleKey(), true );
-                appearance_tab->setChild( appearance_layout );
-                tabs->addChild( appearance_tab );
-            }
-            source->addChild( tabs );
-        }
 
 
-        source->addChild( new VerticalExpandingSpace );
+        m_model->addElement<bool>( "options_label_key", true, "Options" );
+        tinia::model::gui::ElementGroup* optionsRoot = new tinia::model::gui::ElementGroup( "options_label_key", true );
+        tinia::model::gui::Grid* optionsGrid = new tinia::model::gui::Grid( 2, 2 );
+        optionsGrid->setChild( 0, 0, new tinia::model::gui::Label( m_grid_stats.zScaleKey() ) );
+        optionsGrid->setChild( 0, 1, new tinia::model::gui::DoubleSpinBox( m_grid_stats.zScaleKey() ) );
+        optionsGrid->setChild( 1, 0, new tinia::model::gui::CheckBox( m_renderconfig.lightThemeKey() ) );
+        optionsGrid->setChild( 1, 1, new tinia::model::gui::CheckBox( m_renderconfig.renderWellsKey() ) );
+        optionsRoot->setChild(optionsGrid);
+        options->addChild( optionsRoot );
+
+        //options->addChild( m_source_selector.guiFactory() );
+
+        m_model->addElement<bool>( "field_info_enable", true, "Source and Field" );
+        m_model->addElement<bool>( "Source", true );
+
+        ElementGroup* field_details_group = new ElementGroup( "field_info_enable", true );
+
+        Grid* field_details_grid = new Grid( 6, 4 );
+        field_details_grid->setChild( 0, 1, new HorizontalSpace );
+        field_details_grid->setChild( 0, 3, new HorizontalExpandingSpace );
+        field_details_grid->setChild( 1, 0, new Label("Source") );
+        field_details_grid->setChild( 1, 2, new ComboBox(m_source_selector.getSourceSelectorKey() ));
+        field_details_grid->setChild( 1, 1, new Button(m_source_selector.getCloneKey()) );
+        field_details_grid->setChild( 1, 3, new Button(m_source_selector.getDeleteKey()) );
+
+        m_model->addElementWithRestriction<string>( "field_solution",
+                                                    solutions.front(),
+                                                    solutions.begin(),
+                                                    solutions.end() );
+        m_model->addAnnotation( "field_solution", "Solution" );
+        m_model->addStateListener( "field_solution", this);
+        field_details_grid->setChild( 2, 0, new Label( "field_solution" ) );
+        field_details_grid->setChild( 2, 2, new ComboBox( "field_solution" ) );
+
+        m_model->addConstrainedElement<int>("field_report_step", 0, 0, 0, "Report step" );
+        m_model->addStateListener( "field_report_step", this);
+        field_details_grid->setChild( 3, 0, new Label( "field_report_step" ) );
+        field_details_grid->setChild( 3, 2, new HorizontalSlider( "field_report_step" ) );
+
+        m_model->addElement<string>( "field_info_calendar", "n/a", "Date" );
+        field_details_grid->setChild( 4, 0, new Label( "field_info_calendar" ));
+        field_details_grid->setChild( 4, 2, (new Label( "field_info_calendar", true ))->setEnabledKey( "has_field") );
+
+        m_model->addElement<string>( "field_info_range", "n/a", "Range" );
+        field_details_grid->setChild( 5, 0, new Label( "field_info_range" ) );
+        field_details_grid->setChild( 5, 2, (new Label( "field_info_range", true ))->setEnabledKey( "has_field" ) );
+        field_details_group->setChild( field_details_grid );
+
+        options->addChild( field_details_group );
+
+        options->addChild( m_subset_selector.guiFactory() );
+        options->addChild( m_appearance.guiFactory() );
+
+        options->addChild( new VerticalExpandingSpace );
     }
 
-    // --- renderconfig tab ----------------------------------------------------
-    {   Tab* rc_tab = new Tab( m_renderconfig.titleKey() );
-        outer_tabs->addChild( rc_tab );
-        rc_tab->setChild( m_renderconfig.guiFactory() );
+    // --- experimental tab -==---------------------------------------------------
+    {   Tab* experimental_tab = new Tab( "experimental_element_group" );
+        outer_tabs->addChild( experimental_tab );
+        VerticalLayout* experimental = new VerticalLayout;
+
+        m_model->addElement<bool>( "details_label_key", true, "Details" );
+        m_model->addElement<bool>( "primitives_key", m_query_primitives, "# Primitives");
+        m_model->addStateListener( "primitives_key", this);
+        m_model->addElement<int>( "num_prim_key", m_numprimitives, "Number Primitives" );
+        tinia::model::gui::ElementGroup* detailsRoot = new tinia::model::gui::ElementGroup( "details_label_key", true );
+        tinia::model::gui::Grid* detailsStats = m_grid_stats.guiFactory();
+        detailsStats->setChild( 6, 0, new tinia::model::gui::CheckBox( "primitives_key") );
+        detailsStats->setChild( 6, 2, new tinia::model::gui::Label( "num_prim_key", true) );
+        detailsRoot->setChild(detailsStats);
+        experimental->addChild( detailsRoot );
+        experimental->addChild( m_renderconfig.guiFactory() );
+        experimental_tab->setChild(experimental);
     }
 
-    // --- under the hood tab --------------------------------------------------
-    {  Tab* uth_tab = new Tab( m_under_the_hood.titleKey() );
-        outer_tabs->addChild( uth_tab );
-        uth_tab->setChild( m_under_the_hood.guiFactory() );
-    }
+    //// --- under the hood tab --------------------------------------------------
+    //{  Tab* uth_tab = new Tab( m_under_the_hood.titleKey() );
+    //    outer_tabs->addChild( uth_tab );
+    //    uth_tab->setChild( m_under_the_hood.guiFactory() );
+    //}
 
 
     std::vector<tinia::model::StateSchemaElement> elements;
@@ -298,6 +299,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
             //break;
         }
     }
+
 }
 
 
@@ -415,6 +417,10 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
             issueFieldFetch();
         }
     }
+
+    if (stateElement->getKey() == "primitives_key") {
+        stateElement->getValue(m_query_primitives);
+    }
     
     
 
@@ -473,7 +479,7 @@ FRViewJob::updateModelMatrices()
                                    (bbmax.y-bbmin.y) );
         
         if( scale_z < std::numeric_limits<float>::epsilon() ) {
-            scale_z = 1.f;
+            scale_z = 10.f;
         }
         scale_z = m_grid_stats.zScale()*scale_z;
         
@@ -662,6 +668,11 @@ bool FRViewJob::setupPipeline()
         LOGGER_ERROR( log, "Failed to set up pipeline: " << e.what() );
         releasePipeline();
     }
+
+// ------------ for counting # primitives generated -------------- //
+// ----- happens in Render.cpp ----------------------------------- //
+    glGenQueries(1, &m_primitives);
+
     return m_has_pipeline;
 }
 
@@ -777,6 +788,10 @@ FRViewJob::renderFrame( const string&  session,
             fbo,
             width,
             height );
+
+    if (m_query_primitives) {
+        m_model->updateElement( "num_prim_key", (int)m_numprimitives);
+    }
 
 
     return true;

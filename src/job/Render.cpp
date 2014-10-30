@@ -63,7 +63,6 @@ FRViewJob::render( const float*  projection,
                               modelview[8], modelview[9],  modelview[10], modelview[11],
                               modelview[12],modelview[13], modelview[14], modelview[15] );
 
-
     glUseProgram( 0 );
     glBindFramebuffer( GL_FRAMEBUFFER, fbo );
     glViewport( 0, 0, width, height );
@@ -328,6 +327,9 @@ FRViewJob::render( const float*  projection,
             LOGGER_DEBUG( log, "Render manager type : " << (typeid(*m_screen_manager.get())).name() );
         }
 
+    if (m_query_primitives) {
+        glBeginQuery(GL_PRIMITIVES_GENERATED, m_primitives);
+    }
         m_screen_manager->render( fbo,
                                   width,
                                   height,
@@ -335,6 +337,10 @@ FRViewJob::render( const float*  projection,
                                   glm::value_ptr( mv ),
                                   projection,
                                   items);
+    if (m_query_primitives) {
+        glEndQuery(GL_PRIMITIVES_GENERATED);
+        glGetQueryObjectuiv(m_primitives, GL_QUERY_RESULT, &m_numprimitives);
+    }
         
         glViewport( 0, 0, 0.1*width, 0.1*height );
         m_coordsys_renderer->render( glm::value_ptr( mv ), 0.1*width, 0.1*height);
