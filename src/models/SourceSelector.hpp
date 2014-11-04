@@ -49,6 +49,12 @@ public:
     const std::string&
     getDeleteKey() const;
 
+    const std::string&
+    getFileLoadKey() const;
+
+    const std::string&
+    getFileNameKey() const;
+
     tinia::model::gui::Element*
     guiFactory() const;
     

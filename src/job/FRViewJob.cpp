@@ -215,17 +215,21 @@ FRViewJob::FRViewJob( const std::list<string>& files )
         //options->addChild( m_source_selector.guiFactory() );
 
         m_model->addElement<bool>( "field_info_enable", true, "Source and Field" );
-        m_model->addElement<bool>( "Source", true );
 
         ElementGroup* field_details_group = new ElementGroup( "field_info_enable", true );
 
-        Grid* field_details_grid = new Grid( 6, 4 );
+        Grid* field_details_grid = new Grid( 7, 4 );
         field_details_grid->setChild( 0, 1, new HorizontalSpace );
         field_details_grid->setChild( 0, 3, new HorizontalExpandingSpace );
-        field_details_grid->setChild( 1, 0, new Label("Source") );
-        field_details_grid->setChild( 1, 2, new ComboBox(m_source_selector.getSourceSelectorKey() ));
-        field_details_grid->setChild( 1, 1, new Button(m_source_selector.getCloneKey()) );
-        field_details_grid->setChild( 1, 3, new Button(m_source_selector.getDeleteKey()) );
+
+        field_details_grid->setChild( 1, 0, new Button(m_source_selector.getFileLoadKey()) );
+        field_details_grid->setChild( 1, 1, new TextInput( m_source_selector.getFileNameKey()) );
+
+        m_model->addElement<bool>( "Source", true );
+        field_details_grid->setChild( 2, 0, new Label("Source") );
+        field_details_grid->setChild( 2, 2, new ComboBox(m_source_selector.getSourceSelectorKey() ));
+        field_details_grid->setChild( 2, 1, new Button(m_source_selector.getCloneKey()) );
+        field_details_grid->setChild( 2, 3, new Button(m_source_selector.getDeleteKey()) );
 
         m_model->addElementWithRestriction<string>( "field_solution",
                                                     solutions.front(),
@@ -233,21 +237,21 @@ FRViewJob::FRViewJob( const std::list<string>& files )
                                                     solutions.end() );
         m_model->addAnnotation( "field_solution", "Solution" );
         m_model->addStateListener( "field_solution", this);
-        field_details_grid->setChild( 2, 0, new Label( "field_solution" ) );
-        field_details_grid->setChild( 2, 2, new ComboBox( "field_solution" ) );
+        field_details_grid->setChild( 3, 0, new Label( "field_solution" ) );
+        field_details_grid->setChild( 3, 2, new ComboBox( "field_solution" ) );
 
         m_model->addConstrainedElement<int>("field_report_step", 0, 0, 0, "Report step" );
         m_model->addStateListener( "field_report_step", this);
-        field_details_grid->setChild( 3, 0, new Label( "field_report_step" ) );
-        field_details_grid->setChild( 3, 2, new HorizontalSlider( "field_report_step" ) );
+        field_details_grid->setChild( 4, 0, new Label( "field_report_step" ) );
+        field_details_grid->setChild( 4, 2, new HorizontalSlider( "field_report_step" ) );
 
         m_model->addElement<string>( "field_info_calendar", "n/a", "Date" );
-        field_details_grid->setChild( 4, 0, new Label( "field_info_calendar" ));
-        field_details_grid->setChild( 4, 2, (new Label( "field_info_calendar", true ))->setEnabledKey( "has_field") );
+        field_details_grid->setChild( 5, 0, new Label( "field_info_calendar" ));
+        field_details_grid->setChild( 5, 2, (new Label( "field_info_calendar", true ))->setEnabledKey( "has_field") );
 
         m_model->addElement<string>( "field_info_range", "n/a", "Range" );
-        field_details_grid->setChild( 5, 0, new Label( "field_info_range" ) );
-        field_details_grid->setChild( 5, 2, (new Label( "field_info_range", true ))->setEnabledKey( "has_field" ) );
+        field_details_grid->setChild( 6, 0, new Label( "field_info_range" ) );
+        field_details_grid->setChild( 6, 2, (new Label( "field_info_range", true ))->setEnabledKey( "has_field" ) );
         field_details_group->setChild( field_details_grid );
 
         options->addChild( field_details_group );

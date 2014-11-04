@@ -162,6 +162,19 @@ SourceSelector::getDeleteKey() const
     return source_delete_key;
 }
 
+const std::string&
+SourceSelector::getFileLoadKey() const
+{
+    return m_file.fileLoadKey();
+}
+
+const std::string&
+SourceSelector::getFileNameKey() const
+{
+    return m_file.fileNameKey();
+}
+
+
 tinia::model::gui::Element*
 SourceSelector::guiFactory() const
 {

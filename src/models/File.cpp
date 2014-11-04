@@ -86,6 +86,19 @@ File::titleKey() const
     return file_tab_key;
 }
 
+const std::string&
+File::fileLoadKey() const
+{
+    return file_load_key;
+}
+
+const std::string&
+File::fileNameKey() const
+{
+    return file_name_key;
+}
+
+
 void
 File::stateElementModified( tinia::model::StateElement * stateElement )
 {
