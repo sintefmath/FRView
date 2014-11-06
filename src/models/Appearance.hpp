@@ -125,6 +125,9 @@ public:
     void
     stateElementModified( tinia::model::StateElement * stateElement );
 
+    const std::string&
+    flipOrientationKey() const;
+
     tinia::model::gui::Element*
     guiFactory() const;
 

@@ -189,6 +189,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     TabLayout* outer_tabs = new TabLayout;
     left_right_wrapper->addChild( outer_tabs );
 
+        m_model->addElement<bool>( "Source", true );
 
     // --- options tab ----------------------------------------------------------
     {   
@@ -203,12 +204,12 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
 
         m_model->addElement<bool>( "options_label_key", true, "Options" );
-        tinia::model::gui::ElementGroup* optionsRoot = new tinia::model::gui::ElementGroup( "options_label_key", true );
-        tinia::model::gui::Grid* optionsGrid = new tinia::model::gui::Grid( 2, 2 );
-        optionsGrid->setChild( 0, 0, new tinia::model::gui::Label( m_grid_stats.zScaleKey() ) );
-        optionsGrid->setChild( 0, 1, new tinia::model::gui::DoubleSpinBox( m_grid_stats.zScaleKey() ) );
-        optionsGrid->setChild( 1, 0, new tinia::model::gui::CheckBox( m_renderconfig.lightThemeKey() ) );
-        optionsGrid->setChild( 1, 1, new tinia::model::gui::CheckBox( m_renderconfig.renderWellsKey() ) );
+        ElementGroup* optionsRoot = new ElementGroup( "options_label_key", true );
+        Grid* optionsGrid = new Grid( 2, 2 );
+        optionsGrid->setChild( 0, 0, new Label( m_grid_stats.zScaleKey() ) );
+        optionsGrid->setChild( 0, 1, new DoubleSpinBox( m_grid_stats.zScaleKey() ) );
+        optionsGrid->setChild( 1, 0, new CheckBox( m_renderconfig.lightThemeKey() ) );
+        optionsGrid->setChild( 1, 1, new CheckBox( m_renderconfig.renderWellsKey() ) );
         optionsRoot->setChild(optionsGrid);
         options->addChild( optionsRoot );
 
@@ -216,19 +217,19 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
         m_model->addElement<bool>( "field_info_enable", true, "Source and Field" );
 
+
         ElementGroup* field_details_group = new ElementGroup( "field_info_enable", true );
 
-        Grid* field_details_grid = new Grid( 7, 4 );
+        Grid* field_details_grid = new Grid( 8, 4 );
         field_details_grid->setChild( 0, 1, new HorizontalSpace );
         field_details_grid->setChild( 0, 3, new HorizontalExpandingSpace );
 
         field_details_grid->setChild( 1, 0, new Button(m_source_selector.getFileLoadKey()) );
         field_details_grid->setChild( 1, 1, new TextInput( m_source_selector.getFileNameKey()) );
 
-        m_model->addElement<bool>( "Source", true );
         field_details_grid->setChild( 2, 0, new Label("Source") );
-        field_details_grid->setChild( 2, 2, new ComboBox(m_source_selector.getSourceSelectorKey() ));
         field_details_grid->setChild( 2, 1, new Button(m_source_selector.getCloneKey()) );
+        field_details_grid->setChild( 2, 2, new ComboBox(m_source_selector.getSourceSelectorKey() ));
         field_details_grid->setChild( 2, 3, new Button(m_source_selector.getDeleteKey()) );
 
         m_model->addElementWithRestriction<string>( "field_solution",
@@ -252,6 +253,9 @@ FRViewJob::FRViewJob( const std::list<string>& files )
         m_model->addElement<string>( "field_info_range", "n/a", "Range" );
         field_details_grid->setChild( 6, 0, new Label( "field_info_range" ) );
         field_details_grid->setChild( 6, 2, (new Label( "field_info_range", true ))->setEnabledKey( "has_field" ) );
+
+        field_details_grid->setChild( 7, 0, new CheckBox( m_appearance.flipOrientationKey() ) );
+
         field_details_group->setChild( field_details_grid );
 
         options->addChild( field_details_group );
@@ -271,10 +275,10 @@ FRViewJob::FRViewJob( const std::list<string>& files )
         m_model->addElement<bool>( "primitives_key", m_query_primitives, "# Primitives");
         m_model->addStateListener( "primitives_key", this);
         m_model->addElement<int>( "num_prim_key", m_numprimitives, "Number Primitives" );
-        tinia::model::gui::ElementGroup* detailsRoot = new tinia::model::gui::ElementGroup( "details_label_key", true );
-        tinia::model::gui::Grid* detailsStats = m_grid_stats.guiFactory();
-        detailsStats->setChild( 6, 0, new tinia::model::gui::CheckBox( "primitives_key") );
-        detailsStats->setChild( 6, 2, new tinia::model::gui::Label( "num_prim_key", true) );
+        ElementGroup* detailsRoot = new ElementGroup( "details_label_key", true );
+        Grid* detailsStats = m_grid_stats.guiFactory();
+        detailsStats->setChild( 6, 0, new CheckBox( "primitives_key") );
+        detailsStats->setChild( 6, 2, new Label( "num_prim_key", true) );
         detailsRoot->setChild(detailsStats);
         experimental->addChild( detailsRoot );
         experimental->addChild( m_renderconfig.guiFactory() );

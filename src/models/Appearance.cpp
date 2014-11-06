@@ -256,14 +256,14 @@ Appearance::stateElementModified( tinia::model::StateElement * stateElement )
     else if( key == field_range_max_key ) {
         stateElement->getValue( ap.m_colormap_fixed_max );
     }
-    //else if( key == tess_flip_orientation_key ) {
-    //    stateElement->getValue( ap.m_flip_orientation );
-    //    m_source_item->m_do_update_subset = true;
-    //    // Still needed?
-    //    //if( m_renderlist_state == RENDERLIST_SENT ) {
-    //    //    m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
-    //    //}
-    //}
+    else if( key == tess_flip_orientation_key ) {
+        stateElement->getValue( ap.m_flip_orientation );
+        m_source_item->m_do_update_subset = true;
+        // Still needed?
+        //if( m_renderlist_state == RENDERLIST_SENT ) {
+        //    m_renderlist_state = RENDERLIST_CHANGED_NOTIFY_CLIENTS;
+        //}
+    }
     else if( key == subset_color_key ) {
         std::string value;
         stateElement->getValue( value );
@@ -412,6 +412,13 @@ Appearance::guiFactory() const
 
     return layout;
 }
+
+const std::string&
+Appearance::flipOrientationKey() const
+{
+    return tess_flip_orientation_key;
+}
+
 
 void
 Appearance::update(boost::shared_ptr<SourceItem> source_item , size_t index)
