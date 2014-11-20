@@ -77,7 +77,7 @@ mkdir ${INSTALL_DIR}/httpd/logs ${INSTALL_DIR}/httpd/run
 ln -s /etc/httpd/modules ${INSTALL_DIR}/httpd/modules
 SED_SAFE_INSTALL_DIR=${INSTALL_DIR//\//\\\/}
 sed -i "s/ServerRoot \\\"\\/etc\\/httpd\\\"/ServerRoot \\\"${SED_SAFE_INSTALL_DIR}\\/httpd\\\"/g" ${INSTALL_DIR}/httpd/conf/httpd.conf
-sed -i 's/Listen 80/Listen 8081/g' ${INSTALL_DIR}/httpd/conf/httpd.conf
+sed -i 's/Listen 80/Listen 8080/g' ${INSTALL_DIR}/httpd/conf/httpd.conf
 
 cat >> ${INSTALL_DIR}/httpd/conf/httpd.conf <<EOF
 
