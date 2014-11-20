@@ -10,7 +10,7 @@ INSTALL_DIR=`readlink -f $1`
 
 # First we get the needed yum packages
 #yum groupinstall "Development Tools"
-#yum install qt-devel git cmake libXmu-devel libXi-devel freeglut-devel boost-devel libxml2-devel apr-devel httpd-devel
+#yum install qt-devel git cmake libXmu-devel libXi-devel freeglut-devel boost-devel libxml2-devel apr-devel httpd-devel nasm
 
 mkdir extra_code
 cd extra_code
@@ -28,12 +28,26 @@ wget -O glm.zip 'http://downloads.sourceforge.net/project/ogl-math/glm-0.9.4.6/g
 unzip glm.zip
 cp -r glm/glm ${INSTALL_DIR}/include
 
+# Download, build and install TurboJPEG
+mkdir tj
+cd tj
+svn co svn://svn.code.sf.net/p/libjpeg-turbo/code
+cd code/trunk
+autoreconf -fiv
+mkdir build
+cd build
+sh ../configure --prefix=${INSTALL_DIR}
+make -j 8
+make install
+cd ../../../..
+
 # Download Tinia
 git clone https://github.com/sintefmath/tinia.git
 cd tinia
 mkdir build
 cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} -DCMAKE_PREFIX_PATH=${INSTALL_DIR}
+# 141120: The Boost-switch below is to fix a CMake/Boost version incompatibility problem. This may be (required to be) removed in the future.
+cmake .. -DBoost_NO_BOOST_CMAKE=ON -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} -DCMAKE_PREFIX_PATH=${INSTALL_DIR}
 make -j9 install
 cd ..
 cd ..
@@ -63,7 +77,7 @@ mkdir ${INSTALL_DIR}/httpd/logs ${INSTALL_DIR}/httpd/run
 ln -s /etc/httpd/modules ${INSTALL_DIR}/httpd/modules
 SED_SAFE_INSTALL_DIR=${INSTALL_DIR//\//\\\/}
 sed -i "s/ServerRoot \\\"\\/etc\\/httpd\\\"/ServerRoot \\\"${SED_SAFE_INSTALL_DIR}\\/httpd\\\"/g" ${INSTALL_DIR}/httpd/conf/httpd.conf
-sed -i 's/Listen 80/Listen 8080/g' ${INSTALL_DIR}/httpd/conf/httpd.conf
+sed -i 's/Listen 80/Listen 8081/g' ${INSTALL_DIR}/httpd/conf/httpd.conf
 
 cat >> ${INSTALL_DIR}/httpd/conf/httpd.conf <<EOF
 
