@@ -44,8 +44,11 @@ public:
     void
     stateElementModified( tinia::model::StateElement * stateElement );
 
-    tinia::model::gui::Element*
-    guiFactory() const;
+    const std::string&
+    zScaleKey() const;
+
+    tinia::model::gui::Grid*
+    guiFactory();
 
     float
     zScale() const { return m_zscale; }

@@ -144,6 +144,37 @@ SourceSelector::stateElementModified( tinia::model::StateElement * stateElement 
 
 }
 
+const std::string&
+SourceSelector::getSourceSelectorKey() const
+{
+    return source_selector_key;
+}
+
+const std::string&
+SourceSelector::getCloneKey() const
+{
+    return source_clone_key;
+}
+
+const std::string&
+SourceSelector::getDeleteKey() const
+{
+    return source_delete_key;
+}
+
+const std::string&
+SourceSelector::getFileLoadKey() const
+{
+    return m_file.fileLoadKey();
+}
+
+const std::string&
+SourceSelector::getFileNameKey() const
+{
+    return m_file.fileNameKey();
+}
+
+
 tinia::model::gui::Element*
 SourceSelector::guiFactory() const
 {

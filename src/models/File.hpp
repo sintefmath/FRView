@@ -54,6 +54,12 @@ public:
     const std::string&
     titleKey() const;
 
+    const std::string&
+    fileLoadKey() const;
+
+    const std::string&
+    fileNameKey() const;
+
     void
     stateElementModified( tinia::model::StateElement * stateElement );
 

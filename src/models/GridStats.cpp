@@ -39,7 +39,7 @@ static const string grid_max_poly_key = "_grid_max_poly";
 GridStats::GridStats( boost::shared_ptr<tinia::model::ExposedModel>& model, Logic& logic )
     : m_model( model ),
       m_logic( logic ),
-      m_zscale( 1.f )
+      m_zscale( 10.f )
 {
     m_model->addElement<bool>( grid_details_label_key, true, "Grid" );
     m_model->addElement<bool>( zscale_label_key, true, "Z-scale" );
@@ -163,10 +163,16 @@ GridStats::stateElementModified( tinia::model::StateElement * stateElement )
     }
 }
 
-tinia::model::gui::Element*
-GridStats::guiFactory() const
+const std::string&
+GridStats::zScaleKey() const
 {
-    tinia::model::gui::ElementGroup* root = new tinia::model::gui::ElementGroup( grid_details_label_key, true );
+    return zscale_key;
+}
+
+tinia::model::gui::Grid*
+GridStats::guiFactory()
+{
+    //tinia::model::gui::ElementGroup* root = new tinia::model::gui::ElementGroup( grid_details_label_key, true );
     tinia::model::gui::Grid* grid = new tinia::model::gui::Grid( 7, 4 );
     grid->setChild( 0, 1, new tinia::model::gui::HorizontalSpace );
     grid->setChild( 0, 3, new tinia::model::gui::HorizontalExpandingSpace );
@@ -182,11 +188,12 @@ GridStats::guiFactory() const
     grid->setChild( 4, 2, new tinia::model::gui::Label( grid_triangles_key, true ) );
     grid->setChild( 5, 0, new tinia::model::gui::Label( grid_max_poly_key ) );
     grid->setChild( 5, 2, new tinia::model::gui::Label( grid_max_poly_key, true ) );
-    grid->setChild( 6, 0, new tinia::model::gui::Label( zscale_key ) );
-    grid->setChild( 6, 2, new tinia::model::gui::DoubleSpinBox( zscale_key ) );
-    root->setChild( grid );
+    //grid->setChild( 6, 0, new tinia::model::gui::Label( zscale_key ) );
+    //grid->setChild( 6, 2, new tinia::model::gui::DoubleSpinBox( zscale_key ) );
+    return grid;
+    //root->setChild( grid );
 
-    return root;
+    //return root;
 }
 
 

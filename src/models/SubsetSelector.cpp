@@ -28,6 +28,8 @@
 
 namespace {
 
+    const std::string subset_key = "subset_key";
+
     const std::string surface_subset_field_range_key = "surface_subset_field_range";
 
     const std::string field_select_min_key = "field_select_min";
@@ -83,6 +85,8 @@ SubsetSelector::SubsetSelector( boost::shared_ptr<tinia::model::ExposedModel>& m
 {
     std::list<std::string> solutions = { "[none]" };
     const double dmax = std::numeric_limits<double>::max();
+
+    m_model->addElement<bool>( subset_key, true, "Subset" );
 
     // --- field variables -----------------------------------------------------
     m_model->addElement<bool>( surface_subset_field_range_key, false );
@@ -318,6 +322,7 @@ SubsetSelector::guiFactory() const
 {
     using namespace tinia::model::gui;
 
+    ElementGroup* root = new ElementGroup( subset_key, true );
     // subset field range
     Grid* subset_field_minmax_layout = new Grid( 3, 2 );
     subset_field_minmax_layout->setChild( 0, 0, new Label(field_select_min_key) );
@@ -376,7 +381,8 @@ SubsetSelector::guiFactory() const
     subsets_layout->addChild( subset_plane_layout );
     
     
-    return subsets_layout;
+    root->setChild(subsets_layout);
+    return root;
 }
 
 void

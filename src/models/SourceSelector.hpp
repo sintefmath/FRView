@@ -40,6 +40,21 @@ public:
     void
     stateElementModified( tinia::model::StateElement * stateElement );
 
+    const std::string&
+    getSourceSelectorKey() const;
+
+    const std::string&
+    getCloneKey() const;
+
+    const std::string&
+    getDeleteKey() const;
+
+    const std::string&
+    getFileLoadKey() const;
+
+    const std::string&
+    getFileNameKey() const;
+
     tinia::model::gui::Element*
     guiFactory() const;
     

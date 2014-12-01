@@ -57,7 +57,7 @@ RenderConfig::RenderConfig(boost::shared_ptr<tinia::model::ExposedModel>& model,
       m_render_quality( 2 ),
       m_shading_model( Diffuse ),
       m_render_grid( false ),
-      m_render_wells( false ),
+      m_render_wells( true ),
       m_create_nonindexed_surfaces( true ),
       m_line_thickness( 0.5f ),
       m_clip_plane_visible( true )
@@ -119,6 +119,19 @@ RenderConfig::titleKey() const
 {
     return renderconfig_title_key;
 }
+
+const std::string&
+RenderConfig::lightThemeKey() const
+{
+    return light_theme_key;
+}
+
+const std::string&
+RenderConfig::renderWellsKey() const
+{
+    return render_wells_key;
+}
+
 
 const std::string&
 RenderConfig::renderQualityStringKey() const
@@ -239,22 +252,22 @@ RenderConfig::guiFactory() const
     root->addChild( render_options_group );
     VerticalLayout* render_options_layout = new VerticalLayout;
     render_options_group->setChild( render_options_layout );
-    render_options_layout->addChild( new tinia::model::gui::CheckBox( light_theme_key ) );
+    //render_options_layout->addChild( new tinia::model::gui::CheckBox( light_theme_key ) );
     render_options_layout->addChild( new tinia::model::gui::CheckBox( render_clipplane_key ) );
     render_options_layout->addChild( new tinia::model::gui::CheckBox( render_grid_key ) );
-    render_options_layout->addChild( new tinia::model::gui::CheckBox( render_wells_key ) );
+    //render_options_layout->addChild( new tinia::model::gui::CheckBox( render_wells_key ) );
     render_options_layout->addChild( new tinia::model::gui::CheckBox( create_nonindexed_surfaces_key ) );
 
-    // -------------------------------------------------------------------------
-    ElementGroup* rendering_quality_group = new ElementGroup( render_quality_key, true );
-    root->addChild( rendering_quality_group );
-    Grid* alpha_quality_layout = new Grid(3,2);
-    rendering_quality_group->setChild( alpha_quality_layout );
-    alpha_quality_layout->setChild( 0, 0, new Label( render_quality_string_key, true ) );
-    alpha_quality_layout->setChild( 0, 1, new HorizontalSlider( render_quality_key, true ) );
+    //// -------------------------------------------------------------------------
+    //ElementGroup* rendering_quality_group = new ElementGroup( render_quality_key, true );
+    //root->addChild( rendering_quality_group );
+    //Grid* alpha_quality_layout = new Grid(3,2);
+    //rendering_quality_group->setChild( alpha_quality_layout );
+    //alpha_quality_layout->setChild( 0, 0, new Label( render_quality_string_key, true ) );
+    //alpha_quality_layout->setChild( 0, 1, new HorizontalSlider( render_quality_key, true ) );
 
-    alpha_quality_layout->setChild( 1, 0, new Label( shading_model_key ) );
-    alpha_quality_layout->setChild( 1, 1, new ComboBox( shading_model_key ) );
+    //alpha_quality_layout->setChild( 1, 0, new Label( shading_model_key ) );
+    //alpha_quality_layout->setChild( 1, 1, new ComboBox( shading_model_key ) );
     
     // -------------------------------------------------------------------------
     ElementGroup* line_thickness_group = new ElementGroup( line_thickness_key, true );

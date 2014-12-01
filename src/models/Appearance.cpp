@@ -356,16 +356,16 @@ Appearance::guiFactory() const
     surf_details_grid->setChild( 1, 0, (new Label( "colormap_label" ))->setVisibilityKey( "has_field" ) );
     surf_details_grid->setChild( 1, 2, (colormap_popup)->setVisibilityKey( "has_field" ) );
     
-    VerticalLayout* options_layout = new VerticalLayout;
-    options_layout->addChild( new CheckBox( tess_flip_orientation_key ) );
-    options_layout->addChild( new CheckBox( source_visible_key ) );
-    options_layout->addChild( surf_details_grid );
-    
-    ElementGroup* surf_details_group = new ElementGroup( "surface_tab" );
-    surf_details_group->setChild( options_layout );
-    
+    //VerticalLayout* options_layout = new VerticalLayout;
+    //options_layout->addChild( new CheckBox( tess_flip_orientation_key ) );
+    //options_layout->addChild( new CheckBox( source_visible_key ) );
+    //options_layout->addChild( surf_details_grid );
+    //
+    //ElementGroup* surf_details_group = new ElementGroup( "surface_tab" );
+    //surf_details_group->setChild( options_layout );
+    //
     VerticalLayout* layout = new VerticalLayout;
-    layout->addChild( surf_details_group );
+    //layout->addChild( surf_details_group );
 
     // -------------------------------------------------------------------------
     ElementGroup* alpha_subset_group = new ElementGroup( subset_label_key, true );
@@ -387,8 +387,8 @@ Appearance::guiFactory() const
         Grid* alpha_boundary_layout = new Grid(4,2);
         alpha_boundary_group->setChild( alpha_boundary_layout );
 
-        alpha_boundary_layout->setChild( 0, 0, (new Label( boundary_color_key ))->setVisibilityKey( "has_field", true ) );
-        alpha_boundary_layout->setChild( 0, 1, (new ComboBox( boundary_color_key))->setVisibilityKey( "has_field", true ) );
+        alpha_boundary_layout->setChild( 0, 0, new Label( boundary_color_key) );
+        alpha_boundary_layout->setChild( 0, 1, new ComboBox( boundary_color_key) );
         alpha_boundary_layout->setChild( 1, 0, new Label( boundary_opacity_fill_key ) );
         alpha_boundary_layout->setChild( 1, 1, new HorizontalSlider( boundary_opacity_fill_key ) );
         alpha_boundary_layout->setChild( 2, 0, new Label( boundary_opacity_outline_key ) );
@@ -412,6 +412,13 @@ Appearance::guiFactory() const
 
     return layout;
 }
+
+const std::string&
+Appearance::flipOrientationKey() const
+{
+    return tess_flip_orientation_key;
+}
+
 
 void
 Appearance::update(boost::shared_ptr<SourceItem> source_item , size_t index)

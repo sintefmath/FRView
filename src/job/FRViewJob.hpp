@@ -258,4 +258,9 @@ private:
     void
     triggerRedraw( const std::string& viewer_key );
 
+    bool m_query_primitives;
+    GLuint m_primitives;
+    GLuint m_numprimitives;
+
+
 };

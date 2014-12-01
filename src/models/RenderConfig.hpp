@@ -83,6 +83,12 @@ public:
     titleKey() const;
 
     const std::string&
+    lightThemeKey() const;
+
+    const std::string&
+    renderWellsKey() const;
+
+    const std::string&
     renderQualityStringKey() const;
 
     float
