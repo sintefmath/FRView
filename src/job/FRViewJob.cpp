@@ -25,6 +25,7 @@
 
 #include <tinia/model/GUILayout.hpp>
 //#include <tinia/model/PolicyLock.hpp>
+#include "tinia/utils/ProxyDebugGUI.hpp"
 
 #include "dataset/CornerpointGrid.hpp"
 #include "dataset/FieldDataInterface.hpp"
@@ -140,6 +141,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
     m_model->addElement<string>( "source_element_group", "n/a", "Options" );
     m_model->addElement<string>( "experimental_element_group", "n/a", "Experimental" );
+    m_model->addElement<string>( "auto_proxy_element_group", "n/a", "AutoProxy" );
 
 
     root->addChild( left_right_wrapper );
@@ -283,6 +285,27 @@ FRViewJob::FRViewJob( const std::list<string>& files )
         experimental->addChild( detailsRoot );
         experimental->addChild( m_renderconfig.guiFactory() );
         experimental_tab->setChild(experimental);
+    }
+
+    // --- autoProxy-tab -==---------------------------------------------------
+    {
+        Tab *ap_tab = new Tab( "auto_proxy_element_group" );
+	outer_tabs->addChild( ap_tab );
+	VerticalLayout *ap_layout = new VerticalLayout;
+
+	// The constructor of proxyGUI sets up "magical" elements in m_model.
+	tinia::utils::ProxyDebugGUI proxyGUI( m_model,
+					      true, // autoProxy
+					      true, // autoProxy-debugging
+					      true, // jpgProxy
+					      true  // autoSelect proxy method
+					      );
+	
+	// And this method returns a corresponding grid containing GUI elements for manipulating these elements.
+	tinia::model::gui::Grid *grid = proxyGUI.getGrid();
+
+	ap_layout->addChild( grid );
+	ap_tab->setChild( ap_layout );
     }
 
     //// --- under the hood tab --------------------------------------------------
