@@ -76,6 +76,13 @@ namespace {
 
 namespace models {
 
+void SubsetSelector::updateFieldRange(double min, double max)
+{
+    //m_model->updateConstraints( field_select_min_key, min, min, max);
+    //m_model->updateConstraints( field_select_max_key, max, min, max);
+    m_model->updateElement<double>( field_select_min_key, min );
+    m_model->updateElement<double>( field_select_max_key, max );
+}
 
 
 SubsetSelector::SubsetSelector( boost::shared_ptr<tinia::model::ExposedModel>& model,
@@ -505,8 +512,8 @@ SubsetSelector::update(boost::shared_ptr<SourceItem> source_item )
         m_model->updateConstraints<int>( index_range_select_max_k_key, 0, 0, 0 );
     }
     
-    m_model->updateElement<double>( field_select_min_key, m_source_item->m_subset_selector_data->m_field_select_min );
-    m_model->updateElement<double>( field_select_max_key, m_source_item->m_subset_selector_data->m_field_select_max );
+    //m_model->updateElement<double>( field_select_min_key, m_source_item->m_subset_selector_data->m_field_select_min );
+    //m_model->updateElement<double>( field_select_max_key, m_source_item->m_subset_selector_data->m_field_select_max );
 }
 
 void

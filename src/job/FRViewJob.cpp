@@ -371,6 +371,7 @@ FRViewJob::updateCurrentFieldData()
                     o.str("");
                     o << "[not implemented]";
                     m_model->updateElement( "field_info_calendar", fielddata->timestepDescription( si->m_timestep_current ) );
+                    m_subset_selector.updateFieldRange(si->m_grid_field->minValue(),si->m_grid_field->maxValue());
                 }
                 
                 
