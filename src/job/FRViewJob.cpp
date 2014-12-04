@@ -298,8 +298,8 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 					      true, // autoProxy
 					      true, // autoProxy-debugging
 					      true, // jpgProxy
-					      true  // autoSelect proxy method
-					      );
+					      true,  // autoSelect proxy method
+                                              true );
 	
 	// And this method returns a corresponding grid containing GUI elements for manipulating these elements.
 	tinia::model::gui::Grid *grid = proxyGUI.getGrid();
