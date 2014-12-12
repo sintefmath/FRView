@@ -87,6 +87,8 @@ public:
 
     bool init();
 
+    std::vector<std::string> filelist, filenamelist;
+
     bool
     initGL();
 

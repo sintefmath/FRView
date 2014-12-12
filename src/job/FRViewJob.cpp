@@ -52,6 +52,7 @@
 #include "render/surface/GridTessSurfBuilder.hpp"
 #include "render/rlgen/VoxelGrid.hpp"
 #include "render/rlgen/VoxelSurface.hpp"
+#include <boost/filesystem.hpp>
 
 using std::string;
 using std::stringstream;
@@ -219,13 +220,13 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
         m_model->addElement<bool>( "field_info_enable", true, "Source and Field" );
 
-
-        ElementGroup* field_details_group = new ElementGroup( "field_info_enable", true );
-
         Grid* field_details_grid = new Grid( 8, 4 );
+
         field_details_grid->setChild( 0, 1, new HorizontalSpace );
         field_details_grid->setChild( 0, 3, new HorizontalExpandingSpace );
+        ElementGroup* field_details_group = new ElementGroup( "field_info_enable", true );
 
+#ifdef BUILD_FILE_GUI
         field_details_grid->setChild( 1, 0, new Button(m_source_selector.getFileLoadKey()) );
         field_details_grid->setChild( 1, 1, new TextInput( m_source_selector.getFileNameKey()) );
 
@@ -233,6 +234,26 @@ FRViewJob::FRViewJob( const std::list<string>& files )
         field_details_grid->setChild( 2, 1, new Button(m_source_selector.getCloneKey()) );
         field_details_grid->setChild( 2, 2, new ComboBox(m_source_selector.getSourceSelectorKey() ));
         field_details_grid->setChild( 2, 3, new Button(m_source_selector.getDeleteKey()) );
+#else
+
+        filelist.clear();
+        filenamelist.clear();
+        for(auto it=files.begin(); it!=files.end(); ++it ) {
+            if( (*it).find('.') != std::string::npos ) {
+                filelist.push_back(*it);
+                boost::filesystem::path p(*it);
+                filenamelist.push_back(p.filename());
+            }
+        }
+        m_model->addElementWithRestriction<string>( "available_fields",
+                                                    filenamelist.front(),
+                                                    filenamelist.begin(),
+                                                    filenamelist.end() );
+        m_model->addAnnotation( "available_fields", "Fields" );
+        m_model->addStateListener( "available_fields", this);
+        field_details_grid->setChild( 1, 0, new Label( "available_fields" ) );
+        field_details_grid->setChild( 1, 2, new ComboBox( "available_fields" ) );
+#endif
 
         m_model->addElementWithRestriction<string>( "field_solution",
                                                     solutions.front(),
@@ -325,10 +346,12 @@ FRViewJob::FRViewJob( const std::list<string>& files )
             m_enable_gl_debug = true;
         }
         
+#ifdef BUILD_FILE_GUI
         if( (*it).find('.') != std::string::npos ) {
             loadFile( *it );
             //break;
         }
+#endif
     }
 
 }
@@ -422,7 +445,18 @@ FRViewJob::stateElementModified( tinia::model::StateElement *stateElement )
     if( key == "asyncreader_ticket" ) { // Async job is finished
         m_check_async_reader = true;
     }
-    
+
+    else if( key == "available_fields" ) {
+        std::string value;
+        stateElement->getValue( value );
+        deleteAllSources();
+        for (int i=0; i<filenamelist.size(); i++) {
+            if (value.compare(filenamelist[i]) == 0) {
+                loadFile( filelist[i] );
+                break;
+            }
+        }
+    }
     else if( currentSourceItemValid() && (key == "field_solution") ) {
         string value;
         stateElement->getValue( value );
