@@ -5,6 +5,7 @@ SET( version_number "0.7.0" )
 OPTION( EXTEND_CMAKE_MODULE_PATH "Extend the CMAKE_MODULE_PATH variable with user directories?"  ON )
 OPTION( DESKTOP_JOB "Build desktop job" ON )
 OPTION( CLOUD_JOB "Build cloud job" ON )
+OPTION( FILE_GUI "Build with GUI for handling files" OFF )
 OPTION( CHECK_TOPOLOGY "Check topology of tessellated cells (slow!)" OFF )
 OPTION( ECLIPSESCAN_APP "Build app to scan eclipse files" OFF )
 OPTION( PROFILE "Enable profiling" OFF )
@@ -13,6 +14,10 @@ OPTION( USE_SSSE3 "Use SSSE3 intrinsics" ON )
 OPTION( USE_SSE4 "Use SSE4.1 and SSE4.2 intrinsics" ON )
 OPTION( CHECK_INVARIANTS "Check invariants throughout the code" OFF )
 OPTION( EXTRACT_EDGE_GEOMETRY "Extract edge geometry" ON )
+
+IF( FILE_GUI )
+    ADD_DEFINITIONS( "-DBUILD_FILE_GUI" )
+ENDIF( FILE_GUI )
 
 IF( EXTEND_CMAKE_MODULE_PATH )
   SET( CMAKE_MODULE_PATH

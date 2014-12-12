@@ -34,18 +34,16 @@ main( int argc, char** argv )
     // is rather thread-unsafe, we call it here before any threads are created.
     std::setlocale( LC_ALL, "C" );
     
-    bool is_master = (argc > 2) && (strcmp( argv[1], argv[2] ) == 0 );
-    if( is_master ){
-        std::cerr << "Is master.\n";
-    }
     initializeLoggingFramework( &argc, argv );
-
     std::list<std::string> files;
+    for(int i=1; i<argc; i++ ) {
+        files.push_back( argv[i] );
+    }
 
-    FRViewJob job( files );
-    tinia::trell::IPCGLJobController controller( is_master );
-    controller.setJob( &job );
-    //controller.addScript( resources::cameramanipulator );
-    controller.run( argc, argv );
-    return 0;
+    tinia::trell::IPCGLJobController *trellController = new tinia::trell::IPCGLJobController();
+
+    FRViewJob *job = new FRViewJob( files );
+    trellController->setJob( job );
+    trellController->run( argc, argv );
+    exit(EXIT_SUCCESS);
 }
