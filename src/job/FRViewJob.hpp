@@ -23,6 +23,7 @@
 #include <tinia/jobcontroller/OpenGLJob.hpp>
 #include <tinia/model/StateListener.hpp>
 #include <tinia/renderlist/DataBase.hpp>
+#include "tinia/utils/ProxyDebugGUI.hpp"
 #include "utils/PerfTimer.hpp"
 #include "models/Appearance.hpp"
 #include "models/Logic.hpp"
@@ -262,5 +263,6 @@ private:
     GLuint m_primitives;
     GLuint m_numprimitives;
 
+    boost::shared_ptr<tinia::utils::ProxyDebugGUI> m_proxyGUI;
 
 };
