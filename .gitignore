@@ -21,3 +21,5 @@ latex/
 *.lai
 *.la
 *.a
+build
+CMakeLists.txt.user.*

@@ -54,6 +54,8 @@
 #include "render/rlgen/VoxelSurface.hpp"
 #include <boost/filesystem.hpp>
 
+#include <boost/make_shared.hpp>
+
 using std::string;
 using std::stringstream;
 
@@ -143,6 +145,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
     m_model->addElement<string>( "source_element_group", "n/a", "Options" );
     m_model->addElement<string>( "experimental_element_group", "n/a", "Experimental" );
     m_model->addElement<string>( "auto_proxy_element_group", "n/a", "AutoProxy" );
+    m_model->addElement<string>( "kiss_element_group", "n/a", "KISS" );
 
 
     root->addChild( left_right_wrapper );
@@ -308,25 +311,39 @@ FRViewJob::FRViewJob( const std::list<string>& files )
         experimental_tab->setChild(experimental);
     }
 
+    // The constructor of proxyGUI sets up "magical" elements in m_model.
+    m_proxyGUI = boost::make_shared<tinia::utils::ProxyDebugGUI>( m_model,
+                                                                  true, // autoProxy
+                                                                  true, // autoProxy-debugging
+                                                                  true, // jpgProxy
+                                                                  true,  // autoSelect proxy method
+                                                                  true  // depth buffer manipulation
+                                                                  );
+
     // --- autoProxy-tab -==---------------------------------------------------
     {
         Tab *ap_tab = new Tab( "auto_proxy_element_group" );
 	outer_tabs->addChild( ap_tab );
 	VerticalLayout *ap_layout = new VerticalLayout;
-
-	// The constructor of proxyGUI sets up "magical" elements in m_model.
-	tinia::utils::ProxyDebugGUI proxyGUI( m_model,
-					      true, // autoProxy
-					      true, // autoProxy-debugging
-					      true, // jpgProxy
-					      true,  // autoSelect proxy method
-                                              true );
 	
-	// And this method returns a corresponding grid containing GUI elements for manipulating these elements.
-	tinia::model::gui::Grid *grid = proxyGUI.getGrid();
+	// This method returns a corresponding grid containing GUI elements for manipulating these elements.
+	tinia::model::gui::Grid *grid = m_proxyGUI->getGrid();
 
 	ap_layout->addChild( grid );
 	ap_tab->setChild( ap_layout );
+    }
+
+    // --- KISS-tab --------------------------------------------------------------
+    {
+        Tab *kiss_tab = new Tab( "kiss_element_group" );
+	outer_tabs->addChild( kiss_tab );
+	VerticalLayout *ap_layout = new VerticalLayout;
+
+        // This is a more basic and compact version with sensible presets.
+        tinia::model::gui::Grid *grid = m_proxyGUI->getCompactGrid();
+
+	ap_layout->addChild( grid );
+	kiss_tab->setChild( ap_layout );
     }
 
     //// --- under the hood tab --------------------------------------------------
