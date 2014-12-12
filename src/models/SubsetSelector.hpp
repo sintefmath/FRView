@@ -49,6 +49,8 @@ public:
     tinia::model::gui::Element*
     guiFactory() const;
 
+    void updateFieldRange(double min, double max);
+    
     void
     update( boost::shared_ptr<SourceItem> source_item );
 
