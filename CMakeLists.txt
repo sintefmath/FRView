@@ -212,8 +212,8 @@ IF( DESKTOP_JOB )
     )
     ADD_EXECUTABLE( frview_desktop_job "src/main_job.cpp" )
     TARGET_LINK_LIBRARIES( frview_desktop_job
-                           ${TINIA_LIBRARIES}
                            frview_core
+                           ${TINIA_LIBRARIES}
                            ${HPMC_LIBRARY}
                            ${GLEW}
                            ${OPENGL_LIBRARIES}
@@ -231,8 +231,8 @@ IF( CLOUD_JOB )
     INCLUDE_DIRECTORIES( ${LIBXML2_INCLUDE_DIR} )
     ADD_EXECUTABLE( frview_cloud_job "src/main_cloud_job.cpp" )
     TARGET_LINK_LIBRARIES( frview_cloud_job
-                           ${TINIA_LIBRARIES}
                            frview_core
+                           ${TINIA_LIBRARIES}
                            ${HPMC_LIBRARY}
                            ${GLEW}
                            ${OPENGL_LIBRARIES}
