@@ -248,6 +248,15 @@ FRViewJob::FRViewJob( const std::list<string>& files )
                 filenamelist.push_back(p.filename());
             }
         }
+
+        if ( filelist.size()==0 ) {
+            filelist.push_back("nofilesloaded");
+            filenamelist.push_back("Please restart with file arguments!");
+        }
+        else {
+            loadFile( filelist[0] );
+        }
+
         m_model->addElementWithRestriction<string>( "available_fields",
                                                     filenamelist.front(),
                                                     filenamelist.begin(),
