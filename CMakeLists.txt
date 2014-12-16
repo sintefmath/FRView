@@ -48,6 +48,7 @@ set( CMAKE_CXX_FLAGS "-std=c++0x -Wall ${CMAKE_CXX_FLAGS}" )
 FIND_PACKAGE( Tinia 0.2.5 REQUIRED COMPONENTS Server Desktop )
 FIND_PACKAGE( OpenGL REQUIRED)
 FIND_PACKAGE( GLEW )
+FIND_PACKAGE( Boost REQUIRED COMPONENTS system filesystem )
 
 # We require at least version 0.9.4, since we use radians and not degrees.
 FIND_PACKAGE( GLM REQUIRED )

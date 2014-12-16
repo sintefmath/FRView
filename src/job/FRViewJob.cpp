@@ -245,7 +245,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
             if( (*it).find('.') != std::string::npos ) {
                 filelist.push_back(*it);
                 boost::filesystem::path p(*it);
-                filenamelist.push_back(p.filename());
+                filenamelist.push_back(p.filename().string());
             }
         }
 
