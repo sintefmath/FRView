@@ -67,7 +67,7 @@ namespace {
 }
 
 
-FRViewJob::FRViewJob( const std::list<string>& files )
+FRViewJob::FRViewJob( const std::list<string>& files, const bool developer_mode )
     : tinia::jobcontroller::OpenGLJob(),
       m_current_item( ~0 ),
       m_source_selector( m_model, *this ),
@@ -144,8 +144,10 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
     m_model->addElement<string>( "source_element_group", "n/a", "Options" );
     m_model->addElement<string>( "experimental_element_group", "n/a", "Experimental" );
-    m_model->addElement<string>( "auto_proxy_element_group", "n/a", "AutoProxy" );
-    m_model->addElement<string>( "kiss_element_group", "n/a", "KISS" );
+    if ( developer_mode) {
+      m_model->addElement<string>( "auto_proxy_element_group", "n/a", "AutoProxy" );
+    }
+    m_model->addElement<string>( "kiss_element_group", "n/a", "Visualization configuration" ); // "KISS"
 
 
     root->addChild( left_right_wrapper );
@@ -331,6 +333,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
     // --- autoProxy-tab -==---------------------------------------------------
     {
+      if (developer_mode) {
         Tab *ap_tab = new Tab( "auto_proxy_element_group" );
 	outer_tabs->addChild( ap_tab );
 	VerticalLayout *ap_layout = new VerticalLayout;
@@ -340,6 +343,7 @@ FRViewJob::FRViewJob( const std::list<string>& files )
 
 	ap_layout->addChild( grid );
 	ap_tab->setChild( ap_layout );
+      }
     }
 
     // --- KISS-tab --------------------------------------------------------------

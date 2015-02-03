@@ -34,15 +34,22 @@ main( int argc, char** argv )
     // is rather thread-unsafe, we call it here before any threads are created.
     std::setlocale( LC_ALL, "C" );
     
+    bool developer_mode = false;
+
     initializeLoggingFramework( &argc, argv );
     std::list<std::string> files;
     for(int i=1; i<argc; i++ ) {
+      if ( strcmp(argv[i], "developer_mode") == 0 ) {
+	developer_mode = true;
+      }
+      else {
         files.push_back( argv[i] );
+      }
     }
 
     tinia::trell::IPCGLJobController *trellController = new tinia::trell::IPCGLJobController();
 
-    FRViewJob *job = new FRViewJob( files );
+    FRViewJob *job = new FRViewJob( files, developer_mode);
     trellController->setJob( job );
     trellController->run( argc, argv );
     exit(EXIT_SUCCESS);

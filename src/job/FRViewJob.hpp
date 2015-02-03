@@ -80,7 +80,7 @@ class FRViewJob
           public models::Logic
 {
 public:
-    FRViewJob( const std::list<std::string>& files );
+  FRViewJob( const std::list<std::string>& files, const bool developer_mode=false );
 
     ~FRViewJob();
 
